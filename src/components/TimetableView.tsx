@@ -4,7 +4,7 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { Clock, Edit2, Save, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const DEFAULT_PERIODS: Period[] = [];
 
 // Generate default periods
@@ -87,7 +87,7 @@ export function TimetableView() {
         <h2 className="text-3xl font-bold text-foreground">Weekly Timetable</h2>
       </div>
 
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-6 gap-4">
         {DAYS.map((day) => {
           const isToday = day === currentDay;
 

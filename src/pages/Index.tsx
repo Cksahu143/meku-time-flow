@@ -3,6 +3,7 @@ import { Sidebar } from '@/components/Sidebar';
 import { TimetableView } from '@/components/TimetableView';
 import { CalendarView } from '@/components/CalendarView';
 import { TodoView } from '@/components/TodoView';
+import { PomodoroView } from '@/components/PomodoroView';
 import { ViewType } from '@/types';
 
 const Index = () => {
@@ -16,6 +17,7 @@ const Index = () => {
         {currentView === 'timetable' && <TimetableView />}
         {currentView === 'calendar' && <CalendarView />}
         {currentView === 'todo' && <TodoView />}
+        {currentView === 'pomodoro' && <PomodoroView />}
       </main>
     </div>
   );

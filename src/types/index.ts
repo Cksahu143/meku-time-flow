@@ -17,5 +17,12 @@ export interface Task {
   linkedPeriodId?: string;
 }
 
-export type ViewType = 'timetable' | 'calendar' | 'todo';
+export type ViewType = 'timetable' | 'calendar' | 'todo' | 'pomodoro';
 export type CalendarViewType = 'month' | 'week';
+
+export interface PomodoroSettings {
+  workDuration: number;
+  shortBreakDuration: number;
+  longBreakDuration: number;
+  sessionsBeforeLongBreak: number;
+}

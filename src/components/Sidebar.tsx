@@ -1,4 +1,4 @@
-import { Calendar, Clock, ListTodo } from 'lucide-react';
+import { Calendar, Clock, ListTodo, Timer } from 'lucide-react';
 import { ViewType } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -12,6 +12,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
     { id: 'timetable' as ViewType, label: 'Timetable', icon: Clock },
     { id: 'calendar' as ViewType, label: 'Calendar', icon: Calendar },
     { id: 'todo' as ViewType, label: 'To-Do List', icon: ListTodo },
+    { id: 'pomodoro' as ViewType, label: 'Pomodoro', icon: Timer },
   ];
 
   return (
