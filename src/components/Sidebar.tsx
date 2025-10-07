@@ -1,6 +1,11 @@
-import { Calendar, Clock, ListTodo, Timer } from 'lucide-react';
+import { Calendar, Clock, ListTodo, Timer, Moon, Sun, LogOut } from 'lucide-react';
 import { ViewType } from '@/types';
 import { cn } from '@/lib/utils';
+import { useTheme } from '@/providers/ThemeProvider';
+import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 interface SidebarProps {
   currentView: ViewType;
@@ -8,12 +13,29 @@ interface SidebarProps {
 }
 
 export function Sidebar({ currentView, onViewChange }: SidebarProps) {
+  const { theme, setTheme } = useTheme();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  
   const navItems = [
     { id: 'timetable' as ViewType, label: 'Timetable', icon: Clock },
     { id: 'calendar' as ViewType, label: 'Calendar', icon: Calendar },
     { id: 'todo' as ViewType, label: 'To-Do List', icon: ListTodo },
     { id: 'pomodoro' as ViewType, label: 'Pomodoro', icon: Timer },
   ];
+
+  const handleSignOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to sign out',
+      });
+    } else {
+      navigate('/auth');
+    }
+  };
 
   return (
     <aside className="w-60 h-screen bg-card border-r border-border flex flex-col shadow-md">
@@ -48,8 +70,30 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         })}
       </nav>
 
-      <div className="p-4 border-t border-border">
-        <div className="text-xs text-muted-foreground text-center">
+      <div className="p-4 border-t border-border space-y-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          className="w-full"
+        >
+          {theme === 'dark' ? (
+            <Sun className="w-4 h-4 mr-2" />
+          ) : (
+            <Moon className="w-4 h-4 mr-2" />
+          )}
+          {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleSignOut}
+          className="w-full"
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          Sign Out
+        </Button>
+        <div className="text-xs text-muted-foreground text-center pt-2">
           © 2025 Meku Planner
         </div>
       </div>
