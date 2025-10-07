@@ -1,3 +1,4 @@
+import React from 'react';
 import { Calendar, Clock, ListTodo, Timer, Moon, Sun, LogOut } from 'lucide-react';
 import { ViewType } from '@/types';
 import { cn } from '@/lib/utils';
