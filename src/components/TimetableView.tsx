@@ -61,7 +61,7 @@ export function TimetableView() {
 
   const handleEdit = (period: Period) => {
     setEditingPeriod(period.id);
-    setEditForm(period);
+    setEditForm({ ...period, type: period.type || 'class' });
   };
 
   const handleSave = () => {
@@ -201,7 +201,7 @@ export function TimetableView() {
                             </div>
                           </div>
 
-                          {editForm.type === 'class' && (
+                          {(editForm.type === 'class' || !editForm.type) && (
                             <>
                               <Input
                                 type="text"
