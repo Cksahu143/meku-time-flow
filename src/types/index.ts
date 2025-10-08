@@ -6,6 +6,7 @@ export interface Period {
   subject: string;
   teacher?: string;
   room?: string;
+  type?: 'class' | 'short-break' | 'long-break';
 }
 
 export interface Task {

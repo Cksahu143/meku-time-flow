@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { Period } from '@/types';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { Clock, Edit2, Save, X } from 'lucide-react';
+import { Clock, Edit2, Save, X, Plus, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const DEFAULT_PERIODS: Period[] = [];
@@ -77,7 +80,40 @@ export function TimetableView() {
   };
 
   const getPeriodsByDay = (day: string) => {
-    return periods.filter((p) => p.day === day);
+    return periods
+      .filter((p) => p.day === day)
+      .sort((a, b) => {
+        const [aHour, aMin] = a.startTime.split(':').map(Number);
+        const [bHour, bMin] = b.startTime.split(':').map(Number);
+        return aHour * 60 + aMin - (bHour * 60 + bMin);
+      });
+  };
+
+  const handleAddPeriod = (day: string) => {
+    const dayPeriods = getPeriodsByDay(day);
+    const lastPeriod = dayPeriods[dayPeriods.length - 1];
+    
+    const newStartTime = lastPeriod 
+      ? lastPeriod.endTime 
+      : '08:00';
+    
+    const [hour, min] = newStartTime.split(':').map(Number);
+    const newEndTime = `${(hour + 1).toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
+    
+    const newPeriod: Period = {
+      id: `${day}-${Date.now()}`,
+      day,
+      startTime: newStartTime,
+      endTime: newEndTime,
+      subject: '',
+      type: 'class',
+    };
+    
+    setPeriods([...periods, newPeriod]);
+  };
+
+  const handleDeletePeriod = (periodId: string) => {
+    setPeriods(periods.filter((p) => p.id !== periodId));
   };
 
   return (
@@ -124,46 +160,95 @@ export function TimetableView() {
                     >
                       {isEditing ? (
                         <div className="space-y-2">
-                          <input
-                            type="text"
-                            value={editForm.subject || ''}
-                            onChange={(e) =>
-                              setEditForm({ ...editForm, subject: e.target.value })
+                          <Select
+                            value={editForm.type || 'class'}
+                            onValueChange={(value: 'class' | 'short-break' | 'long-break') =>
+                              setEditForm({ ...editForm, type: value })
                             }
-                            placeholder="Subject"
-                            className="w-full px-2 py-1 text-sm rounded bg-background border border-input"
-                          />
-                          <input
-                            type="text"
-                            value={editForm.teacher || ''}
-                            onChange={(e) =>
-                              setEditForm({ ...editForm, teacher: e.target.value })
-                            }
-                            placeholder="Teacher"
-                            className="w-full px-2 py-1 text-sm rounded bg-background border border-input"
-                          />
-                          <input
-                            type="text"
-                            value={editForm.room || ''}
-                            onChange={(e) =>
-                              setEditForm({ ...editForm, room: e.target.value })
-                            }
-                            placeholder="Room"
-                            className="w-full px-2 py-1 text-sm rounded bg-background border border-input"
-                          />
+                          >
+                            <SelectTrigger className="w-full h-8 text-sm">
+                              <SelectValue placeholder="Type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="class">Class</SelectItem>
+                              <SelectItem value="short-break">Short Break</SelectItem>
+                              <SelectItem value="long-break">Long Break</SelectItem>
+                            </SelectContent>
+                          </Select>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-xs opacity-75">Start</label>
+                              <Input
+                                type="time"
+                                value={editForm.startTime || ''}
+                                onChange={(e) =>
+                                  setEditForm({ ...editForm, startTime: e.target.value })
+                                }
+                                className="h-8 text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs opacity-75">End</label>
+                              <Input
+                                type="time"
+                                value={editForm.endTime || ''}
+                                onChange={(e) =>
+                                  setEditForm({ ...editForm, endTime: e.target.value })
+                                }
+                                className="h-8 text-sm"
+                              />
+                            </div>
+                          </div>
+
+                          {editForm.type === 'class' && (
+                            <>
+                              <Input
+                                type="text"
+                                value={editForm.subject || ''}
+                                onChange={(e) =>
+                                  setEditForm({ ...editForm, subject: e.target.value })
+                                }
+                                placeholder="Subject"
+                                className="h-8 text-sm"
+                              />
+                              <Input
+                                type="text"
+                                value={editForm.teacher || ''}
+                                onChange={(e) =>
+                                  setEditForm({ ...editForm, teacher: e.target.value })
+                                }
+                                placeholder="Teacher"
+                                className="h-8 text-sm"
+                              />
+                              <Input
+                                type="text"
+                                value={editForm.room || ''}
+                                onChange={(e) =>
+                                  setEditForm({ ...editForm, room: e.target.value })
+                                }
+                                placeholder="Room"
+                                className="h-8 text-sm"
+                              />
+                            </>
+                          )}
+
                           <div className="flex gap-2">
-                            <button
+                            <Button
                               onClick={handleSave}
-                              className="flex-1 flex items-center justify-center gap-1 px-2 py-1 text-sm bg-success text-success-foreground rounded hover:opacity-90"
+                              size="sm"
+                              className="flex-1 h-8 text-xs"
                             >
-                              <Save className="w-3 h-3" /> Save
-                            </button>
-                            <button
+                              <Save className="w-3 h-3 mr-1" /> Save
+                            </Button>
+                            <Button
                               onClick={handleCancel}
-                              className="flex-1 flex items-center justify-center gap-1 px-2 py-1 text-sm bg-destructive text-destructive-foreground rounded hover:opacity-90"
+                              variant="destructive"
+                              size="sm"
+                              className="flex-1 h-8 text-xs"
                             >
-                              <X className="w-3 h-3" /> Cancel
-                            </button>
+                              <X className="w-3 h-3 mr-1" /> Cancel
+                            </Button>
                           </div>
                         </div>
                       ) : (
@@ -172,23 +257,40 @@ export function TimetableView() {
                             <span className="text-xs font-medium opacity-75">
                               {period.startTime} - {period.endTime}
                             </span>
-                            <button
-                              onClick={() => handleEdit(period)}
-                              className="opacity-50 hover:opacity-100 transition-opacity"
-                            >
-                              <Edit2 className="w-3 h-3" />
-                            </button>
-                          </div>
-                          <div className="font-semibold text-sm">
-                            {period.subject || 'Free Period'}
-                          </div>
-                          {period.teacher && (
-                            <div className="text-xs opacity-75 mt-1">
-                              {period.teacher}
+                            <div className="flex gap-1">
+                              <button
+                                onClick={() => handleEdit(period)}
+                                className="opacity-50 hover:opacity-100 transition-opacity"
+                              >
+                                <Edit2 className="w-3 h-3" />
+                              </button>
+                              <button
+                                onClick={() => handleDeletePeriod(period.id)}
+                                className="opacity-50 hover:opacity-100 hover:text-destructive transition-all"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
                             </div>
-                          )}
-                          {period.room && (
-                            <div className="text-xs opacity-75">Room {period.room}</div>
+                          </div>
+                          
+                          {period.type === 'short-break' || period.type === 'long-break' ? (
+                            <div className="font-semibold text-sm">
+                              {period.type === 'short-break' ? '☕ Short Break' : '🍽️ Long Break'}
+                            </div>
+                          ) : (
+                            <>
+                              <div className="font-semibold text-sm">
+                                {period.subject || 'Free Period'}
+                              </div>
+                              {period.teacher && (
+                                <div className="text-xs opacity-75 mt-1">
+                                  {period.teacher}
+                                </div>
+                              )}
+                              {period.room && (
+                                <div className="text-xs opacity-75">Room {period.room}</div>
+                              )}
+                            </>
                           )}
                         </>
                       )}
@@ -196,6 +298,15 @@ export function TimetableView() {
                   );
                 })}
               </div>
+              
+              <Button
+                onClick={() => handleAddPeriod(day)}
+                variant="outline"
+                size="sm"
+                className="w-full mt-2 h-8 text-xs"
+              >
+                <Plus className="w-3 h-3 mr-1" /> Add Period
+              </Button>
             </div>
           );
         })}
