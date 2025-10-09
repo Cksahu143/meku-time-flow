@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Sidebar } from '@/components/Sidebar';
+import { MobileSidebar } from '@/components/MobileSidebar';
 import { TimetableView } from '@/components/TimetableView';
 import { CalendarView } from '@/components/CalendarView';
 import { TodoView } from '@/components/TodoView';
@@ -42,7 +43,10 @@ const Index = () => {
 
   return (
     <div className="flex min-h-screen w-full bg-background">
-      <Sidebar currentView={currentView} onViewChange={setCurrentView} />
+      <div className="hidden md:block">
+        <Sidebar currentView={currentView} onViewChange={setCurrentView} />
+      </div>
+      <MobileSidebar currentView={currentView} onViewChange={setCurrentView} />
       
       <main className="flex-1 overflow-auto">
         {currentView === 'timetable' && <TimetableView />}

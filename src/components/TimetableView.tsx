@@ -1,11 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Period } from '@/types';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { Clock, Edit2, Save, X, Plus, Trash2 } from 'lucide-react';
+import { useTimetable } from '@/hooks/useTimetable';
+import { Clock, Edit2, Save, X, Plus, Trash2, Coffee, Clock3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ShareTimetableDialog } from '@/components/ShareTimetableDialog';
+import { ThemeCustomization } from '@/components/ThemeCustomization';
+import { TodayScheduleWidget } from '@/components/TodayScheduleWidget';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const DEFAULT_PERIODS: Period[] = [];
@@ -27,9 +30,28 @@ DAYS.forEach((day, dayIndex) => {
 });
 
 export function TimetableView() {
-  const [periods, setPeriods] = useLocalStorage<Period[]>('timetable', DEFAULT_PERIODS);
+  const { currentTimetable, updatePeriods, updateThemeColors, loading } = useTimetable();
   const [editingPeriod, setEditingPeriod] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Period>>({});
+
+  const periods = currentTimetable?.periods || [];
+  const themeColors = currentTimetable?.theme_colors || {};
+
+  // Migrate localStorage data on first load
+  useEffect(() => {
+    const localData = localStorage.getItem('timetable');
+    if (localData && currentTimetable && currentTimetable.periods.length === 0) {
+      const parsedData = JSON.parse(localData);
+      if (parsedData.length > 0) {
+        updatePeriods(parsedData);
+        localStorage.removeItem('timetable'); // Clean up old data
+      }
+    }
+  }, [currentTimetable]);
+
+  const setPeriods = async (newPeriods: Period[]) => {
+    await updatePeriods(newPeriods);
+  };
 
   const getCurrentDay = () => {
     const day = new Date().getDay();
@@ -116,15 +138,54 @@ export function TimetableView() {
     setPeriods(periods.filter((p) => p.id !== periodId));
   };
 
+  const uniqueSubjects = Array.from(
+    new Set(periods.filter(p => p.type === 'class' && p.subject).map(p => p.subject))
+  );
+
+  const getPeriodStyle = (period: Period) => {
+    if (period.type !== 'class') return {};
+    const color = themeColors[period.subject];
+    return color ? { borderLeft: `4px solid ${color}` } : {};
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p>Loading timetable...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6 animate-slide-in-right">
-      <div className="flex items-center gap-3 mb-6">
-        <Clock className="w-8 h-8 text-primary" />
-        <h2 className="text-3xl font-bold text-foreground">Weekly Timetable</h2>
+    <div className="p-4 md:p-6 animate-slide-in-right">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <Clock className="w-8 h-8 text-primary" />
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground">Weekly Timetable</h2>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {currentTimetable && (
+            <>
+              <ShareTimetableDialog timetableId={currentTimetable.id} />
+              <ThemeCustomization
+                subjects={uniqueSubjects}
+                themeColors={themeColors}
+                onUpdateColors={updateThemeColors}
+              />
+            </>
+          )}
+        </div>
       </div>
 
-      <div className="grid grid-cols-6 gap-4">
-        {DAYS.map((day) => {
+      {/* Today's Schedule Widget on Mobile */}
+      <div className="md:hidden mb-6">
+        <TodayScheduleWidget periods={periods} themeColors={themeColors} />
+      </div>
+
+      <div className="flex gap-6">
+        <div className="flex-1 overflow-x-auto">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 min-w-max">
+            {DAYS.map((day) => {
           const isToday = day === currentDay;
 
           return (
@@ -308,8 +369,15 @@ export function TimetableView() {
                 <Plus className="w-3 h-3 mr-1" /> Add Period
               </Button>
             </div>
-          );
-        })}
+            );
+          })}
+          </div>
+        </div>
+
+        {/* Today's Schedule Widget on Desktop */}
+        <div className="hidden md:block w-80 flex-shrink-0">
+          <TodayScheduleWidget periods={periods} themeColors={themeColors} />
+        </div>
       </div>
     </div>
   );

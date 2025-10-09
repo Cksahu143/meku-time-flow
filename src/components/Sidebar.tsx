@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { InvitationNotifications } from '@/components/InvitationNotifications';
+import { ProfileSettings } from '@/components/ProfileSettings';
 
 interface SidebarProps {
   currentView: ViewType;
@@ -41,10 +43,18 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
   return (
     <aside className="w-60 h-screen bg-card border-r border-border flex flex-col shadow-md">
       <div className="p-6 border-b border-border">
-        <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-          Meku
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">School Planner</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+              Meku
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">School Planner</p>
+          </div>
+          <div className="flex gap-1">
+            <InvitationNotifications />
+            <ProfileSettings />
+          </div>
+        </div>
       </div>
 
       <nav className="flex-1 p-4 space-y-2">
