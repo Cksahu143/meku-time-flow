@@ -46,7 +46,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              Meku
+              EducationAssist
             </h1>
             <p className="text-sm text-muted-foreground mt-1">School Planner</p>
           </div>
@@ -105,7 +105,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
           Sign Out
         </Button>
         <div className="text-xs text-muted-foreground text-center pt-2">
-          © 2025 Meku Planner
+          © 2025 EducationAssist
         </div>
       </div>
     </aside>
