@@ -40,14 +40,14 @@ const Index = () => {
   }
 
   return (
-    <div className="flex min-h-screen w-full bg-background">
-      <div className="hidden md:block">
+    <div className="flex min-h-screen h-screen w-full bg-background overflow-hidden">
+      <div className="hidden md:block flex-shrink-0">
         <Sidebar currentView={currentView} onViewChange={setCurrentView} />
       </div>
       <MobileSidebar currentView={currentView} onViewChange={setCurrentView} />
       
       <AnimatedBackground viewType={currentView}>
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 w-full h-full overflow-auto">
           {currentView === 'timetable' && <TimetableView />}
           {currentView === 'calendar' && <CalendarView />}
           {currentView === 'todo' && <TodoView />}
