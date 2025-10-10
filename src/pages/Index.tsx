@@ -7,6 +7,8 @@ import { TimetableView } from '@/components/TimetableView';
 import { CalendarView } from '@/components/CalendarView';
 import { TodoView } from '@/components/TodoView';
 import { PomodoroView } from '@/components/PomodoroView';
+import { AnimatedBackground } from '@/components/AnimatedBackground';
+import { LoadingScreen } from '@/components/LoadingScreen';
 import { ViewType } from '@/types';
 
 const Index = () => {
@@ -34,11 +36,7 @@ const Index = () => {
   }, [navigate]);
 
   if (loading) {
-    return (
-      <div className="flex min-h-screen w-full items-center justify-center bg-background">
-        <div className="text-lg">Loading...</div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   return (
@@ -48,12 +46,14 @@ const Index = () => {
       </div>
       <MobileSidebar currentView={currentView} onViewChange={setCurrentView} />
       
-      <main className="flex-1 overflow-auto">
-        {currentView === 'timetable' && <TimetableView />}
-        {currentView === 'calendar' && <CalendarView />}
-        {currentView === 'todo' && <TodoView />}
-        {currentView === 'pomodoro' && <PomodoroView />}
-      </main>
+      <AnimatedBackground viewType={currentView}>
+        <main className="flex-1 overflow-auto">
+          {currentView === 'timetable' && <TimetableView />}
+          {currentView === 'calendar' && <CalendarView />}
+          {currentView === 'todo' && <TodoView />}
+          {currentView === 'pomodoro' && <PomodoroView />}
+        </main>
+      </AnimatedBackground>
     </div>
   );
 };

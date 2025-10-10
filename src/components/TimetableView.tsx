@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Period } from '@/types';
 import { useTimetable } from '@/hooks/useTimetable';
-import { Clock, Edit2, Save, X, Plus, Trash2, Coffee, Clock3 } from 'lucide-react';
+import { Clock, Edit2, Save, X, Plus, Trash2, Coffee, Clock3, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,7 +30,7 @@ DAYS.forEach((day, dayIndex) => {
 });
 
 export function TimetableView() {
-  const { currentTimetable, updatePeriods, updateThemeColors, loading } = useTimetable();
+  const { timetables, currentTimetable, setCurrentTimetable, updatePeriods, updateThemeColors, loading } = useTimetable();
   const [editingPeriod, setEditingPeriod] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Period>>({});
 
@@ -161,12 +161,32 @@ export function TimetableView() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
           <Clock className="w-8 h-8 text-primary" />
-          <h2 className="text-2xl md:text-3xl font-bold text-foreground">Weekly Timetable</h2>
+          <div>
+            <h2 className="text-2xl md:text-3xl font-bold text-foreground">Weekly Timetable</h2>
+            {timetables.length > 1 && (
+              <select
+                value={currentTimetable?.id || ''}
+                onChange={(e) => {
+                  const selected = timetables.find(t => t.id === e.target.value);
+                  if (selected) setCurrentTimetable(selected);
+                }}
+                className="mt-1 text-sm px-3 py-1 rounded-lg border border-input bg-background"
+              >
+                {timetables.map(t => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} {t.user_id !== (currentTimetable?.user_id) ? '(Shared)' : ''}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           {currentTimetable && (
             <>
-              <ShareTimetableDialog timetableId={currentTimetable.id} />
+              {currentTimetable.user_id === currentTimetable.user_id && (
+                <ShareTimetableDialog timetableId={currentTimetable.id} />
+              )}
               <ThemeCustomization
                 subjects={uniqueSubjects}
                 themeColors={themeColors}

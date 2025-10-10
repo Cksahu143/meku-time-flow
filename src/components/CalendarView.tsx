@@ -107,7 +107,7 @@ export function CalendarView() {
             <button
               onClick={() => setViewType('month')}
               className={cn(
-                'px-4 py-2 rounded-lg font-medium transition-all',
+                'px-4 py-2 rounded-lg font-medium transition-all hover:scale-105',
                 viewType === 'month'
                   ? 'bg-gradient-primary text-primary-foreground shadow-md'
                   : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
@@ -118,7 +118,7 @@ export function CalendarView() {
             <button
               onClick={() => setViewType('week')}
               className={cn(
-                'px-4 py-2 rounded-lg font-medium transition-all',
+                'px-4 py-2 rounded-lg font-medium transition-all hover:scale-105',
                 viewType === 'week'
                   ? 'bg-gradient-primary text-primary-foreground shadow-md'
                   : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
@@ -127,27 +127,28 @@ export function CalendarView() {
               Week
             </button>
           </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => (viewType === 'month' ? navigateMonth(-1) : navigateWeek(-1))}
-              className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-all hover:scale-110"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-
-            <div className="text-lg font-semibold min-w-[200px] text-center">
-              {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-            </div>
-
-            <button
-              onClick={() => (viewType === 'month' ? navigateMonth(1) : navigateWeek(1))}
-              className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-all hover:scale-110"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
         </div>
+      </div>
+
+      {/* Centered Navigation Header */}
+      <div className="flex items-center justify-center gap-6 mb-6">
+        <button
+          onClick={() => (viewType === 'month' ? navigateMonth(-1) : navigateWeek(-1))}
+          className="p-3 rounded-lg bg-secondary hover:bg-secondary/80 transition-all hover:scale-110 active:scale-95"
+        >
+          <ChevronLeft className="w-6 h-6 animate-bounce-x" />
+        </button>
+
+        <div className="text-2xl font-bold min-w-[250px] text-center bg-gradient-primary bg-clip-text text-transparent">
+          {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+        </div>
+
+        <button
+          onClick={() => (viewType === 'month' ? navigateMonth(1) : navigateWeek(1))}
+          className="p-3 rounded-lg bg-secondary hover:bg-secondary/80 transition-all hover:scale-110 active:scale-95"
+        >
+          <ChevronRight className="w-6 h-6 animate-bounce-x" />
+        </button>
       </div>
 
       {viewType === 'month' ? (

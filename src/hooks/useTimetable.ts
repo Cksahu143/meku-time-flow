@@ -28,15 +28,40 @@ export const useTimetable = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await supabase
+      // Load owned timetables
+      const { data: ownedData, error: ownedError } = await supabase
         .from('timetables')
         .select('*')
         .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (ownedError) throw ownedError;
 
-      if (data && data.length > 0) {
-        const timetables = data.map(t => ({
+      // Load shared timetables
+      const { data: sharedData, error: sharedError } = await supabase
+        .from('shared_timetables')
+        .select('timetable_id')
+        .eq('user_id', user.id);
+
+      if (sharedError) throw sharedError;
+
+      // Fetch the actual timetable data for shared timetables
+      let sharedTimetables: any[] = [];
+      if (sharedData && sharedData.length > 0) {
+        const timetableIds = sharedData.map(s => s.timetable_id);
+        const { data: sharedTimetableData, error: sharedTimetableError } = await supabase
+          .from('timetables')
+          .select('*')
+          .in('id', timetableIds);
+
+        if (sharedTimetableError) throw sharedTimetableError;
+        sharedTimetables = sharedTimetableData || [];
+      }
+
+      // Combine owned and shared timetables
+      const allTimetablesData = [...(ownedData || []), ...sharedTimetables];
+
+      if (allTimetablesData.length > 0) {
+        const timetables = allTimetablesData.map(t => ({
           ...t,
           periods: t.periods as unknown as Period[],
           theme_colors: (t.theme_colors as unknown as Record<string, string>) || {},

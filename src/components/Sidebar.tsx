@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, Clock, ListTodo, Timer, Moon, Sun, LogOut } from 'lucide-react';
+import { Calendar, Clock, ListTodo, Timer, Moon, Sun, Palette, LogOut } from 'lucide-react';
 import { ViewType } from '@/types';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/providers/ThemeProvider';
@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { InvitationNotifications } from '@/components/InvitationNotifications';
 import { ProfileSettings } from '@/components/ProfileSettings';
+import { MusicPlayer } from '@/components/MusicPlayer';
 
 interface SidebarProps {
   currentView: ViewType;
@@ -82,28 +83,44 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
       </nav>
 
       <div className="p-4 border-t border-border space-y-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          className="w-full"
-        >
-          {theme === 'dark' ? (
-            <Sun className="w-4 h-4 mr-2" />
-          ) : (
-            <Moon className="w-4 h-4 mr-2" />
-          )}
-          {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleSignOut}
-          className="w-full"
-        >
-          <LogOut className="w-4 h-4 mr-2" />
-          Sign Out
-        </Button>
+        <div className="flex gap-2 mb-2">
+          <Button
+            variant={theme === 'light' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setTheme('light')}
+            className="flex-1"
+          >
+            <Sun className="w-4 h-4" />
+          </Button>
+          <Button
+            variant={theme === 'dark' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setTheme('dark')}
+            className="flex-1"
+          >
+            <Moon className="w-4 h-4" />
+          </Button>
+          <Button
+            variant={theme === 'pastel' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setTheme('pastel')}
+            className="flex-1"
+          >
+            <Palette className="w-4 h-4" />
+          </Button>
+        </div>
+        <div className="flex gap-2">
+          <MusicPlayer />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSignOut}
+            className="flex-1"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Sign Out
+          </Button>
+        </div>
         <div className="text-xs text-muted-foreground text-center pt-2">
           © 2025 EducationAssist
         </div>
