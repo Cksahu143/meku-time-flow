@@ -7,12 +7,29 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { Users } from 'lucide-react';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+
+interface Profile {
+  id: string;
+  username: string | null;
+  email: string;
+  avatar_url: string | null;
+  last_seen: string | null;
+}
 
 const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -31,19 +48,40 @@ const Auth = () => {
       }
     });
 
+    fetchProfiles();
+
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  const fetchProfiles = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, username, email, avatar_url, last_seen')
+        .order('last_seen', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      if (data) setProfiles(data);
+    } catch (error) {
+      console.error('Error fetching profiles:', error);
+    }
+  };
+
+  const isUserActive = (lastSeen: string | null) => {
+    if (!lastSeen) return false;
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    return new Date(lastSeen) > fiveMinutesAgo;
+  };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signInWithOtp({
         email,
-        password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
           data: {
             username,
           },
@@ -57,9 +95,44 @@ const Auth = () => {
           description: error.message,
         });
       } else {
+        setOtpSent(true);
+        toast({
+          title: 'Verification Code Sent!',
+          description: 'Please check your email for the 6-digit code.',
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'An unexpected error occurred',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token: otp,
+        type: 'email',
+      });
+
+      if (error) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: error.message,
+        });
+      } else {
         toast({
           title: 'Success!',
-          description: 'Account created successfully. You can now sign in.',
+          description: 'Email verified successfully!',
         });
       }
     } catch (error) {
@@ -103,7 +176,8 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
+      <div className="flex flex-col md:flex-row gap-6 w-full max-w-5xl">
+        <Card className="w-full md:w-2/3">
         <CardHeader className="space-y-1">
           <CardTitle className="text-3xl font-bold text-center bg-gradient-primary bg-clip-text text-transparent">
             EducationAssist
@@ -150,49 +224,133 @@ const Auth = () => {
             </TabsContent>
             
             <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-username">Username</Label>
-                  <Input
-                    id="signup-username"
-                    type="text"
-                    placeholder="Your username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    placeholder="your@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Creating account...' : 'Sign Up'}
-                </Button>
-              </form>
+              {!otpSent ? (
+                <form onSubmit={handleSignUp} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-username">Username</Label>
+                    <Input
+                      id="signup-username"
+                      type="text"
+                      placeholder="Your username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email">Email (Gmail)</Label>
+                    <Input
+                      id="signup-email"
+                      type="email"
+                      placeholder="your@gmail.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? 'Sending code...' : 'Send Verification Code'}
+                  </Button>
+                </form>
+              ) : (
+                <form onSubmit={handleVerifyOtp} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Enter 6-Digit Code</Label>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Check your email: {email}
+                    </p>
+                    <div className="flex justify-center">
+                      <InputOTP
+                        maxLength={6}
+                        value={otp}
+                        onChange={(value) => setOtp(value)}
+                      >
+                        <InputOTPGroup>
+                          <InputOTPSlot index={0} />
+                          <InputOTPSlot index={1} />
+                          <InputOTPSlot index={2} />
+                          <InputOTPSlot index={3} />
+                          <InputOTPSlot index={4} />
+                          <InputOTPSlot index={5} />
+                        </InputOTPGroup>
+                      </InputOTP>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-1/2"
+                      onClick={() => {
+                        setOtpSent(false);
+                        setOtp('');
+                      }}
+                    >
+                      Back
+                    </Button>
+                    <Button type="submit" className="w-1/2" disabled={loading || otp.length !== 6}>
+                      {loading ? 'Verifying...' : 'Verify Code'}
+                    </Button>
+                  </div>
+                </form>
+              )}
             </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
+
+      <Card className="w-full md:w-1/3">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Users className="w-5 h-5 text-primary" />
+            <CardTitle className="text-lg">Active Users</CardTitle>
+          </div>
+          <CardDescription>Users with accounts</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-[400px] pr-4">
+            <div className="space-y-4">
+              {profiles.map((profile, index) => (
+                <div key={profile.id}>
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <Avatar>
+                        <AvatarImage src={profile.avatar_url || undefined} />
+                        <AvatarFallback className="bg-primary/10 text-primary">
+                          {(profile.username || profile.email || 'U').charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      {isUserActive(profile.last_seen) && (
+                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-success border-2 border-background rounded-full" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">
+                        {profile.username || 'Anonymous'}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {profile.email}
+                      </p>
+                    </div>
+                    {isUserActive(profile.last_seen) && (
+                      <Badge variant="outline" className="text-xs border-success text-success">
+                        Active
+                      </Badge>
+                    )}
+                  </div>
+                  {index < profiles.length - 1 && <Separator className="mt-4" />}
+                </div>
+              ))}
+              {profiles.length === 0 && (
+                <p className="text-center text-muted-foreground text-sm py-8">
+                  No users yet
+                </p>
+              )}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+      </div>
     </div>
   );
 };

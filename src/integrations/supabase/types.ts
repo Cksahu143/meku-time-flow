@@ -16,31 +16,37 @@ export type Database = {
     Tables: {
       profiles: {
         Row: {
+          avatar_url: string | null
           created_at: string
           display_name: string | null
           email: string
           id: string
           is_public: boolean | null
+          last_seen: string | null
           theme: string | null
           updated_at: string
           username: string | null
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string
           display_name?: string | null
           email: string
           id: string
           is_public?: boolean | null
+          last_seen?: string | null
           theme?: string | null
           updated_at?: string
           username?: string | null
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string
           display_name?: string | null
           email?: string
           id?: string
           is_public?: boolean | null
+          last_seen?: string | null
           theme?: string | null
           updated_at?: string
           username?: string | null
