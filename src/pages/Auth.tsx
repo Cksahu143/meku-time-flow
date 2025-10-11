@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Users } from 'lucide-react';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+
 
 interface Profile {
   id: string;
@@ -27,8 +27,6 @@ const Auth = () => {
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
-  const [otp, setOtp] = useState('');
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -79,10 +77,10 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithOtp({
+      const { error } = await supabase.auth.signUp({
         email,
+        password,
         options: {
-          shouldCreateUser: true,
           data: {
             username,
           },
@@ -96,44 +94,9 @@ const Auth = () => {
           description: error.message,
         });
       } else {
-        setOtpSent(true);
-        toast({
-          title: 'Verification Code Sent!',
-          description: 'Please check your email for the 6-digit code.',
-        });
-      }
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'An unexpected error occurred',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const { error } = await supabase.auth.verifyOtp({
-        email,
-        token: otp,
-        type: 'email',
-      });
-
-      if (error) {
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: error.message,
-        });
-      } else {
         toast({
           title: 'Success!',
-          description: 'Email verified successfully!',
+          description: 'Account created successfully!',
         });
       }
     } catch (error) {
@@ -225,76 +188,44 @@ const Auth = () => {
             </TabsContent>
             
             <TabsContent value="signup">
-              {!otpSent ? (
-                <form onSubmit={handleSignUp} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-username">Username</Label>
-                    <Input
-                      id="signup-username"
-                      type="text"
-                      placeholder="Your username"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email (Gmail)</Label>
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      placeholder="your@gmail.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? 'Sending code...' : 'Send Verification Code'}
-                  </Button>
-                </form>
-              ) : (
-                <form onSubmit={handleVerifyOtp} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Enter 6-Digit Code</Label>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Check your email: {email}
-                    </p>
-                    <div className="flex justify-center">
-                      <InputOTP
-                        maxLength={6}
-                        value={otp}
-                        onChange={(value) => setOtp(value)}
-                      >
-                        <InputOTPGroup>
-                          <InputOTPSlot index={0} />
-                          <InputOTPSlot index={1} />
-                          <InputOTPSlot index={2} />
-                          <InputOTPSlot index={3} />
-                          <InputOTPSlot index={4} />
-                          <InputOTPSlot index={5} />
-                        </InputOTPGroup>
-                      </InputOTP>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-1/2"
-                      onClick={() => {
-                        setOtpSent(false);
-                        setOtp('');
-                      }}
-                    >
-                      Back
-                    </Button>
-                    <Button type="submit" className="w-1/2" disabled={loading || otp.length !== 6}>
-                      {loading ? 'Verifying...' : 'Verify Code'}
-                    </Button>
-                  </div>
-                </form>
-              )}
+              <form onSubmit={handleSignUp} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="signup-username">Username</Label>
+                  <Input
+                    id="signup-username"
+                    type="text"
+                    placeholder="Your username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email">Email</Label>
+                  <Input
+                    id="signup-email"
+                    type="email"
+                    placeholder="your@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-password">Password</Label>
+                  <Input
+                    id="signup-password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? 'Creating account...' : 'Sign Up'}
+                </Button>
+              </form>
             </TabsContent>
           </Tabs>
         </CardContent>

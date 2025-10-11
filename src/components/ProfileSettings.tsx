@@ -12,14 +12,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Settings } from 'lucide-react';
+import { Settings, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export const ProfileSettings: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [isPublic, setIsPublic] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -44,9 +47,59 @@ export const ProfileSettings: React.FC = () => {
       if (data) {
         setDisplayName(data.display_name || '');
         setIsPublic(data.is_public || false);
+        setAvatarUrl(data.avatar_url || null);
       }
     } catch (error) {
       console.error('Error loading profile:', error);
+    }
+  };
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setUploading(true);
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${Math.random()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      setAvatarUrl(publicUrl);
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: user.id,
+          email: user.email!,
+          avatar_url: publicUrl,
+        });
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: 'Avatar updated',
+        description: 'Your profile picture has been changed',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to upload avatar',
+        variant: 'destructive',
+      });
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -63,6 +116,7 @@ export const ProfileSettings: React.FC = () => {
           email: user.email!,
           display_name: displayName,
           is_public: isPublic,
+          avatar_url: avatarUrl,
         });
 
       if (error) throw error;
@@ -100,6 +154,41 @@ export const ProfileSettings: React.FC = () => {
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 pt-4">
+          <div className="space-y-2">
+            <Label>Profile Picture</Label>
+            <div className="flex items-center gap-4">
+              <Avatar className="h-20 w-20">
+                <AvatarImage src={avatarUrl || undefined} />
+                <AvatarFallback className="bg-primary/10 text-primary text-xl">
+                  {displayName?.charAt(0)?.toUpperCase() || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  disabled={uploading}
+                  className="hidden"
+                  id="avatar-upload"
+                />
+                <Label htmlFor="avatar-upload">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={uploading}
+                    asChild
+                  >
+                    <span className="cursor-pointer">
+                      <Upload className="w-4 h-4 mr-2" />
+                      {uploading ? 'Uploading...' : 'Upload Photo'}
+                    </span>
+                  </Button>
+                </Label>
+              </div>
+            </div>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="displayName">Display Name</Label>
             <Input

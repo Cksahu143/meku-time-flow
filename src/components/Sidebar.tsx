@@ -1,5 +1,5 @@
-import React from 'react';
-import { Calendar, Clock, ListTodo, Timer, Moon, Sun, Palette, LogOut } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Calendar, Clock, ListTodo, Timer, Moon, Sun, Palette, LogOut, Users } from 'lucide-react';
 import { ViewType } from '@/types';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/providers/ThemeProvider';
@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { InvitationNotifications } from '@/components/InvitationNotifications';
 import { ProfileSettings } from '@/components/ProfileSettings';
 import { MusicPlayer } from '@/components/MusicPlayer';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface SidebarProps {
   currentView: ViewType;
@@ -20,6 +21,28 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [profile, setProfile] = useState<{ avatar_url: string | null; display_name: string | null; username: string | null } | null>(null);
+
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  const loadProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase
+        .from('profiles')
+        .select('avatar_url, display_name, username')
+        .eq('id', user.id)
+        .single();
+
+      if (data) setProfile(data);
+    } catch (error) {
+      console.error('Error loading profile:', error);
+    }
+  };
   
   const navItems = [
     { id: 'timetable' as ViewType, label: 'Timetable', icon: Clock },
@@ -44,7 +67,13 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
   return (
     <aside className="w-60 h-screen bg-card border-r border-border flex flex-col shadow-md overflow-hidden">
       <div className="p-4 border-b border-border flex-shrink-0">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-3 mb-3">
+          <Avatar className="h-12 w-12 cursor-pointer" onClick={() => document.getElementById('avatar-upload')?.click()}>
+            <AvatarImage src={profile?.avatar_url || undefined} />
+            <AvatarFallback className="bg-primary/10 text-primary">
+              {(profile?.display_name || profile?.username || 'U').charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
           <div className="flex-1 min-w-0">
             <h1 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent truncate">
               EducationAssist
@@ -53,6 +82,14 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
           </div>
         </div>
         <div className="flex gap-1 justify-end">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/active-users')}
+            title="View Active Users"
+          >
+            <Users className="h-5 w-5" />
+          </Button>
           <InvitationNotifications />
           <ProfileSettings />
         </div>
