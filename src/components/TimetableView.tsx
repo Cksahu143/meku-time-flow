@@ -157,7 +157,7 @@ export function TimetableView() {
   }
 
   return (
-    <div className="p-4 md:p-6 animate-slide-in-right">
+    <div className="min-h-full h-full p-4 md:p-6 lg:p-8 animate-slide-in-right">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
           <Clock className="w-8 h-8 text-primary" />

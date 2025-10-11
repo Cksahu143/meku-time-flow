@@ -47,7 +47,7 @@ const Index = () => {
       <MobileSidebar currentView={currentView} onViewChange={setCurrentView} />
       
       <AnimatedBackground viewType={currentView}>
-        <main className="flex-1 w-full h-full overflow-auto">
+        <main className="flex-1 w-full h-screen overflow-y-auto overflow-x-hidden pt-16 md:pt-0">
           {currentView === 'timetable' && <TimetableView />}
           {currentView === 'calendar' && <CalendarView />}
           {currentView === 'todo' && <TodoView />}

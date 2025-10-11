@@ -72,11 +72,11 @@ export function AnimatedBackground({ children, viewType }: AnimatedBackgroundPro
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <div className="relative flex-1 h-full overflow-hidden">
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {getBackgroundElements()}
       </div>
-      <div className="relative z-10">{children}</div>
+      <div className="relative z-10 h-full">{children}</div>
     </div>
   );
 }

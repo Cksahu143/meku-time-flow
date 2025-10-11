@@ -95,7 +95,7 @@ export function CalendarView() {
   const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   return (
-    <div className="p-6 animate-slide-in-right">
+    <div className="min-h-full h-full p-4 md:p-6 lg:p-8 animate-slide-in-right">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <CalendarIcon className="w-8 h-8 text-primary" />
