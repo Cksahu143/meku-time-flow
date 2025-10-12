@@ -34,7 +34,7 @@ const Auth = () => {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigate('/');
+        navigate('/app');
       }
     });
 
@@ -42,7 +42,7 @@ const Auth = () => {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
-        navigate('/');
+        navigate('/app');
       }
     });
 
@@ -115,9 +115,11 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithOtp({
         email,
-        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/app`,
+        },
       });
 
       if (error) {
@@ -125,6 +127,11 @@ const Auth = () => {
           variant: 'destructive',
           title: 'Error',
           description: error.message,
+        });
+      } else {
+        toast({
+          title: 'Check your email!',
+          description: 'We sent you a magic link to sign in.',
         });
       }
     } catch (error) {
@@ -170,20 +177,12 @@ const Auth = () => {
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signin-password">Password</Label>
-                  <Input
-                    id="signin-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Signing in...' : 'Sign In'}
+                  {loading ? 'Sending magic link...' : 'Send Magic Link'}
                 </Button>
+                <p className="text-sm text-muted-foreground text-center">
+                  We'll send you an email with a link to sign in
+                </p>
               </form>
             </TabsContent>
             

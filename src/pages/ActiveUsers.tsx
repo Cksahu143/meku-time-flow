@@ -76,7 +76,7 @@ const ActiveUsers = () => {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/app')}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
