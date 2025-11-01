@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, ListTodo, Timer, Moon, Sun, Palette, LogOut, Users } from 'lucide-react';
+import { Calendar, Clock, ListTodo, Timer, Moon, Sun, Palette, LogOut, Users, MessageSquare } from 'lucide-react';
 import { ViewType } from '@/types';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/providers/ThemeProvider';
@@ -49,6 +49,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
     { id: 'calendar' as ViewType, label: 'Calendar', icon: Calendar },
     { id: 'todo' as ViewType, label: 'To-Do List', icon: ListTodo },
     { id: 'pomodoro' as ViewType, label: 'Pomodoro', icon: Timer },
+    { id: 'groups' as ViewType, label: 'Groups', icon: MessageSquare },
   ];
 
   const handleSignOut = async () => {

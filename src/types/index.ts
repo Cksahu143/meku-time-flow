@@ -18,8 +18,44 @@ export interface Task {
   linkedPeriodId?: string;
 }
 
-export type ViewType = 'timetable' | 'calendar' | 'todo' | 'pomodoro';
+export type ViewType = 'timetable' | 'calendar' | 'todo' | 'pomodoro' | 'groups';
 export type CalendarViewType = 'month' | 'week';
+
+export interface Group {
+  id: string;
+  name: string;
+  description?: string;
+  avatar_url?: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GroupMember {
+  id: string;
+  group_id: string;
+  user_id: string;
+  role: 'admin' | 'member';
+  joined_at: string;
+}
+
+export interface GroupInvitation {
+  id: string;
+  group_id: string;
+  invited_by: string;
+  invited_user_id: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Message {
+  id: string;
+  group_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+}
 
 export interface PomodoroSettings {
   workDuration: number;

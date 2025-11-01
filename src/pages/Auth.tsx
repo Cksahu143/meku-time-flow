@@ -115,11 +115,9 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithOtp({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/app`,
-        },
+        password,
       });
 
       if (error) {
@@ -127,11 +125,6 @@ const Auth = () => {
           variant: 'destructive',
           title: 'Error',
           description: error.message,
-        });
-      } else {
-        toast({
-          title: 'Check your email!',
-          description: 'We sent you a magic link to sign in.',
         });
       }
     } catch (error) {
@@ -177,12 +170,20 @@ const Auth = () => {
                     required
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signin-password">Password</Label>
+                  <Input
+                    id="signin-password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Sending magic link...' : 'Send Magic Link'}
+                  {loading ? 'Signing in...' : 'Sign In'}
                 </Button>
-                <p className="text-sm text-muted-foreground text-center">
-                  We'll send you an email with a link to sign in
-                </p>
               </form>
             </TabsContent>
             
