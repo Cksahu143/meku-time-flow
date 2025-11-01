@@ -155,7 +155,6 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup }:
         <div className="space-y-4">
           {messages.map((message) => {
             const profile = profiles[message.user_id];
-            const isOwnMessage = message.user_id === (supabase.auth.getUser().then(r => r.data.user?.id));
 
             return (
               <div key={message.id} className="animate-fade-in">
