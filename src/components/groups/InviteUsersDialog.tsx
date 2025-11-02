@@ -49,12 +49,12 @@ export const InviteUsersDialog = ({ open, onOpenChange, groupId }: InviteUsersDi
 
       let query = supabase
         .from('profiles')
-        .select('id, username, display_name, avatar_url')
+        .select('id, username, display_name, avatar_url, email')
         .neq('id', currentUser.id)
         .not('id', 'in', `(${memberIds.join(',')})`);
 
       if (searchQuery) {
-        query = query.or(`username.ilike.%${searchQuery}%,display_name.ilike.%${searchQuery}%`);
+        query = query.or(`username.ilike.%${searchQuery}%,display_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`);
       }
 
       const { data, error } = await query.limit(10);
@@ -134,7 +134,7 @@ export const InviteUsersDialog = ({ open, onOpenChange, groupId }: InviteUsersDi
               id="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by username..."
+              placeholder="Search by username or email..."
             />
           </div>
           <ScrollArea className="h-64">
