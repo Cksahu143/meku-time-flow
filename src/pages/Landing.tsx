@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar, CheckSquare, Clock, Layout } from 'lucide-react';
+import { Calendar, CheckSquare, Clock, Layout, MessageSquare } from 'lucide-react';
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -27,6 +27,11 @@ const Landing = () => {
       icon: <Clock className="w-12 h-12 text-primary-glow" />,
       title: "Pomodoro Timer",
       description: "Boost productivity with built-in focus timer and break reminders"
+    },
+    {
+      icon: <MessageSquare className="w-12 h-12 text-accent" />,
+      title: "Group Chats",
+      description: "Collaborate with classmates in real-time group conversations"
     }
   ];
 
@@ -64,7 +69,7 @@ const Landing = () => {
       {/* Features Grid */}
       <section className="container mx-auto px-4 py-16">
         <h3 className="text-3xl font-bold text-center mb-12">Everything You Need to Succeed</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           {features.map((feature, index) => (
             <Card key={index} className="border-2 hover:border-primary transition-colors hover:shadow-lg">
               <CardHeader>
