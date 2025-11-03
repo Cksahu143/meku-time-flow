@@ -81,17 +81,31 @@ export const CreateGroupDialog = ({ open, onOpenChange, onCreateGroup }: CreateG
           .in('email', inviteEmails);
 
         if (profiles && profiles.length > 0) {
-          const invitations = profiles.map(profile => ({
-            group_id: group.id,
-            invited_by: user.id,
-            invited_user_id: profile.id,
-          }));
+          // Check for existing invitations
+          const { data: existingInvitations } = await supabase
+            .from('group_invitations')
+            .select('invited_user_id')
+            .eq('group_id', group.id)
+            .in('invited_user_id', profiles.map(p => p.id));
 
-          await supabase.from('group_invitations').insert(invitations);
+          const existingUserIds = new Set(existingInvitations?.map(inv => inv.invited_user_id) || []);
+          const newProfiles = profiles.filter(p => !existingUserIds.has(p.id));
+
+          if (newProfiles.length > 0) {
+            const invitations = newProfiles.map(profile => ({
+              group_id: group.id,
+              invited_by: user.id,
+              invited_user_id: profile.id,
+            }));
+
+            await supabase.from('group_invitations').insert(invitations);
+          }
           
           toast({
             title: 'Group created',
-            description: `Invited ${profiles.length} user(s) to the group`,
+            description: newProfiles.length > 0 
+              ? `Invited ${newProfiles.length} user(s) to the group`
+              : 'Group created successfully',
           });
         }
       }

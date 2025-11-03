@@ -78,7 +78,26 @@ export const InviteUsersDialog = ({ open, onOpenChange, groupId }: InviteUsersDi
       const currentUser = (await supabase.auth.getUser()).data.user;
       if (!currentUser) throw new Error('Not authenticated');
 
-      const invitations = Array.from(selectedUsers).map(userId => ({
+      // Check for existing invitations
+      const { data: existingInvitations } = await supabase
+        .from('group_invitations')
+        .select('invited_user_id')
+        .eq('group_id', groupId)
+        .in('invited_user_id', Array.from(selectedUsers));
+
+      const existingUserIds = new Set(existingInvitations?.map(inv => inv.invited_user_id) || []);
+      const newUserIds = Array.from(selectedUsers).filter(userId => !existingUserIds.has(userId));
+
+      if (newUserIds.length === 0) {
+        toast({
+          title: 'Already invited',
+          description: 'All selected users have already been invited',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const invitations = newUserIds.map(userId => ({
         group_id: groupId,
         invited_by: currentUser.id,
         invited_user_id: userId,
@@ -90,9 +109,10 @@ export const InviteUsersDialog = ({ open, onOpenChange, groupId }: InviteUsersDi
 
       if (error) throw error;
 
+      const skippedCount = selectedUsers.size - newUserIds.length;
       toast({
         title: 'Success',
-        description: `Invited ${selectedUsers.size} user(s) to the group!`,
+        description: `Invited ${newUserIds.length} user(s) to the group${skippedCount > 0 ? ` (${skippedCount} already invited)` : ''}`,
       });
 
       setSelectedUsers(new Set());
