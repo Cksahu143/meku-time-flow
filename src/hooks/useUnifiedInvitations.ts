@@ -98,30 +98,42 @@ export const useUnifiedInvitations = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await supabase
+      // Fetch invitations without joins (no FKs in schema cache)
+      const { data: invites, error: invError } = await supabase
         .from('group_invitations')
-        .select(`
-          *,
-          groups(name, avatar_url),
-          profiles!invited_by(display_name, username)
-        `)
+        .select('*')
         .eq('invited_user_id', user.id)
         .eq('status', 'pending');
 
-      if (error) throw error;
+      if (invError) throw invError;
 
-      setGroupInvitations((data || []).map(inv => ({ 
+      const groupIds = Array.from(new Set((invites || []).map(i => i.group_id)));
+      const inviterIds = Array.from(new Set((invites || []).map(i => i.invited_by)));
+
+      // Fetch related groups
+      const { data: groupsData } = groupIds.length
+        ? await supabase.from('groups').select('id, name, avatar_url').in('id', groupIds)
+        : { data: [] as any[] };
+
+      // Fetch inviter profiles
+      const { data: profilesData } = inviterIds.length
+        ? await supabase.from('profiles').select('id, display_name, username').in('id', inviterIds)
+        : { data: [] as any[] };
+
+      const groupMap = new Map((groupsData || []).map(g => [g.id, { name: g.name, avatar_url: g.avatar_url }]));
+      const inviterMap = new Map((profilesData || []).map(p => [p.id, { display_name: p.display_name, username: p.username }]));
+
+      setGroupInvitations((invites || []).map(inv => ({ 
         ...inv, 
         type: 'group' as const,
         status: inv.status as 'pending' | 'accepted' | 'rejected',
-        group: Array.isArray(inv.groups) ? inv.groups[0] : inv.groups,
-        inviter: Array.isArray(inv.profiles) ? inv.profiles[0] : inv.profiles
+        group: groupMap.get(inv.group_id),
+        inviter: inviterMap.get(inv.invited_by)
       })));
     } catch (error) {
       console.error('Error loading group invitations:', error);
     }
   };
-
   const acceptTimetableInvitation = async (invitationId: string, timetableId: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
