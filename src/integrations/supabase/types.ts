@@ -118,23 +118,35 @@ export type Database = {
         Row: {
           content: string
           created_at: string
+          edited_at: string | null
           group_id: string
           id: string
+          is_deleted: boolean | null
           user_id: string
+          voice_duration: number | null
+          voice_url: string | null
         }
         Insert: {
           content: string
           created_at?: string
+          edited_at?: string | null
           group_id: string
           id?: string
+          is_deleted?: boolean | null
           user_id: string
+          voice_duration?: number | null
+          voice_url?: string | null
         }
         Update: {
           content?: string
           created_at?: string
+          edited_at?: string | null
           group_id?: string
           id?: string
+          is_deleted?: boolean | null
           user_id?: string
+          voice_duration?: number | null
+          voice_url?: string | null
         }
         Relationships: [
           {

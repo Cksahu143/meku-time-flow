@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, MoreVertical, Users, LogOut, Edit, Trash } from 'lucide-react';
+import { Send, MoreVertical, Users, LogOut, Edit, Trash, X } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +16,10 @@ import {
 import { GroupSettingsDialog } from './GroupSettingsDialog';
 import { InviteUsersDialog } from './InviteUsersDialog';
 import { TypingIndicator } from './TypingIndicator';
+import { VoiceRecorder } from './VoiceRecorder';
+import { VoiceMessage } from './VoiceMessage';
 import { formatDistanceToNow } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 interface GroupChatProps {
   group: Group;
@@ -26,22 +29,34 @@ interface GroupChatProps {
 }
 
 export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup }: GroupChatProps) => {
-  const { messages, loading, sendMessage } = useMessages(group.id);
+  const { messages, loading, sendMessage, sendVoiceMessage, editMessage, deleteMessage } = useMessages(group.id);
   const [newMessage, setNewMessage] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
   const [profiles, setProfiles] = useState<Record<string, any>>({});
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState('');
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isTyping, setIsTyping] = useState(false);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     checkAdminStatus();
     fetchProfiles();
+    getCurrentUser();
   }, [group.id]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const getCurrentUser = async () => {
+    const user = (await supabase.auth.getUser()).data.user;
+    if (user) setCurrentUserId(user.id);
+  };
 
   const checkAdminStatus = async () => {
     const user = (await supabase.auth.getUser()).data.user;
@@ -93,6 +108,60 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup }:
       e.preventDefault();
       handleSend();
     }
+  };
+
+  const handleTyping = async (value: string) => {
+    setNewMessage(value);
+
+    if (!isTyping && value.trim()) {
+      setIsTyping(true);
+      await updateTypingStatus(true);
+    }
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    typingTimeoutRef.current = setTimeout(async () => {
+      setIsTyping(false);
+      await updateTypingStatus(false);
+    }, 2000);
+  };
+
+  const updateTypingStatus = async (typing: boolean) => {
+    const user = (await supabase.auth.getUser()).data.user;
+    if (!user) return;
+
+    await supabase
+      .from('typing_indicators')
+      .upsert({
+        group_id: group.id,
+        user_id: user.id,
+        is_typing: typing,
+      });
+  };
+
+  const handleVoiceSend = async (audioBlob: Blob, duration: number) => {
+    await sendVoiceMessage(audioBlob, duration);
+  };
+
+  const startEdit = (messageId: string, content: string) => {
+    setEditingMessageId(messageId);
+    setEditingContent(content);
+  };
+
+  const cancelEdit = () => {
+    setEditingMessageId(null);
+    setEditingContent('');
+  };
+
+  const saveEdit = async (messageId: string) => {
+    await editMessage(messageId, editingContent);
+    cancelEdit();
+  };
+
+  const handleDelete = async (messageId: string, voiceUrl?: string) => {
+    await deleteMessage(messageId, voiceUrl);
   };
 
   return (
@@ -155,10 +224,12 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup }:
         <div className="space-y-4">
           {messages.map((message) => {
             const profile = profiles[message.user_id];
+            const isOwnMessage = message.user_id === currentUserId;
+            const isEditing = editingMessageId === message.id;
 
             return (
               <div key={message.id} className="animate-fade-in">
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-3 group">
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={profile?.avatar_url} />
                     <AvatarFallback>
@@ -174,11 +245,78 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup }:
                         {formatDistanceToNow(new Date(message.created_at), {
                           addSuffix: true,
                         })}
+                        {message.edited_at && ' (edited)'}
                       </span>
+                      {isOwnMessage && !message.is_deleted && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <MoreVertical className="h-3 w-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {!message.voice_url && (
+                              <DropdownMenuItem onClick={() => startEdit(message.id, message.content)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem
+                              onClick={() => handleDelete(message.id, message.voice_url)}
+                              className="text-destructive"
+                            >
+                              <Trash className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </div>
-                    <div className="bg-muted rounded-lg px-3 py-2 inline-block max-w-xl">
-                      <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
-                    </div>
+                    {isEditing ? (
+                      <div className="flex gap-2 items-center">
+                        <Input
+                          value={editingContent}
+                          onChange={(e) => setEditingContent(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              saveEdit(message.id);
+                            } else if (e.key === 'Escape') {
+                              cancelEdit();
+                            }
+                          }}
+                          className="flex-1"
+                        />
+                        <Button size="sm" onClick={() => saveEdit(message.id)}>
+                          Save
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={cancelEdit}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="max-w-xl">
+                        {message.voice_url && message.voice_duration ? (
+                          <VoiceMessage
+                            voiceUrl={message.voice_url}
+                            duration={message.voice_duration}
+                          />
+                        ) : (
+                          <div className={`rounded-lg px-3 py-2 inline-block ${
+                            message.is_deleted ? 'bg-muted/50' : 'bg-muted'
+                          }`}>
+                            <p className={`text-sm whitespace-pre-wrap break-words ${
+                              message.is_deleted ? 'italic text-muted-foreground' : ''
+                            }`}>
+                              {message.content}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -191,9 +329,10 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup }:
       {/* Input */}
       <div className="p-4 border-t border-border bg-card">
         <div className="flex gap-2">
+          <VoiceRecorder onSendVoice={handleVoiceSend} />
           <Input
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
+            onChange={(e) => handleTyping(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Type a message..."
             className="flex-1"

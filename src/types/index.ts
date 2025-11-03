@@ -55,6 +55,10 @@ export interface Message {
   user_id: string;
   content: string;
   created_at: string;
+  voice_url?: string;
+  voice_duration?: number;
+  edited_at?: string;
+  is_deleted?: boolean;
 }
 
 export interface PomodoroSettings {

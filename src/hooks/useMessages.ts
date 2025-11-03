@@ -83,9 +83,111 @@ export const useMessages = (groupId: string | null) => {
     }
   };
 
+  const sendVoiceMessage = async (audioBlob: Blob, duration: number) => {
+    if (!groupId) return;
+
+    try {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) throw new Error('Not authenticated');
+
+      const fileName = `${user.id}/${Date.now()}.webm`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('voice-messages')
+        .upload(fileName, audioBlob);
+
+      if (uploadError) throw uploadError;
+
+      const { error } = await supabase
+        .from('messages')
+        .insert([{
+          group_id: groupId,
+          user_id: user.id,
+          content: 'Voice message',
+          voice_url: fileName,
+          voice_duration: duration
+        }]);
+
+      if (error) throw error;
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const editMessage = async (messageId: string, newContent: string) => {
+    if (!newContent.trim()) return;
+
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .update({ content: newContent.trim(), edited_at: new Date().toISOString() })
+        .eq('id', messageId);
+
+      if (error) throw error;
+
+      setMessages(prev => prev.map(msg =>
+        msg.id === messageId
+          ? { ...msg, content: newContent.trim(), edited_at: new Date().toISOString() }
+          : msg
+      ));
+
+      toast({
+        title: 'Success',
+        description: 'Message updated',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const deleteMessage = async (messageId: string, voiceUrl?: string) => {
+    try {
+      if (voiceUrl) {
+        await supabase.storage
+          .from('voice-messages')
+          .remove([voiceUrl]);
+      }
+
+      const { error } = await supabase
+        .from('messages')
+        .update({ is_deleted: true, content: 'Message deleted' })
+        .eq('id', messageId);
+
+      if (error) throw error;
+
+      setMessages(prev => prev.map(msg =>
+        msg.id === messageId
+          ? { ...msg, is_deleted: true, content: 'Message deleted' }
+          : msg
+      ));
+
+      toast({
+        title: 'Success',
+        description: 'Message deleted',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   return {
     messages,
     loading,
     sendMessage,
+    sendVoiceMessage,
+    editMessage,
+    deleteMessage,
   };
 };
