@@ -102,8 +102,8 @@ export const useUnifiedInvitations = () => {
         .from('group_invitations')
         .select(`
           *,
-          group:groups(name, avatar_url),
-          inviter:profiles!group_invitations_invited_by_fkey(display_name, username)
+          groups(name, avatar_url),
+          profiles!invited_by(display_name, username)
         `)
         .eq('invited_user_id', user.id)
         .eq('status', 'pending');
@@ -114,8 +114,8 @@ export const useUnifiedInvitations = () => {
         ...inv, 
         type: 'group' as const,
         status: inv.status as 'pending' | 'accepted' | 'rejected',
-        group: Array.isArray(inv.group) ? inv.group[0] : inv.group,
-        inviter: Array.isArray(inv.inviter) ? inv.inviter[0] : inv.inviter
+        group: Array.isArray(inv.groups) ? inv.groups[0] : inv.groups,
+        inviter: Array.isArray(inv.profiles) ? inv.profiles[0] : inv.profiles
       })));
     } catch (error) {
       console.error('Error loading group invitations:', error);
