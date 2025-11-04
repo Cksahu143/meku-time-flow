@@ -59,6 +59,10 @@ export interface Message {
   voice_duration?: number;
   edited_at?: string;
   is_deleted?: boolean;
+  file_url?: string;
+  file_name?: string;
+  file_size?: number;
+  file_type?: string;
 }
 
 export interface PomodoroSettings {

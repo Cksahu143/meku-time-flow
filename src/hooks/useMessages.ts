@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Message } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { useMessageCache } from './useMessageCache';
 
 export const useMessages = (groupId: string | null) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { getCachedData, setCachedData } = useMessageCache(groupId);
 
   useEffect(() => {
     if (!groupId) {
@@ -41,6 +43,13 @@ export const useMessages = (groupId: string | null) => {
   const fetchMessages = async () => {
     if (!groupId) return;
 
+    // Try to load from cache first
+    const cached = getCachedData();
+    if (cached) {
+      setMessages(cached.messages);
+      setLoading(false);
+    }
+
     try {
       const { data, error } = await supabase
         .from('messages')
@@ -50,7 +59,11 @@ export const useMessages = (groupId: string | null) => {
 
       if (error) throw error;
 
-      setMessages(data || []);
+      const fetchedMessages = data || [];
+      setMessages(fetchedMessages);
+      
+      // Update cache with fresh data
+      setCachedData(fetchedMessages, {});
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -115,6 +128,45 @@ export const useMessages = (groupId: string | null) => {
         description: error.message,
         variant: 'destructive',
       });
+    }
+  };
+
+  const sendFileMessage = async (file: File) => {
+    if (!groupId) return;
+
+    try {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) throw new Error('Not authenticated');
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${groupId}/${user.id}/${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('chat-files')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { error } = await supabase
+        .from('messages')
+        .insert([{
+          group_id: groupId,
+          user_id: user.id,
+          content: file.name,
+          file_url: fileName,
+          file_name: file.name,
+          file_size: file.size,
+          file_type: file.type
+        }]);
+
+      if (error) throw error;
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+      throw error;
     }
   };
 
@@ -187,6 +239,7 @@ export const useMessages = (groupId: string | null) => {
     loading,
     sendMessage,
     sendVoiceMessage,
+    sendFileMessage,
     editMessage,
     deleteMessage,
   };

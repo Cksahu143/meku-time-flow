@@ -119,6 +119,10 @@ export type Database = {
           content: string
           created_at: string
           edited_at: string | null
+          file_name: string | null
+          file_size: number | null
+          file_type: string | null
+          file_url: string | null
           group_id: string
           id: string
           is_deleted: boolean | null
@@ -130,6 +134,10 @@ export type Database = {
           content: string
           created_at?: string
           edited_at?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string | null
           group_id: string
           id?: string
           is_deleted?: boolean | null
@@ -141,6 +149,10 @@ export type Database = {
           content?: string
           created_at?: string
           edited_at?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string | null
           group_id?: string
           id?: string
           is_deleted?: boolean | null

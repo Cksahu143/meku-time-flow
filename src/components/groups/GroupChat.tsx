@@ -18,6 +18,8 @@ import { InviteUsersDialog } from './InviteUsersDialog';
 import { TypingIndicator } from './TypingIndicator';
 import { VoiceRecorder } from './VoiceRecorder';
 import { VoiceMessage } from './VoiceMessage';
+import { FileAttachment } from './FileAttachment';
+import { FilePreview } from './FilePreview';
 import { formatDistanceToNow } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 
@@ -29,7 +31,7 @@ interface GroupChatProps {
 }
 
 export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup }: GroupChatProps) => {
-  const { messages, loading, sendMessage, sendVoiceMessage, editMessage, deleteMessage } = useMessages(group.id);
+  const { messages, loading, sendMessage, sendVoiceMessage, sendFileMessage, editMessage, deleteMessage } = useMessages(group.id);
   const [newMessage, setNewMessage] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -45,9 +47,12 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup }:
 
   useEffect(() => {
     checkAdminStatus();
-    fetchProfiles();
     getCurrentUser();
   }, [group.id]);
+
+  useEffect(() => {
+    fetchProfiles();
+  }, [messages]);
 
   useEffect(() => {
     scrollToBottom();
@@ -162,6 +167,10 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup }:
 
   const handleDelete = async (messageId: string, voiceUrl?: string) => {
     await deleteMessage(messageId, voiceUrl);
+  };
+
+  const handleFileSend = async (file: File) => {
+    await sendFileMessage(file);
   };
 
   return (
@@ -297,26 +306,33 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup }:
                           <X className="h-4 w-4" />
                         </Button>
                       </div>
-                    ) : (
-                      <div className="max-w-xl">
-                        {message.voice_url && message.voice_duration ? (
-                          <VoiceMessage
-                            voiceUrl={message.voice_url}
-                            duration={message.voice_duration}
-                          />
-                        ) : (
-                          <div className={`rounded-lg px-3 py-2 inline-block ${
-                            message.is_deleted ? 'bg-muted/50' : 'bg-muted'
-                          }`}>
-                            <p className={`text-sm whitespace-pre-wrap break-words ${
-                              message.is_deleted ? 'italic text-muted-foreground' : ''
-                            }`}>
-                              {message.content}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                     ) : (
+                       <div className="max-w-xl">
+                         {message.voice_url && message.voice_duration ? (
+                           <VoiceMessage
+                             voiceUrl={message.voice_url}
+                             duration={message.voice_duration}
+                           />
+                         ) : message.file_url && message.file_name ? (
+                           <FilePreview
+                             fileUrl={message.file_url}
+                             fileName={message.file_name}
+                             fileSize={message.file_size || 0}
+                             fileType={message.file_type || 'application/octet-stream'}
+                           />
+                         ) : (
+                           <div className={`rounded-lg px-3 py-2 inline-block ${
+                             message.is_deleted ? 'bg-muted/50' : 'bg-muted'
+                           }`}>
+                             <p className={`text-sm whitespace-pre-wrap break-words ${
+                               message.is_deleted ? 'italic text-muted-foreground' : ''
+                             }`}>
+                               {message.content}
+                             </p>
+                           </div>
+                         )}
+                       </div>
+                     )}
                   </div>
                 </div>
               </div>
@@ -329,6 +345,10 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup }:
       {/* Input */}
       <div className="p-4 border-t border-border bg-card">
         <div className="flex gap-2">
+          <FileAttachment
+            onFileSelect={() => {}}
+            onSend={handleFileSend}
+          />
           <VoiceRecorder onSendVoice={handleVoiceSend} />
           <Input
             value={newMessage}
