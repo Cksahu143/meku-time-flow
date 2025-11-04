@@ -20,6 +20,7 @@ import { VoiceRecorder } from './VoiceRecorder';
 import { VoiceMessage } from './VoiceMessage';
 import { FileAttachment } from './FileAttachment';
 import { FilePreview } from './FilePreview';
+import { CameraCapture } from './CameraCapture';
 import { formatDistanceToNow } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 
@@ -345,6 +346,7 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup }:
       {/* Input */}
       <div className="p-4 border-t border-border bg-card">
         <div className="flex gap-2">
+          <CameraCapture onCapture={handleFileSend} />
           <FileAttachment
             onFileSelect={() => {}}
             onSend={handleFileSend}
