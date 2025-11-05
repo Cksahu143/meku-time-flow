@@ -65,6 +65,31 @@ export interface Message {
   file_type?: string;
 }
 
+export interface Conversation {
+  id: string;
+  user1_id: string;
+  user2_id: string;
+  created_at: string;
+  updated_at: string;
+  last_message_at?: string;
+}
+
+export interface DirectMessage {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  content: string;
+  created_at: string;
+  edited_at?: string;
+  is_deleted?: boolean;
+  voice_url?: string;
+  voice_duration?: number;
+  file_url?: string;
+  file_name?: string;
+  file_size?: number;
+  file_type?: string;
+}
+
 export interface PomodoroSettings {
   workDuration: number;
   shortBreakDuration: number;

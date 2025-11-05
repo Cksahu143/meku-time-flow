@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Users } from 'lucide-react';
+import { useConversations } from '@/hooks/useConversations';
+import { useToast } from '@/hooks/use-toast';
 
 interface Profile {
   id: string;
@@ -22,6 +24,8 @@ const ActiveUsers = () => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { createOrGetConversation } = useConversations();
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchProfiles();
@@ -69,6 +73,19 @@ const ActiveUsers = () => {
     return new Date(lastSeen) > fiveMinutesAgo;
   };
 
+  const handleUserClick = async (userId: string) => {
+    const conversationId = await createOrGetConversation(userId);
+    if (conversationId) {
+      navigate('/app', { state: { openConversation: conversationId, userId } });
+    } else {
+      toast({
+        title: 'Error',
+        description: 'Failed to open chat',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
@@ -110,7 +127,10 @@ const ActiveUsers = () => {
                 <div className="space-y-4">
                   {profiles.map((profile, index) => (
                     <div key={profile.id}>
-                      <div className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                      <div 
+                        className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                        onClick={() => handleUserClick(profile.id)}
+                      >
                         <div className="relative">
                           <Avatar className="h-14 w-14">
                             <AvatarImage src={profile.avatar_url || undefined} />
