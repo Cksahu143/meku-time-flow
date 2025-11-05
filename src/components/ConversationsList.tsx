@@ -3,7 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Conversation } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
-import { MessageSquare } from 'lucide-react';
+import { Input } from './ui/input';
+import { MessageSquare, Search } from 'lucide-react';
 
 interface ConversationsListProps {
   conversations: Conversation[];
@@ -28,6 +29,7 @@ export const ConversationsList = ({
 }: ConversationsListProps) => {
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [profiles, setProfiles] = useState<Record<string, UserProfile>>({});
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const getCurrentUser = async () => {
@@ -85,10 +87,32 @@ export const ConversationsList = ({
     );
   }
 
+  const filteredConversations = conversations.filter((conversation) => {
+    const otherUserId =
+      conversation.user1_id === currentUserId
+        ? conversation.user2_id
+        : conversation.user1_id;
+    const profile = profiles[otherUserId];
+    const userName = profile?.display_name || profile?.username || profile?.email || '';
+    return userName.toLowerCase().includes(searchQuery.toLowerCase());
+  });
+
   return (
-    <ScrollArea className="flex-1">
-      <div className="p-2">
-        {conversations.map((conversation) => {
+    <div className="flex-1 flex flex-col">
+      <div className="p-3 border-b">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search chats..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+      </div>
+      <ScrollArea className="flex-1">
+        <div className="p-2">
+          {filteredConversations.map((conversation) => {
           const otherUserId =
             conversation.user1_id === currentUserId
               ? conversation.user2_id
@@ -132,5 +156,6 @@ export const ConversationsList = ({
         })}
       </div>
     </ScrollArea>
+    </div>
   );
 };

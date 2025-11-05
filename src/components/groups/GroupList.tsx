@@ -4,6 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 interface GroupListProps {
@@ -22,6 +24,7 @@ interface GroupWithLastMessage extends Group {
 
 export const GroupList = ({ groups, loading, selectedGroup, onSelectGroup }: GroupListProps) => {
   const [groupsWithMessages, setGroupsWithMessages] = useState<GroupWithLastMessage[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const fetchLastMessages = async () => {
@@ -76,10 +79,26 @@ export const GroupList = ({ groups, loading, selectedGroup, onSelectGroup }: Gro
     );
   }
 
+  const filteredGroups = groupsWithMessages.filter(group =>
+    group.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
-    <ScrollArea className="flex-1">
-      <div className="p-2">
-        {groupsWithMessages.map((group) => (
+    <div className="flex-1 flex flex-col">
+      <div className="p-3 border-b">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search groups..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+      </div>
+      <ScrollArea className="flex-1">
+        <div className="p-2">
+          {filteredGroups.map((group) => (
           <button
             key={group.id}
             onClick={() => onSelectGroup(group)}
@@ -110,5 +129,6 @@ export const GroupList = ({ groups, loading, selectedGroup, onSelectGroup }: Gro
         ))}
       </div>
     </ScrollArea>
+    </div>
   );
 };

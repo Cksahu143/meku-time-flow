@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, MoreVertical, Users, LogOut, Edit, Trash, X } from 'lucide-react';
+import { Send, MoreVertical, Users, LogOut, Edit, Trash, X, Info } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { GroupSettingsDialog } from './GroupSettingsDialog';
+import { GroupInfoDialog } from './GroupInfoDialog';
 import { InviteUsersDialog } from './InviteUsersDialog';
 import { TypingIndicator } from './TypingIndicator';
 import { VoiceRecorder } from './VoiceRecorder';
@@ -36,6 +37,7 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup }:
   const [newMessage, setNewMessage] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
   const [profiles, setProfiles] = useState<Record<string, any>>({});
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
@@ -197,6 +199,10 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup }:
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setShowInfo(true)}>
+              <Info className="mr-2 h-4 w-4" />
+              Group Info
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setShowInvite(true)}>
               <Users className="mr-2 h-4 w-4" />
               Invite Members
@@ -364,6 +370,14 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup }:
           </Button>
         </div>
       </div>
+
+      <GroupInfoDialog
+        open={showInfo}
+        onOpenChange={setShowInfo}
+        group={group}
+        isAdmin={isAdmin}
+        onUpdateGroup={onUpdateGroup}
+      />
 
       <GroupSettingsDialog
         open={showSettings}
