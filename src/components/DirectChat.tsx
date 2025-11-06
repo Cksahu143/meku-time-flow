@@ -11,6 +11,7 @@ import { VoiceRecorder } from './groups/VoiceRecorder';
 import { FileAttachment } from './groups/FileAttachment';
 import { CameraCapture } from './groups/CameraCapture';
 import { FilePreview } from './groups/FilePreview';
+import { toast } from 'sonner';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +40,7 @@ export const DirectChat = ({
   const [editingContent, setEditingContent] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const lastMessageIdRef = useRef<string | null>(null);
 
   const {
     messages,
@@ -63,6 +65,27 @@ export const DirectChat = ({
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Notify for new messages from the other user
+  useEffect(() => {
+    if (messages.length > 0 && currentUserId) {
+      const lastMessage = messages[messages.length - 1];
+      
+      // Only notify if it's from the other user, it's new, and not already notified
+      if (
+        lastMessage.sender_id !== currentUserId && 
+        lastMessage.id !== lastMessageIdRef.current
+      ) {
+        toast.info(`💬 ${otherUserName}`, {
+          description: lastMessage.voice_url ? '🎤 Voice message' :
+                      lastMessage.file_url ? `📎 ${lastMessage.file_name}` :
+                      lastMessage.content.slice(0, 50) + (lastMessage.content.length > 50 ? "..." : "")
+        });
+        
+        lastMessageIdRef.current = lastMessage.id;
+      }
+    }
+  }, [messages, currentUserId, otherUserName]);
 
   const handleSend = () => {
     if (!input.trim()) return;

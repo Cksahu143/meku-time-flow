@@ -3,7 +3,7 @@ import { Timer, Play, Pause, RotateCcw, Settings, Coffee, Brain, Award } from 'l
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { PomodoroSettings } from '@/types';
 import { cn } from '@/lib/utils';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 type SessionType = 'work' | 'shortBreak' | 'longBreak';
 
@@ -61,23 +61,20 @@ export function PomodoroView() {
       if (newCompletedSessions % settings.sessionsBeforeLongBreak === 0) {
         setSessionType('longBreak');
         setTimeLeft(settings.longBreakDuration * 60);
-        toast({
-          title: 'Work Session Complete!',
+        toast.success('Work Session Complete! 🎉', {
           description: 'Time for a long break. You earned it!',
         });
       } else {
         setSessionType('shortBreak');
         setTimeLeft(settings.shortBreakDuration * 60);
-        toast({
-          title: 'Work Session Complete!',
+        toast.success('Work Session Complete! ✨', {
           description: 'Take a short break.',
         });
       }
     } else {
       setSessionType('work');
       setTimeLeft(settings.workDuration * 60);
-      toast({
-        title: 'Break Complete!',
+      toast.success('Break Complete! 💪', {
         description: 'Ready to focus again?',
       });
     }

@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Task, Period } from '@/types';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { ListTodo, Plus, Trash2, Edit2, Check, X, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 export function TodoView() {
   const [tasks, setTasks] = useLocalStorage<Task[]>('tasks', []);
@@ -15,11 +16,45 @@ export function TodoView() {
     priority: 'medium',
     completed: false,
   });
+  const [notifiedTasks, setNotifiedTasks] = useLocalStorage<string[]>('notified-tasks', []);
 
   const todayTasks = tasks.filter(
     (task) => task.date === new Date().toISOString().split('T')[0]
   );
   const completedToday = todayTasks.filter((task) => task.completed).length;
+
+  // Check for due and overdue tasks
+  useEffect(() => {
+    const checkDueTasks = () => {
+      const today = new Date().toISOString().split('T')[0];
+      
+      tasks.forEach((task) => {
+        if (!task.completed && !notifiedTasks.includes(task.id)) {
+          const taskDate = task.date;
+          
+          // Notify for tasks due today
+          if (taskDate === today) {
+            toast.info("Task due today! 📅", {
+              description: task.title
+            });
+            setNotifiedTasks([...notifiedTasks, task.id]);
+          } 
+          // Notify for overdue tasks
+          else if (taskDate < today) {
+            toast.warning("Overdue task! ⚠️", {
+              description: task.title
+            });
+            setNotifiedTasks([...notifiedTasks, task.id]);
+          }
+        }
+      });
+    };
+
+    checkDueTasks();
+    // Check every hour for due tasks
+    const interval = setInterval(checkDueTasks, 3600000);
+    return () => clearInterval(interval);
+  }, [tasks, notifiedTasks, setNotifiedTasks]);
 
   const handleAddTask = () => {
     if (newTask.title?.trim()) {

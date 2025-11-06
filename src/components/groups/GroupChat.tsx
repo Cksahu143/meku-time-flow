@@ -23,7 +23,7 @@ import { FileAttachment } from './FileAttachment';
 import { FilePreview } from './FilePreview';
 import { CameraCapture } from './CameraCapture';
 import { formatDistanceToNow } from 'date-fns';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 interface GroupChatProps {
   group: Group;
@@ -46,7 +46,7 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup }:
   const [isTyping, setIsTyping] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
+  const lastMessageIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     checkAdminStatus();
@@ -60,6 +60,32 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup }:
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Notify for new messages from others
+  useEffect(() => {
+    if (messages.length > 0 && currentUserId) {
+      const lastMessage = messages[messages.length - 1];
+      
+      // Only notify if it's a new message, not from current user, and not already notified
+      if (
+        lastMessage.user_id !== currentUserId && 
+        lastMessage.id !== lastMessageIdRef.current &&
+        profiles[lastMessage.user_id]
+      ) {
+        const senderName = profiles[lastMessage.user_id]?.display_name || 
+                          profiles[lastMessage.user_id]?.username || 
+                          'Someone';
+        
+        toast.info(`💬 ${senderName} in ${group.name}`, {
+          description: lastMessage.voice_url ? '🎤 Voice message' :
+                      lastMessage.file_url ? `📎 ${lastMessage.file_name}` :
+                      lastMessage.content.slice(0, 50) + (lastMessage.content.length > 50 ? "..." : "")
+        });
+        
+        lastMessageIdRef.current = lastMessage.id;
+      }
+    }
+  }, [messages, currentUserId, profiles, group.name]);
 
   const getCurrentUser = async () => {
     const user = (await supabase.auth.getUser()).data.user;
