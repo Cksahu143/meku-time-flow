@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, ListTodo, Timer, Moon, Sun, Palette, LogOut, Users, MessageSquare } from 'lucide-react';
+import { Calendar, Clock, ListTodo, Timer, Moon, Sun, Palette, LogOut, Users, MessageSquare, HelpCircle } from 'lucide-react';
 import { ViewType } from '@/types';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/providers/ThemeProvider';
@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { InvitationNotifications } from '@/components/InvitationNotifications';
 import { ProfileSettings } from '@/components/ProfileSettings';
 import { MusicPlayer } from '@/components/MusicPlayer';
+import { HelpDialog } from '@/components/HelpDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface SidebarProps {
@@ -22,6 +23,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<{ avatar_url: string | null; display_name: string | null; username: string | null } | null>(null);
+  const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -83,6 +85,15 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
           </div>
         </div>
         <div className="flex gap-1 justify-end">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowHelp(true)}
+            title="Help & Guide"
+            className="animate-pulse hover:animate-none"
+          >
+            <HelpCircle className="h-5 w-5 text-primary" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"
@@ -163,6 +174,8 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
           © 2025 EducationAssist
         </div>
       </div>
+      
+      <HelpDialog open={showHelp} onOpenChange={setShowHelp} />
     </aside>
   );
 }

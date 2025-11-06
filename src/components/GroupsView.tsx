@@ -9,8 +9,14 @@ import { DirectChat } from './DirectChat';
 import { ConversationsList } from './ConversationsList';
 import { CreateGroupDialog } from './groups/CreateGroupDialog';
 import { InvitationsPanel } from './groups/InvitationsPanel';
+import { AnimatedBackground } from './AnimatedBackground';
 import { Button } from './ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from './ui/resizable';
 import { Plus, Users } from 'lucide-react';
 import { Group, Conversation } from '@/types';
 
@@ -86,100 +92,110 @@ export const GroupsView = () => {
   };
 
   return (
-    <div className="h-full flex">
-      {/* Sidebar */}
-      <div className="w-80 border-r border-border bg-card flex flex-col">
-        <div className="p-4 border-b border-border">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Messages</h2>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setShowInvitations(!showInvitations)}
-              >
-                <Users className="h-4 w-4" />
-              </Button>
-              {activeTab === 'groups' && (
-                <Button
-                  variant="default"
-                  size="icon"
-                  onClick={() => setShowCreateDialog(true)}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
+    <AnimatedBackground viewType="groups">
+      <div className="h-full flex">
+        <ResizablePanelGroup direction="horizontal">
+          {/* Sidebar */}
+          <ResizablePanel defaultSize={25} minSize={15} maxSize={40}>
+            <div className="h-full border-r border-border bg-card/50 backdrop-blur-sm flex flex-col">
+              <div className="p-4 border-b border-border">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold">Messages</h2>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setShowInvitations(!showInvitations)}
+                    >
+                      <Users className="h-4 w-4" />
+                    </Button>
+                    {activeTab === 'groups' && (
+                      <Button
+                        variant="default"
+                        size="icon"
+                        onClick={() => setShowCreateDialog(true)}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'groups' | 'chats')}>
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="groups">Groups</TabsTrigger>
+                    <TabsTrigger value="chats">Chats</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+
+              {showInvitations ? (
+                <InvitationsPanel onClose={() => setShowInvitations(false)} />
+              ) : (
+                <Tabs value={activeTab} className="flex-1 flex flex-col">
+                  <TabsContent value="groups" className="flex-1 m-0">
+                    <GroupList
+                      groups={groups}
+                      loading={groupsLoading}
+                      selectedGroup={selectedGroup}
+                      onSelectGroup={handleSelectGroup}
+                    />
+                  </TabsContent>
+                  <TabsContent value="chats" className="flex-1 m-0">
+                    <ConversationsList
+                      conversations={conversations}
+                      loading={conversationsLoading}
+                      selectedConversationId={selectedConversation?.conversation.id || null}
+                      onSelectConversation={handleSelectConversation}
+                    />
+                  </TabsContent>
+                </Tabs>
               )}
             </div>
-          </div>
+          </ResizablePanel>
 
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'groups' | 'chats')}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="groups">Groups</TabsTrigger>
-              <TabsTrigger value="chats">Chats</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+          <ResizableHandle withHandle />
 
-        {showInvitations ? (
-          <InvitationsPanel onClose={() => setShowInvitations(false)} />
-        ) : (
-          <Tabs value={activeTab} className="flex-1 flex flex-col">
-            <TabsContent value="groups" className="flex-1 m-0">
-              <GroupList
-                groups={groups}
-                loading={groupsLoading}
-                selectedGroup={selectedGroup}
-                onSelectGroup={handleSelectGroup}
-              />
-            </TabsContent>
-            <TabsContent value="chats" className="flex-1 m-0">
-              <ConversationsList
-                conversations={conversations}
-                loading={conversationsLoading}
-                selectedConversationId={selectedConversation?.conversation.id || null}
-                onSelectConversation={handleSelectConversation}
-              />
-            </TabsContent>
-          </Tabs>
-        )}
-      </div>
-
-      {/* Chat Area */}
-      <div className="flex-1">
-        {selectedGroup ? (
-          <GroupChat
-            group={selectedGroup}
-            onUpdateGroup={updateGroup}
-            onDeleteGroup={deleteGroup}
-            onLeaveGroup={leaveGroup}
-          />
-        ) : selectedConversation ? (
-          <DirectChat
-            conversationId={selectedConversation.conversation.id}
-            otherUserId={selectedConversation.otherUserId}
-            otherUserName={selectedConversation.otherUserName}
-            otherUserAvatar={selectedConversation.otherUserAvatar}
-            onBack={handleBackToList}
-          />
-        ) : (
-          <div className="h-full flex items-center justify-center text-muted-foreground">
-            <div className="text-center">
-              <Users className="h-16 w-16 mx-auto mb-4 opacity-50" />
-              <p className="text-lg">
-                {activeTab === 'groups' 
-                  ? 'Select a group to start chatting'
-                  : 'Select a chat or start a new one from Active Users'}
-              </p>
+          {/* Chat Area */}
+          <ResizablePanel defaultSize={75}>
+            <div className="h-full">
+              {selectedGroup ? (
+                <GroupChat
+                  group={selectedGroup}
+                  onUpdateGroup={updateGroup}
+                  onDeleteGroup={deleteGroup}
+                  onLeaveGroup={leaveGroup}
+                />
+              ) : selectedConversation ? (
+                <DirectChat
+                  conversationId={selectedConversation.conversation.id}
+                  otherUserId={selectedConversation.otherUserId}
+                  otherUserName={selectedConversation.otherUserName}
+                  otherUserAvatar={selectedConversation.otherUserAvatar}
+                  onBack={handleBackToList}
+                />
+              ) : (
+                <div className="h-full flex items-center justify-center text-muted-foreground">
+                  <div className="text-center animate-fade-in">
+                    <Users className="h-16 w-16 mx-auto mb-4 opacity-50 animate-bounce-in" />
+                    <p className="text-lg">
+                      {activeTab === 'groups' 
+                        ? 'Select a group to start chatting'
+                        : 'Select a chat or start a new one from Active Users'}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        )}
-      </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
 
-      <CreateGroupDialog
-        open={showCreateDialog}
-        onOpenChange={setShowCreateDialog}
-        onCreateGroup={createGroup}
-      />
-    </div>
+        <CreateGroupDialog
+          open={showCreateDialog}
+          onOpenChange={setShowCreateDialog}
+          onCreateGroup={createGroup}
+        />
+      </div>
+    </AnimatedBackground>
   );
 };
