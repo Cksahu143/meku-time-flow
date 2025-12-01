@@ -12,9 +12,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Settings, Upload } from 'lucide-react';
+import { Settings, Upload, Bell } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { NotificationPreferences } from '@/components/NotificationPreferences';
 
 export const ProfileSettings: React.FC = () => {
   const [open, setOpen] = useState(false);
@@ -142,79 +144,98 @@ export const ProfileSettings: React.FC = () => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon">
+        <Button variant="ghost" size="icon" className="hover-scale transition-all">
           <Settings className="h-5 w-5" />
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto animate-scale-in">
         <DialogHeader>
-          <DialogTitle>Profile Settings</DialogTitle>
+          <DialogTitle className="text-2xl">Settings</DialogTitle>
           <DialogDescription>
-            Manage your profile visibility and display name
+            Manage your profile, notifications, and preferences
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 pt-4">
-          <div className="space-y-2">
-            <Label>Profile Picture</Label>
-            <div className="flex items-center gap-4">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src={avatarUrl || undefined} />
-                <AvatarFallback className="bg-primary/10 text-primary text-xl">
-                  {displayName?.charAt(0)?.toUpperCase() || 'U'}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarUpload}
-                  disabled={uploading}
-                  className="hidden"
-                  id="avatar-upload"
-                />
-                <Label htmlFor="avatar-upload">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
+        
+        <Tabs defaultValue="profile" className="pt-4">
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="profile" className="transition-all data-[state=active]:scale-105">
+              Profile
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="transition-all data-[state=active]:scale-105">
+              <Bell className="h-4 w-4 mr-2" />
+              Notifications
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="profile" className="space-y-4 animate-fade-in">
+            <div className="space-y-2">
+              <Label>Profile Picture</Label>
+              <div className="flex items-center gap-4">
+                <Avatar className="h-20 w-20 ring-2 ring-primary/20 transition-all hover:ring-primary/40 hover-scale">
+                  <AvatarImage src={avatarUrl || undefined} />
+                  <AvatarFallback className="bg-primary/10 text-primary text-xl">
+                    {displayName?.charAt(0)?.toUpperCase() || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarUpload}
                     disabled={uploading}
-                    asChild
-                  >
-                    <span className="cursor-pointer">
-                      <Upload className="w-4 h-4 mr-2" />
-                      {uploading ? 'Uploading...' : 'Upload Photo'}
-                    </span>
-                  </Button>
-                </Label>
+                    className="hidden"
+                    id="avatar-upload"
+                  />
+                  <Label htmlFor="avatar-upload">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={uploading}
+                      asChild
+                      className="hover-scale"
+                    >
+                      <span className="cursor-pointer">
+                        <Upload className="w-4 h-4 mr-2" />
+                        {uploading ? 'Uploading...' : 'Upload Photo'}
+                      </span>
+                    </Button>
+                  </Label>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="displayName">Display Name</Label>
-            <Input
-              id="displayName"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Your name"
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="isPublic">Public Profile</Label>
-              <p className="text-sm text-muted-foreground">
-                Allow others to find and view your profile
-              </p>
+            <div className="space-y-2">
+              <Label htmlFor="displayName">Display Name</Label>
+              <Input
+                id="displayName"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Your name"
+                className="transition-all focus:scale-[1.01]"
+              />
             </div>
-            <Switch
-              id="isPublic"
-              checked={isPublic}
-              onCheckedChange={setIsPublic}
-            />
-          </div>
-          <Button onClick={handleSave} disabled={loading} className="w-full">
-            {loading ? 'Saving...' : 'Save Settings'}
-          </Button>
-        </div>
+            <div className="flex items-center justify-between p-4 rounded-lg border border-border/50 hover:border-border transition-all hover-lift">
+              <div className="space-y-0.5">
+                <Label htmlFor="isPublic">Public Profile</Label>
+                <p className="text-sm text-muted-foreground">
+                  Allow others to find and view your profile
+                </p>
+              </div>
+              <Switch
+                id="isPublic"
+                checked={isPublic}
+                onCheckedChange={setIsPublic}
+              />
+            </div>
+            <Button onClick={handleSave} disabled={loading} className="w-full hover-scale shadow-elegant">
+              {loading ? 'Saving...' : 'Save Profile'}
+            </Button>
+          </TabsContent>
+
+          <TabsContent value="notifications" className="animate-fade-in">
+            <NotificationPreferences />
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
