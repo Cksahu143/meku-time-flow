@@ -42,18 +42,20 @@ const Index = () => {
 
   return (
     <div className="flex min-h-screen h-screen w-full bg-background overflow-hidden">
-      <div className="hidden md:block flex-shrink-0">
+      <div className="hidden md:block flex-shrink-0 animate-slide-in-left">
         <Sidebar currentView={currentView} onViewChange={setCurrentView} />
       </div>
       <MobileSidebar currentView={currentView} onViewChange={setCurrentView} />
       
       <AnimatedBackground viewType={currentView}>
         <main className="flex-1 w-full h-screen overflow-y-auto overflow-x-hidden pt-16 md:pt-0">
-          {currentView === 'timetable' && <TimetableView />}
-          {currentView === 'calendar' && <CalendarView />}
-          {currentView === 'todo' && <TodoView />}
-          {currentView === 'pomodoro' && <PomodoroView />}
-          {currentView === 'groups' && <GroupsView />}
+          <div className="animate-fade-in">
+            {currentView === 'timetable' && <TimetableView />}
+            {currentView === 'calendar' && <CalendarView />}
+            {currentView === 'todo' && <TodoView />}
+            {currentView === 'pomodoro' && <PomodoroView />}
+            {currentView === 'groups' && <GroupsView />}
+          </div>
         </main>
       </AnimatedBackground>
     </div>
