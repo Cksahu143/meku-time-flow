@@ -42,18 +42,28 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
 
     try {
       setLoading(true);
-      const { data } = await supabase.storage
+      
+      // Extract path from URL if it's a full URL
+      let filePath = fileUrl;
+      if (fileUrl.includes('chat-files/')) {
+        filePath = fileUrl.split('chat-files/')[1].split('?')[0];
+      }
+
+      const { data, error } = await supabase.storage
         .from('chat-files')
-        .createSignedUrl(fileUrl, 3600); // 1 hour expiry
+        .createSignedUrl(filePath, 3600);
+
+      if (error) throw error;
 
       if (data?.signedUrl) {
         setImageUrl(data.signedUrl);
         return data.signedUrl;
       }
     } catch (error: any) {
+      console.error('File preview error:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load file',
+        description: 'Failed to load file preview',
         variant: 'destructive',
       });
     } finally {
@@ -66,9 +76,15 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
     try {
       setDownloading(true);
 
+      // Extract path from URL if it's a full URL
+      let filePath = fileUrl;
+      if (fileUrl.includes('chat-files/')) {
+        filePath = fileUrl.split('chat-files/')[1].split('?')[0];
+      }
+
       const { data, error } = await supabase.storage
         .from('chat-files')
-        .download(fileUrl);
+        .download(filePath);
 
       if (error) throw error;
 
@@ -87,6 +103,7 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
         description: `${fileName} has been downloaded`,
       });
     } catch (error: any) {
+      console.error('File download error:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to download file',
@@ -108,54 +125,72 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
 
   return (
     <>
-      <div className="flex items-center gap-3 p-3 bg-muted rounded-lg max-w-sm group">
-        <div className="flex-shrink-0 text-primary">{getFileIcon()}</div>
+      <div className="flex items-center gap-3 p-3 bg-muted/50 hover:bg-muted rounded-lg max-w-sm group transition-all duration-200 hover:shadow-md">
+        <div className="flex-shrink-0 text-primary animate-pulse-glow">{getFileIcon()}</div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate">{fileName}</p>
           <p className="text-xs text-muted-foreground">{formatFileSize(fileSize)}</p>
         </div>
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex gap-1 opacity-70 group-hover:opacity-100 transition-all duration-200">
           {isPreviewable && (
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-8 w-8 hover:bg-primary/10 hover:text-primary transition-all duration-200 hover:scale-110"
               onClick={handlePreview}
               disabled={loading}
             >
-              <Eye className="h-4 w-4" />
+              {loading ? (
+                <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
             </Button>
           )}
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            className="h-8 w-8 hover:bg-primary/10 hover:text-primary transition-all duration-200 hover:scale-110"
             onClick={handleDownload}
             disabled={downloading}
           >
-            <Download className="h-4 w-4" />
+            {downloading ? (
+              <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
           </Button>
         </div>
       </div>
 
       <Dialog open={showPreview} onOpenChange={setShowPreview}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-4xl animate-scale-in">
           <DialogHeader>
-            <DialogTitle>{fileName}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              {getFileIcon()}
+              <span className="truncate">{fileName}</span>
+            </DialogTitle>
           </DialogHeader>
-          <div className="mt-4">
+          <div className="mt-4 bg-muted/30 rounded-lg p-4 animate-fade-in">
+            {loading && (
+              <div className="flex items-center justify-center py-12">
+                <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
             {imageUrl && fileType.startsWith('image/') && (
               <img
                 src={imageUrl}
                 alt={fileName}
-                className="w-full h-auto max-h-[70vh] object-contain rounded-lg"
+                className="w-full h-auto max-h-[70vh] object-contain rounded-lg shadow-lg animate-zoom-in"
+                onLoad={() => setLoading(false)}
               />
             )}
             {imageUrl && fileType.startsWith('video/') && (
               <video
                 src={imageUrl}
                 controls
-                className="w-full h-auto max-h-[70vh] rounded-lg"
+                className="w-full h-auto max-h-[70vh] rounded-lg shadow-lg animate-zoom-in"
+                onLoadedData={() => setLoading(false)}
               />
             )}
           </div>
