@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Group } from '@/types';
+import { Group, Message } from '@/types';
 import { useMessages } from '@/hooks/useMessages';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, MoreVertical, Users, LogOut, Edit, Trash, X, Info } from 'lucide-react';
+import { Send, MoreVertical, Users, LogOut, Edit, Trash, X, Info, Reply } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +22,12 @@ import { VoiceMessage } from './VoiceMessage';
 import { FileAttachment } from './FileAttachment';
 import { FilePreview } from './FilePreview';
 import { CameraCapture } from './CameraCapture';
+import { PDFViewer } from '@/components/messages/PDFViewer';
+import { ImageThumbnail } from '@/components/messages/ImageThumbnail';
+import { PhotoCollage } from '@/components/messages/PhotoCollage';
+import { MessageReply } from '@/components/messages/MessageReply';
+import { LinkPreview } from '@/components/messages/LinkPreview';
+import { ReactionPicker } from '@/components/messages/ReactionPicker';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -35,6 +41,7 @@ interface GroupChatProps {
 export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup }: GroupChatProps) => {
   const { messages, loading, sendMessage, sendVoiceMessage, sendFileMessage, editMessage, deleteMessage } = useMessages(group.id);
   const [newMessage, setNewMessage] = useState('');
+  const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
@@ -133,8 +140,9 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup }:
   const handleSend = async () => {
     if (!newMessage.trim()) return;
 
-    await sendMessage(newMessage);
+    await sendMessage(newMessage, replyTo?.id);
     setNewMessage('');
+    setReplyTo(null);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -202,6 +210,42 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup }:
     await sendFileMessage(file);
   };
 
+  const handleReply = (message: Message) => {
+    setReplyTo(message);
+  };
+
+  const handleReaction = async (messageId: string, emoji: string) => {
+    // TODO: Implement reactions in database
+    toast.success(`Reacted with ${emoji}`);
+  };
+
+  // Group consecutive images for collage
+  const getCollageGroups = () => {
+    const groups: Message[][] = [];
+    let currentGroup: Message[] = [];
+
+    messages.forEach((msg, idx) => {
+      if (msg.file_type?.startsWith('image/') && msg.file_url) {
+        currentGroup.push(msg);
+        if (currentGroup.length === 4 || idx === messages.length - 1) {
+          if (currentGroup.length === 4) {
+            groups.push([...currentGroup]);
+          }
+          currentGroup = [];
+        }
+      } else {
+        currentGroup = [];
+      }
+    });
+
+    return groups;
+  };
+
+  const isPartOfCollage = (messageId: string) => {
+    const collageGroups = getCollageGroups();
+    return collageGroups.some(group => group.some(msg => msg.id === messageId));
+  };
+
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
@@ -264,10 +308,17 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup }:
       {/* Messages */}
       <ScrollArea className="flex-1 p-4" ref={scrollRef}>
         <div className="space-y-4">
-          {messages.map((message) => {
+          {messages.map((message, idx) => {
             const profile = profiles[message.user_id];
             const isOwnMessage = message.user_id === currentUserId;
             const isEditing = editingMessageId === message.id;
+            const collageGroups = getCollageGroups();
+            const collageGroup = collageGroups.find(group => group[0].id === message.id);
+            
+            // Skip if part of collage but not the first message
+            if (isPartOfCollage(message.id) && !collageGroup) {
+              return null;
+            }
 
             return (
               <div key={message.id} className="animate-fade-in">
@@ -289,6 +340,19 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup }:
                         })}
                         {message.edited_at && ' (edited)'}
                       </span>
+                      {!message.is_deleted && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-all hover-scale"
+                            onClick={() => handleReply(message)}
+                          >
+                            <Reply className="h-3 w-3" />
+                          </Button>
+                          <ReactionPicker onReact={(emoji) => handleReaction(message.id, emoji)} />
+                        </>
+                      )}
                       {isOwnMessage && !message.is_deleted && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -341,18 +405,31 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup }:
                       </div>
                      ) : (
                        <div className="max-w-xl">
-                         {message.voice_url && message.voice_duration ? (
+                         {collageGroup ? (
+                           <PhotoCollage
+                             images={collageGroup.map(msg => ({
+                               url: msg.file_url!,
+                               alt: msg.file_name || 'Image'
+                             }))}
+                           />
+                         ) : message.voice_url && message.voice_duration ? (
                            <VoiceMessage
                              voiceUrl={message.voice_url}
                              duration={message.voice_duration}
                            />
                          ) : message.file_url && message.file_name ? (
-                           <FilePreview
-                             fileUrl={message.file_url}
-                             fileName={message.file_name}
-                             fileSize={message.file_size || 0}
-                             fileType={message.file_type || 'application/octet-stream'}
-                           />
+                           message.file_type?.includes('pdf') ? (
+                             <PDFViewer fileUrl={message.file_url} fileName={message.file_name} />
+                           ) : message.file_type?.startsWith('image/') ? (
+                             <ImageThumbnail imageUrl={message.file_url} alt={message.file_name} />
+                           ) : (
+                             <FilePreview
+                               fileUrl={message.file_url}
+                               fileName={message.file_name}
+                               fileSize={message.file_size || 0}
+                               fileType={message.file_type || 'application/octet-stream'}
+                             />
+                           )
                          ) : (
                            <div className={`rounded-lg px-3 py-2 inline-block ${
                              message.is_deleted ? 'bg-muted/50' : 'bg-muted'
@@ -362,6 +439,14 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup }:
                              }`}>
                                {message.content}
                              </p>
+                             {message.link_url && (
+                               <LinkPreview
+                                 url={message.link_url}
+                                 title={message.link_title}
+                                 description={message.link_description}
+                                 image={message.link_image}
+                               />
+                             )}
                            </div>
                          )}
                        </div>
@@ -377,6 +462,7 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup }:
 
       {/* Input */}
       <div className="p-4 border-t border-border bg-card">
+        <MessageReply replyTo={replyTo} onClear={() => setReplyTo(null)} />
         <div className="flex gap-2">
           <CameraCapture onCapture={handleFileSend} />
           <FileAttachment
@@ -389,9 +475,9 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup }:
             onChange={(e) => handleTyping(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Type a message..."
-            className="flex-1"
+            className="flex-1 transition-all focus:scale-[1.01]"
           />
-          <Button onClick={handleSend} size="icon">
+          <Button onClick={handleSend} size="icon" className="hover-scale">
             <Send className="h-4 w-4" />
           </Button>
         </div>

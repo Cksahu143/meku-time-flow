@@ -53,6 +53,11 @@ export type Database = {
           file_url: string | null
           id: string
           is_deleted: boolean | null
+          link_description: string | null
+          link_image: string | null
+          link_title: string | null
+          link_url: string | null
+          reply_to_message_id: string | null
           sender_id: string
           voice_duration: number | null
           voice_url: string | null
@@ -68,6 +73,11 @@ export type Database = {
           file_url?: string | null
           id?: string
           is_deleted?: boolean | null
+          link_description?: string | null
+          link_image?: string | null
+          link_title?: string | null
+          link_url?: string | null
+          reply_to_message_id?: string | null
           sender_id: string
           voice_duration?: number | null
           voice_url?: string | null
@@ -83,6 +93,11 @@ export type Database = {
           file_url?: string | null
           id?: string
           is_deleted?: boolean | null
+          link_description?: string | null
+          link_image?: string | null
+          link_title?: string | null
+          link_url?: string | null
+          reply_to_message_id?: string | null
           sender_id?: string
           voice_duration?: number | null
           voice_url?: string | null
@@ -93,6 +108,13 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "direct_messages_reply_to_message_id_fkey"
+            columns: ["reply_to_message_id"]
+            isOneToOne: false
+            referencedRelation: "direct_messages"
             referencedColumns: ["id"]
           },
         ]
@@ -209,6 +231,11 @@ export type Database = {
           group_id: string
           id: string
           is_deleted: boolean | null
+          link_description: string | null
+          link_image: string | null
+          link_title: string | null
+          link_url: string | null
+          reply_to_message_id: string | null
           user_id: string
           voice_duration: number | null
           voice_url: string | null
@@ -224,6 +251,11 @@ export type Database = {
           group_id: string
           id?: string
           is_deleted?: boolean | null
+          link_description?: string | null
+          link_image?: string | null
+          link_title?: string | null
+          link_url?: string | null
+          reply_to_message_id?: string | null
           user_id: string
           voice_duration?: number | null
           voice_url?: string | null
@@ -239,6 +271,11 @@ export type Database = {
           group_id?: string
           id?: string
           is_deleted?: boolean | null
+          link_description?: string | null
+          link_image?: string | null
+          link_title?: string | null
+          link_url?: string | null
+          reply_to_message_id?: string | null
           user_id?: string
           voice_duration?: number | null
           voice_url?: string | null
@@ -251,11 +288,19 @@ export type Database = {
             referencedRelation: "groups"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "messages_reply_to_message_id_fkey"
+            columns: ["reply_to_message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
         ]
       }
       profiles: {
         Row: {
           avatar_url: string | null
+          bio: string | null
           created_at: string
           display_name: string | null
           email: string
@@ -268,6 +313,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string
           display_name?: string | null
           email: string
@@ -280,6 +326,7 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string
           display_name?: string | null
           email?: string
