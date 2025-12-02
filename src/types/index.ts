@@ -63,6 +63,11 @@ export interface Message {
   file_name?: string;
   file_size?: number;
   file_type?: string;
+  reply_to_message_id?: string;
+  link_url?: string;
+  link_title?: string;
+  link_description?: string;
+  link_image?: string;
 }
 
 export interface Conversation {
@@ -88,6 +93,11 @@ export interface DirectMessage {
   file_name?: string;
   file_size?: number;
   file_type?: string;
+  reply_to_message_id?: string;
+  link_url?: string;
+  link_title?: string;
+  link_description?: string;
+  link_image?: string;
 }
 
 export interface PomodoroSettings {
@@ -95,4 +105,16 @@ export interface PomodoroSettings {
   shortBreakDuration: number;
   longBreakDuration: number;
   sessionsBeforeLongBreak: number;
+}
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  username?: string;
+  display_name?: string;
+  avatar_url?: string;
+  bio?: string;
+  is_public?: boolean;
+  created_at: string;
+  updated_at: string;
 }

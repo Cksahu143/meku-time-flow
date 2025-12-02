@@ -21,6 +21,7 @@ import { NotificationPreferences } from '@/components/NotificationPreferences';
 export const ProfileSettings: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [displayName, setDisplayName] = useState('');
+  const [bio, setBio] = useState('');
   const [isPublic, setIsPublic] = useState(false);
   const [loading, setLoading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -48,6 +49,7 @@ export const ProfileSettings: React.FC = () => {
 
       if (data) {
         setDisplayName(data.display_name || '');
+        setBio(data.bio || '');
         setIsPublic(data.is_public || false);
         setAvatarUrl(data.avatar_url || null);
       }
@@ -117,6 +119,7 @@ export const ProfileSettings: React.FC = () => {
           id: user.id,
           email: user.email!,
           display_name: displayName,
+          bio: bio,
           is_public: isPublic,
           avatar_url: avatarUrl,
         });
@@ -213,6 +216,20 @@ export const ProfileSettings: React.FC = () => {
                 placeholder="Your name"
                 className="transition-all focus:scale-[1.01]"
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="bio">Bio</Label>
+              <textarea
+                id="bio"
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder="Tell others about yourself..."
+                className="w-full min-h-[100px] px-3 py-2 rounded-md border border-input bg-background text-sm transition-all focus:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                maxLength={500}
+              />
+              <p className="text-xs text-muted-foreground text-right">
+                {bio.length}/500 characters
+              </p>
             </div>
             <div className="flex items-center justify-between p-4 rounded-lg border border-border/50 hover:border-border transition-all hover-lift">
               <div className="space-y-0.5">

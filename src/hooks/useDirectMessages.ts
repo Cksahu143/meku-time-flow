@@ -57,18 +57,36 @@ export const useDirectMessages = (conversationId: string | null) => {
     }
   };
 
-  const sendMessage = async (content: string) => {
+  const sendMessage = async (content: string, replyToId?: string) => {
     if (!conversationId) return;
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { error } = await supabase.from('direct_messages').insert({
+      const messageData: any = {
         conversation_id: conversationId,
         sender_id: user.id,
         content,
-      });
+      };
+
+      if (replyToId) {
+        messageData.reply_to_message_id = replyToId;
+      }
+
+      // Check for URLs and extract first one for preview
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      const urls = content.match(urlRegex);
+      if (urls && urls.length > 0) {
+        try {
+          const url = new URL(urls[0]);
+          messageData.link_url = urls[0];
+          messageData.link_title = url.hostname;
+          messageData.link_description = urls[0];
+        } catch {}
+      }
+
+      const { error } = await supabase.from('direct_messages').insert(messageData);
 
       if (error) throw error;
     } catch (error) {

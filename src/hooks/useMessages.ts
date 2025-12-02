@@ -75,16 +75,38 @@ export const useMessages = (groupId: string | null) => {
     }
   };
 
-  const sendMessage = async (content: string) => {
+  const sendMessage = async (content: string, replyToId?: string) => {
     if (!groupId || !content.trim()) return;
 
     try {
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) throw new Error('Not authenticated');
 
+      const messageData: any = { 
+        group_id: groupId, 
+        user_id: user.id, 
+        content: content.trim() 
+      };
+
+      if (replyToId) {
+        messageData.reply_to_message_id = replyToId;
+      }
+
+      // Check for URLs and extract first one for preview
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      const urls = content.match(urlRegex);
+      if (urls && urls.length > 0) {
+        try {
+          const url = new URL(urls[0]);
+          messageData.link_url = urls[0];
+          messageData.link_title = url.hostname;
+          messageData.link_description = urls[0];
+        } catch {}
+      }
+
       const { error } = await supabase
         .from('messages')
-        .insert([{ group_id: groupId, user_id: user.id, content: content.trim() }]);
+        .insert([messageData]);
 
       if (error) throw error;
     } catch (error: any) {
