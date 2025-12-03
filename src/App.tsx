@@ -10,6 +10,8 @@ import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import ActiveUsers from "./pages/ActiveUsers";
+import Profile from "./pages/Profile";
+import EditProfile from "./pages/EditProfile";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +27,9 @@ const App = () => (
             <Route path="/app" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/active-users" element={<ActiveUsers />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/profile/:userId" element={<Profile />} />
+            <Route path="/profile/edit" element={<EditProfile />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
