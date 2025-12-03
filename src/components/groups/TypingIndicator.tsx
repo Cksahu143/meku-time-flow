@@ -61,10 +61,17 @@ export const TypingIndicator = ({ groupId }: TypingIndicatorProps) => {
   if (typingUsers.length === 0) return null;
 
   return (
-    <div className="text-sm text-muted-foreground italic py-2">
-      {typingUsers.length === 1
-        ? `${typingUsers[0]} is typing...`
-        : `${typingUsers.slice(0, 2).join(', ')}${typingUsers.length > 2 ? ` and ${typingUsers.length - 2} others` : ''} are typing...`}
+    <div className="flex items-center gap-2 text-sm text-muted-foreground py-2 animate-fade-in">
+      <div className="flex gap-1">
+        <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+        <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+        <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+      </div>
+      <span className="italic">
+        {typingUsers.length === 1
+          ? `${typingUsers[0]} is typing...`
+          : `${typingUsers.slice(0, 2).join(', ')}${typingUsers.length > 2 ? ` and ${typingUsers.length - 2} others` : ''} are typing...`}
+      </span>
     </div>
   );
 };
