@@ -6,6 +6,12 @@ export interface NotificationPreferences {
   tasks: boolean;
   pomodoro: boolean;
   groupInvites: boolean;
+  mentions: boolean;
+  replies: boolean;
+  follows: boolean;
+  reactions: boolean;
+  system: boolean;
+  announcements: boolean;
   quietHoursEnabled: boolean;
   quietHoursStart: string;
   quietHoursEnd: string;
@@ -17,6 +23,12 @@ const DEFAULT_PREFERENCES: NotificationPreferences = {
   tasks: true,
   pomodoro: true,
   groupInvites: true,
+  mentions: true,
+  replies: true,
+  follows: true,
+  reactions: true,
+  system: true,
+  announcements: true,
   quietHoursEnabled: false,
   quietHoursStart: '22:00',
   quietHoursEnd: '08:00',
@@ -75,7 +87,7 @@ export const useNotificationPreferences = () => {
     }
   };
 
-  const shouldShowNotification = (type: keyof Pick<NotificationPreferences, 'messages' | 'tasks' | 'pomodoro' | 'groupInvites'>) => {
+  const shouldShowNotification = (type: keyof Pick<NotificationPreferences, 'messages' | 'tasks' | 'pomodoro' | 'groupInvites' | 'mentions' | 'replies' | 'follows' | 'reactions' | 'system' | 'announcements'>) => {
     if (isQuietHours()) return false;
     return preferences[type];
   };

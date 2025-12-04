@@ -164,6 +164,10 @@ export default {
           "0%": { transform: "rotateY(0deg)" },
           "100%": { transform: "rotateY(180deg)" },
         },
+        "bounce-subtle": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-2px)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -188,6 +192,7 @@ export default {
         "pulse-glow": "pulse-glow 2s ease-in-out infinite",
         "zoom-in": "zoom-in 0.3s ease-out",
         "flip": "flip 0.6s ease-in-out",
+        "bounce-subtle": "bounce-subtle 1s ease-in-out infinite",
       },
       transitionTimingFunction: {
         'smooth': 'cubic-bezier(0.4, 0, 0.2, 1)',

@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, Clock, MessageSquare, CheckSquare, Timer, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  Bell, Clock, MessageSquare, CheckSquare, Timer, Users, 
+  AtSign, Reply, UserPlus, Heart, Settings, Megaphone, ExternalLink 
+} from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
@@ -10,6 +14,7 @@ import { useNotificationPreferences } from '@/hooks/useNotificationPreferences';
 import { toast } from 'sonner';
 
 export const NotificationPreferences: React.FC = () => {
+  const navigate = useNavigate();
   const { preferences, savePreferences, loading } = useNotificationPreferences();
   const [localPrefs, setLocalPrefs] = useState(preferences);
   const [permissionStatus, setPermissionStatus] = useState<NotificationPermission>('default');
@@ -35,7 +40,6 @@ export const NotificationPreferences: React.FC = () => {
       setPermissionStatus(permission);
       
       if (permission === 'granted') {
-        // Register service worker
         if ('serviceWorker' in navigator) {
           const registration = await navigator.serviceWorker.register('/service-worker.js');
           console.log('Service Worker registered:', registration);
@@ -61,8 +65,42 @@ export const NotificationPreferences: React.FC = () => {
     return <div className="animate-pulse">Loading preferences...</div>;
   }
 
+  const notificationTypes = [
+    { id: 'messages', icon: MessageSquare, label: 'Messages', description: 'New messages in groups and direct chats' },
+    { id: 'mentions', icon: AtSign, label: 'Mentions', description: 'When someone @mentions you in a chat' },
+    { id: 'replies', icon: Reply, label: 'Replies', description: 'Replies to your messages' },
+    { id: 'follows', icon: UserPlus, label: 'Follows', description: 'When someone follows you' },
+    { id: 'reactions', icon: Heart, label: 'Reactions', description: 'Reactions to your posts and messages' },
+    { id: 'tasks', icon: CheckSquare, label: 'Tasks', description: 'Reminders for due and overdue tasks' },
+    { id: 'pomodoro', icon: Timer, label: 'Pomodoro', description: 'Session complete notifications' },
+    { id: 'groupInvites', icon: Users, label: 'Group Invites', description: 'New group invitation alerts' },
+    { id: 'system', icon: Settings, label: 'System', description: 'Important system updates and alerts' },
+    { id: 'announcements', icon: Megaphone, label: 'Announcements', description: 'App announcements and news' },
+  ];
+
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Notification Hub Link */}
+      <Card className="border-primary/30 bg-primary/5 shadow-elegant hover-lift transition-all duration-300">
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <Bell className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold">Notification Hub</h3>
+                <p className="text-sm text-muted-foreground">View all your notifications in one place</p>
+              </div>
+            </div>
+            <Button onClick={() => navigate('/notifhub')} className="gap-2 hover-scale">
+              <ExternalLink className="h-4 w-4" />
+              Open Hub
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card className="border-border/50 shadow-elegant hover-lift transition-all duration-300">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -109,80 +147,28 @@ export const NotificationPreferences: React.FC = () => {
             Choose which types of notifications you want to receive
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between group">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center transition-all group-hover:scale-110">
-                <MessageSquare className="h-5 w-5 text-primary" />
+        <CardContent className="space-y-4">
+          {notificationTypes.map((type, index) => (
+            <React.Fragment key={type.id}>
+              <div className="flex items-center justify-between group">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center transition-all group-hover:scale-110">
+                    <type.icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <Label htmlFor={type.id} className="cursor-pointer">{type.label}</Label>
+                    <p className="text-sm text-muted-foreground">{type.description}</p>
+                  </div>
+                </div>
+                <Switch
+                  id={type.id}
+                  checked={localPrefs[type.id as keyof typeof localPrefs] as boolean}
+                  onCheckedChange={(checked) => setLocalPrefs({ ...localPrefs, [type.id]: checked })}
+                />
               </div>
-              <div>
-                <Label htmlFor="messages" className="cursor-pointer">Messages</Label>
-                <p className="text-sm text-muted-foreground">New messages in groups and direct chats</p>
-              </div>
-            </div>
-            <Switch
-              id="messages"
-              checked={localPrefs.messages}
-              onCheckedChange={(checked) => setLocalPrefs({ ...localPrefs, messages: checked })}
-            />
-          </div>
-
-          <Separator />
-
-          <div className="flex items-center justify-between group">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center transition-all group-hover:scale-110">
-                <CheckSquare className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <Label htmlFor="tasks" className="cursor-pointer">Tasks</Label>
-                <p className="text-sm text-muted-foreground">Reminders for due and overdue tasks</p>
-              </div>
-            </div>
-            <Switch
-              id="tasks"
-              checked={localPrefs.tasks}
-              onCheckedChange={(checked) => setLocalPrefs({ ...localPrefs, tasks: checked })}
-            />
-          </div>
-
-          <Separator />
-
-          <div className="flex items-center justify-between group">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center transition-all group-hover:scale-110">
-                <Timer className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <Label htmlFor="pomodoro" className="cursor-pointer">Pomodoro</Label>
-                <p className="text-sm text-muted-foreground">Session complete notifications</p>
-              </div>
-            </div>
-            <Switch
-              id="pomodoro"
-              checked={localPrefs.pomodoro}
-              onCheckedChange={(checked) => setLocalPrefs({ ...localPrefs, pomodoro: checked })}
-            />
-          </div>
-
-          <Separator />
-
-          <div className="flex items-center justify-between group">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center transition-all group-hover:scale-110">
-                <Users className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <Label htmlFor="groupInvites" className="cursor-pointer">Group Invites</Label>
-                <p className="text-sm text-muted-foreground">New group invitation alerts</p>
-              </div>
-            </div>
-            <Switch
-              id="groupInvites"
-              checked={localPrefs.groupInvites}
-              onCheckedChange={(checked) => setLocalPrefs({ ...localPrefs, groupInvites: checked })}
-            />
-          </div>
+              {index < notificationTypes.length - 1 && <Separator />}
+            </React.Fragment>
+          ))}
         </CardContent>
       </Card>
 

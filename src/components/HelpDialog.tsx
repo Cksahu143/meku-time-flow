@@ -15,7 +15,6 @@ import {
   Clock,
   Users,
   MessageSquare,
-  Plus,
   Settings,
   UserPlus,
   Bell,
@@ -73,6 +72,8 @@ export const HelpDialog = ({ open, onOpenChange }: HelpDialogProps) => {
         'Invite members by searching their username or email',
         'Click three dots to view group info, edit details, or remove members (host only)',
         'Search groups using the search bar when you have many',
+        'Pin important messages by clicking the pin icon',
+        'Use @mentions to notify specific members',
       ],
     },
     {
@@ -81,9 +82,11 @@ export const HelpDialog = ({ open, onOpenChange }: HelpDialogProps) => {
       description: 'One-on-one conversations',
       steps: [
         'Go to Active Users page and click on any user',
-        'A new private chat will be created automatically',
-        'Switch between Groups and Chats tabs to find your conversations',
-        'Search chats using the search bar',
+        'Select "Create Chat" to start a conversation',
+        'View online status and last seen timestamps',
+        'Reply to specific messages for context',
+        'Forward messages to other chats or groups',
+        'Drag and drop files to share attachments',
       ],
     },
     {
@@ -92,18 +95,32 @@ export const HelpDialog = ({ open, onOpenChange }: HelpDialogProps) => {
       description: 'Share your schedule with friends',
       steps: [
         'Click "Share Timetable" button',
-        'Generate a shareable link',
-        'Send the link to anyone you want to share with',
+        'Enter the email of the person you want to share with',
+        'They will receive a notification to accept',
       ],
     },
     {
       icon: Bell,
-      title: 'Invitations',
-      description: 'Manage group invitations',
+      title: 'Notifications',
+      description: 'Stay updated on all activities',
       steps: [
-        'Click the users icon in Groups/Chats section',
-        'View all pending invitations',
-        'Accept or decline invitations',
+        'Click the bell icon to see pending invitations',
+        'Visit the Notification Hub for all alerts',
+        'Filter by type: mentions, replies, follows, reactions',
+        'Enable browser notifications for alerts when away',
+        'Set quiet hours to pause notifications',
+      ],
+    },
+    {
+      icon: UserPlus,
+      title: 'Social Features',
+      description: 'Connect with classmates',
+      steps: [
+        'Visit user profiles to see their posts and activity',
+        'Follow users to stay updated on their posts',
+        'View followers and following lists',
+        'React to posts with likes',
+        'Check the Activity tab for recent actions',
       ],
     },
     {
@@ -113,9 +130,9 @@ export const HelpDialog = ({ open, onOpenChange }: HelpDialogProps) => {
       steps: [
         'Click your profile picture to open settings',
         'Update your display name, username, and bio',
-        'Upload a custom avatar',
+        'Upload a custom avatar and profile header',
         'Choose between light, dark, or pastel themes',
-        'Customize theme colors to match your style',
+        'Customize notification preferences',
       ],
     },
     {
@@ -125,7 +142,7 @@ export const HelpDialog = ({ open, onOpenChange }: HelpDialogProps) => {
       steps: [
         'Click the music icon to open the player',
         'Play, pause, and skip tracks',
-        'Adjust volume using the slider',
+        'Choose from nature sounds or calm piano',
       ],
     },
   ];
