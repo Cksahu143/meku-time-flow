@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, ListTodo, Timer, Moon, Sun, Palette, LogOut, Users, MessageSquare, HelpCircle } from 'lucide-react';
+import { Calendar, Clock, ListTodo, Timer, Moon, Sun, Palette, LogOut, Users, MessageSquare, HelpCircle, UserCheck } from 'lucide-react';
 import { ViewType } from '@/types';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/providers/ThemeProvider';
@@ -84,7 +84,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
             <p className="text-xs text-muted-foreground">School Planner</p>
           </div>
         </div>
-        <div className="flex gap-1 justify-end">
+        <div className="flex gap-1 justify-end flex-wrap">
           <Button
             variant="ghost"
             size="icon"
