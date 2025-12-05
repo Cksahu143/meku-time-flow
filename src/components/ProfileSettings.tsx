@@ -12,11 +12,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Settings, Upload, Bell } from 'lucide-react';
+import { Settings, Upload, Bell, Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { NotificationPreferences } from '@/components/NotificationPreferences';
+import { PrivacySettings } from '@/components/PrivacySettings';
 
 export const ProfileSettings: React.FC = () => {
   const [open, setOpen] = useState(false);
@@ -160,9 +161,13 @@ export const ProfileSettings: React.FC = () => {
         </DialogHeader>
         
         <Tabs defaultValue="profile" className="pt-4">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
             <TabsTrigger value="profile" className="transition-all data-[state=active]:scale-105">
               Profile
+            </TabsTrigger>
+            <TabsTrigger value="privacy" className="transition-all data-[state=active]:scale-105">
+              <Shield className="h-4 w-4 mr-2" />
+              Privacy
             </TabsTrigger>
             <TabsTrigger value="notifications" className="transition-all data-[state=active]:scale-105">
               <Bell className="h-4 w-4 mr-2" />
@@ -247,6 +252,10 @@ export const ProfileSettings: React.FC = () => {
             <Button onClick={handleSave} disabled={loading} className="w-full hover-scale shadow-elegant">
               {loading ? 'Saving...' : 'Save Profile'}
             </Button>
+          </TabsContent>
+
+          <TabsContent value="privacy" className="animate-fade-in">
+            <PrivacySettings />
           </TabsContent>
 
           <TabsContent value="notifications" className="animate-fade-in">
