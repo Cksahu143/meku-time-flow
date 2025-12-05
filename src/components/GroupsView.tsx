@@ -19,6 +19,7 @@ import {
 } from './ui/resizable';
 import { Plus, Users } from 'lucide-react';
 import { Group, Conversation } from '@/types';
+import { useToast } from '@/hooks/use-toast';
 
 interface LocationState {
   openConversation?: string;
@@ -28,6 +29,7 @@ interface LocationState {
 export const GroupsView = () => {
   const location = useLocation();
   const locationState = location.state as LocationState | null;
+  const { toast } = useToast();
   
   const { groups, loading: groupsLoading, createGroup, updateGroup, deleteGroup, leaveGroup } = useGroups();
   const { conversations, loading: conversationsLoading, createOrGetConversation } = useConversations();
@@ -43,6 +45,65 @@ export const GroupsView = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showInvitations, setShowInvitations] = useState(false);
   const [activeTab, setActiveTab] = useState<'groups' | 'chats'>('groups');
+  const [isPublicProfile, setIsPublicProfile] = useState(true);
+  const [hasShownWarning, setHasShownWarning] = useState(false);
+
+  // Check if user has public profile
+  useEffect(() => {
+    const checkPublicProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase
+        .from('profiles')
+        .select('is_public')
+        .eq('id', user.id)
+        .single();
+
+      setIsPublicProfile(data?.is_public ?? false);
+    };
+
+    checkPublicProfile();
+
+    // Subscribe to profile changes
+    const channel = supabase
+      .channel('profile-public-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+        },
+        async (payload) => {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user && payload.new.id === user.id) {
+            setIsPublicProfile(payload.new.is_public ?? false);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Show warning toast if public profile is off
+  useEffect(() => {
+    if (!isPublicProfile && !hasShownWarning) {
+      toast({
+        variant: 'destructive',
+        title: 'Warning',
+        description: 'You cannot chat with anyone. Please turn on public profile to allow.',
+        duration: 5000,
+      });
+      setHasShownWarning(true);
+    }
+    if (isPublicProfile) {
+      setHasShownWarning(false);
+    }
+  }, [isPublicProfile, hasShownWarning, toast]);
 
   // Handle navigation from Active Users
   useEffect(() => {
@@ -74,11 +135,27 @@ export const GroupsView = () => {
   };
 
   const handleSelectConversation = async (conversation: Conversation, otherUserId: string) => {
+    if (!isPublicProfile) {
+      toast({
+        variant: 'destructive',
+        title: 'Cannot access chat',
+        description: 'Please turn on public profile in Settings → Privacy to use chats.',
+      });
+      return;
+    }
     fetchUserProfile(otherUserId, conversation);
     setSelectedGroup(null);
   };
 
   const handleSelectGroup = (group: Group) => {
+    if (!isPublicProfile) {
+      toast({
+        variant: 'destructive',
+        title: 'Cannot access group',
+        description: 'Please turn on public profile in Settings → Privacy to use groups.',
+      });
+      return;
+    }
     setSelectedGroup(group);
     setSelectedConversation(null);
   };
@@ -114,6 +191,7 @@ export const GroupsView = () => {
                         variant="default"
                         size="icon"
                         onClick={() => setShowCreateDialog(true)}
+                        disabled={!isPublicProfile}
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
@@ -139,6 +217,7 @@ export const GroupsView = () => {
                       loading={groupsLoading}
                       selectedGroup={selectedGroup}
                       onSelectGroup={handleSelectGroup}
+                      isDisabled={!isPublicProfile}
                     />
                   </TabsContent>
                   <TabsContent value="chats" className="flex-1 m-0">
@@ -147,6 +226,7 @@ export const GroupsView = () => {
                       loading={conversationsLoading}
                       selectedConversationId={selectedConversation?.conversation.id || null}
                       onSelectConversation={handleSelectConversation}
+                      isDisabled={!isPublicProfile}
                     />
                   </TabsContent>
                 </Tabs>
@@ -159,7 +239,19 @@ export const GroupsView = () => {
           {/* Chat Area */}
           <ResizablePanel defaultSize={75}>
             <div className="h-full">
-              {selectedGroup ? (
+              {!isPublicProfile ? (
+                <div className="h-full flex items-center justify-center text-muted-foreground">
+                  <div className="text-center animate-fade-in p-8 max-w-md">
+                    <div className="h-16 w-16 mx-auto mb-4 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                      <Users className="h-8 w-8 text-yellow-500" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-foreground mb-2">Public Profile Required</h3>
+                    <p className="text-muted-foreground mb-4">
+                      To use groups and chats, please enable your public profile in Settings → Privacy.
+                    </p>
+                  </div>
+                </div>
+              ) : selectedGroup ? (
                 <GroupChat
                   group={selectedGroup}
                   onUpdateGroup={updateGroup}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, ListTodo, Timer, Moon, Sun, Palette, LogOut, Users, MessageSquare, HelpCircle, UserCheck } from 'lucide-react';
+import { Calendar, Clock, ListTodo, Timer, Moon, Sun, Palette, LogOut, Users, MessageSquare, HelpCircle, AlertCircle } from 'lucide-react';
 import { ViewType } from '@/types';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/providers/ThemeProvider';
@@ -22,11 +22,45 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [profile, setProfile] = useState<{ avatar_url: string | null; display_name: string | null; username: string | null } | null>(null);
+  const [profile, setProfile] = useState<{ avatar_url: string | null; display_name: string | null; username: string | null; is_public: boolean | null } | null>(null);
   const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
     loadProfile();
+
+    // Subscribe to profile changes for real-time updates
+    const setupSubscription = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const channel = supabase
+        .channel('sidebar-profile-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'profiles',
+            filter: `id=eq.${user.id}`,
+          },
+          (payload) => {
+            setProfile(prev => ({
+              ...prev,
+              avatar_url: payload.new.avatar_url,
+              display_name: payload.new.display_name,
+              username: payload.new.username,
+              is_public: payload.new.is_public,
+            }));
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    };
+
+    setupSubscription();
   }, []);
 
   const loadProfile = async () => {
@@ -36,7 +70,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
 
       const { data } = await supabase
         .from('profiles')
-        .select('avatar_url, display_name, username')
+        .select('avatar_url, display_name, username, is_public')
         .eq('id', user.id)
         .single();
 
@@ -51,7 +85,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
     { id: 'calendar' as ViewType, label: 'Calendar', icon: Calendar },
     { id: 'todo' as ViewType, label: 'To-Do List', icon: ListTodo },
     { id: 'pomodoro' as ViewType, label: 'Pomodoro', icon: Timer },
-    { id: 'groups' as ViewType, label: 'Groups', icon: MessageSquare },
+    { id: 'groups' as ViewType, label: 'Groups', icon: MessageSquare, showWarning: !profile?.is_public },
   ];
 
   const handleSignOut = async () => {
@@ -117,15 +151,23 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
               key={item.id}
               onClick={() => onViewChange(item.id)}
               className={cn(
-                'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200',
+                'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 relative',
                 'hover:scale-105 active:scale-95',
                 isActive
                   ? 'bg-gradient-primary text-primary-foreground shadow-md'
-                  : 'text-foreground hover:bg-secondary'
+                  : 'text-foreground hover:bg-secondary',
+                item.showWarning && !isActive && 'opacity-70'
               )}
             >
-              <Icon className="w-4 h-4" />
-              <span className="font-medium text-sm">{item.label}</span>
+              <div className="relative">
+                <Icon className={cn("w-4 h-4", item.showWarning && !isActive && "text-muted-foreground")} />
+                {item.showWarning && (
+                  <div className="absolute -top-1 -right-1 h-3 w-3 bg-yellow-500 rounded-full flex items-center justify-center">
+                    <AlertCircle className="h-2 w-2 text-white" />
+                  </div>
+                )}
+              </div>
+              <span className={cn("font-medium text-sm", item.showWarning && !isActive && "text-muted-foreground")}>{item.label}</span>
             </button>
           );
         })}

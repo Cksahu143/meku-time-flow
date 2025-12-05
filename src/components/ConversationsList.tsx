@@ -4,13 +4,15 @@ import { Conversation } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
 import { Input } from './ui/input';
-import { MessageSquare, Search } from 'lucide-react';
+import { MessageSquare, Search, AlertCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface ConversationsListProps {
   conversations: Conversation[];
   loading: boolean;
   selectedConversationId: string | null;
   onSelectConversation: (conversation: Conversation, otherUserId: string) => void;
+  isDisabled?: boolean;
 }
 
 interface UserProfile {
@@ -26,6 +28,7 @@ export const ConversationsList = ({
   loading,
   selectedConversationId,
   onSelectConversation,
+  isDisabled,
 }: ConversationsListProps) => {
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [profiles, setProfiles] = useState<Record<string, UserProfile>>({});
@@ -124,27 +127,43 @@ export const ConversationsList = ({
             <button
               key={conversation.id}
               onClick={() => onSelectConversation(conversation, otherUserId)}
-              className={`w-full p-3 rounded-lg text-left transition-colors ${
+              disabled={isDisabled}
+              className={cn(
+                `w-full p-3 rounded-lg text-left transition-colors`,
                 isSelected
                   ? 'bg-primary/10 border-primary'
+                  : '',
+                isDisabled 
+                  ? 'opacity-50 cursor-not-allowed hover:bg-transparent' 
                   : 'hover:bg-muted/50'
-              }`}
+              )}
             >
               <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarImage src={profile?.avatar_url || undefined} />
-                  <AvatarFallback className="bg-primary/10 text-primary">
-                    {profile?.display_name?.charAt(0).toUpperCase() ||
-                      profile?.username?.charAt(0).toUpperCase() ||
-                      profile?.email?.charAt(0).toUpperCase() ||
-                      '?'}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="relative">
+                  <Avatar className={cn(isDisabled && "grayscale")}>
+                    <AvatarImage src={profile?.avatar_url || undefined} />
+                    <AvatarFallback className="bg-primary/10 text-primary">
+                      {profile?.display_name?.charAt(0).toUpperCase() ||
+                        profile?.username?.charAt(0).toUpperCase() ||
+                        profile?.email?.charAt(0).toUpperCase() ||
+                        '?'}
+                    </AvatarFallback>
+                  </Avatar>
+                  {isDisabled && (
+                    <div className="absolute -top-1 -right-1 h-5 w-5 bg-yellow-500 rounded-full flex items-center justify-center">
+                      <AlertCircle className="h-3 w-3 text-white" />
+                    </div>
+                  )}
+                </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">
+                  <p className={cn("font-medium truncate", isDisabled && "text-muted-foreground")}>
                     {profile?.display_name || profile?.username || profile?.email || 'User'}
                   </p>
-                  {conversation.last_message_at && (
+                  {isDisabled ? (
+                    <p className="text-xs text-muted-foreground">
+                      Enable public profile to access
+                    </p>
+                  ) : conversation.last_message_at && (
                     <p className="text-xs text-muted-foreground">
                       {new Date(conversation.last_message_at).toLocaleDateString()}
                     </p>
