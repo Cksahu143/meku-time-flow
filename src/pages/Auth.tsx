@@ -12,6 +12,8 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Users } from 'lucide-react';
+import { ForgotPasswordDialog } from '@/components/ForgotPasswordDialog';
+
 
 
 interface Profile {
@@ -28,6 +30,7 @@ const Auth = () => {
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -184,6 +187,14 @@ const Auth = () => {
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? 'Signing in...' : 'Sign In'}
                 </Button>
+                <Button
+                  type="button"
+                  variant="link"
+                  className="w-full text-muted-foreground hover:text-primary"
+                  onClick={() => setShowForgotPassword(true)}
+                >
+                  Forgot Password?
+                </Button>
               </form>
             </TabsContent>
             
@@ -283,6 +294,11 @@ const Auth = () => {
         </CardContent>
       </Card>
       </div>
+      
+      <ForgotPasswordDialog 
+        open={showForgotPassword} 
+        onOpenChange={setShowForgotPassword} 
+      />
     </div>
   );
 };

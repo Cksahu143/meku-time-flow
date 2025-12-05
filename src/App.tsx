@@ -13,6 +13,7 @@ import ActiveUsers from "./pages/ActiveUsers";
 import Profile from "./pages/Profile";
 import EditProfile from "./pages/EditProfile";
 import NotificationHub from "./pages/NotificationHub";
+import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/profile/:userId" element={<Profile />} />
             <Route path="/profile/edit" element={<EditProfile />} />
             <Route path="/notifhub" element={<NotificationHub />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

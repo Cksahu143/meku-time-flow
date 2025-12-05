@@ -520,6 +520,7 @@ export type Database = {
           created_at: string
           display_name: string | null
           email: string
+          email_visible: boolean | null
           id: string
           is_public: boolean | null
           last_seen: string | null
@@ -534,6 +535,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           email: string
+          email_visible?: boolean | null
           id: string
           is_public?: boolean | null
           last_seen?: string | null
@@ -548,6 +550,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           email?: string
+          email_visible?: boolean | null
           id?: string
           is_public?: boolean | null
           last_seen?: string | null
