@@ -5,14 +5,16 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
+import { Search, AlertCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 interface GroupListProps {
   groups: Group[];
   loading: boolean;
   selectedGroup: Group | null;
   onSelectGroup: (group: Group) => void;
+  isDisabled?: boolean;
 }
 
 interface GroupWithLastMessage extends Group {
@@ -22,7 +24,7 @@ interface GroupWithLastMessage extends Group {
   };
 }
 
-export const GroupList = ({ groups, loading, selectedGroup, onSelectGroup }: GroupListProps) => {
+export const GroupList = ({ groups, loading, selectedGroup, onSelectGroup, isDisabled }: GroupListProps) => {
   const [groupsWithMessages, setGroupsWithMessages] = useState<GroupWithLastMessage[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -102,18 +104,30 @@ export const GroupList = ({ groups, loading, selectedGroup, onSelectGroup }: Gro
           <button
             key={group.id}
             onClick={() => onSelectGroup(group)}
-            className={`w-full p-3 rounded-lg flex items-start gap-3 hover:bg-accent transition-colors ${
-              selectedGroup?.id === group.id ? 'bg-accent' : ''
-            }`}
+            disabled={isDisabled}
+            className={cn(
+              `w-full p-3 rounded-lg flex items-start gap-3 transition-colors`,
+              selectedGroup?.id === group.id ? 'bg-accent' : '',
+              isDisabled 
+                ? 'opacity-50 cursor-not-allowed hover:bg-transparent' 
+                : 'hover:bg-accent'
+            )}
           >
-            <Avatar className="h-12 w-12 flex-shrink-0">
-              <AvatarImage src={group.avatar_url} />
-              <AvatarFallback>{group.name.slice(0, 2).toUpperCase()}</AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <Avatar className={cn("h-12 w-12 flex-shrink-0", isDisabled && "grayscale")}>
+                <AvatarImage src={group.avatar_url} />
+                <AvatarFallback>{group.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+              </Avatar>
+              {isDisabled && (
+                <div className="absolute -top-1 -right-1 h-5 w-5 bg-yellow-500 rounded-full flex items-center justify-center">
+                  <AlertCircle className="h-3 w-3 text-white" />
+                </div>
+              )}
+            </div>
             <div className="flex-1 min-w-0 text-left">
               <div className="flex items-center justify-between mb-1">
-                <h3 className="font-semibold truncate">{group.name}</h3>
-                {group.lastMessage && (
+                <h3 className={cn("font-semibold truncate", isDisabled && "text-muted-foreground")}>{group.name}</h3>
+                {group.lastMessage && !isDisabled && (
                   <span className="text-xs text-muted-foreground ml-2">
                     {formatDistanceToNow(new Date(group.lastMessage.created_at), {
                       addSuffix: true,
@@ -122,7 +136,9 @@ export const GroupList = ({ groups, loading, selectedGroup, onSelectGroup }: Gro
                 )}
               </div>
               <p className="text-sm text-muted-foreground truncate">
-                {group.lastMessage?.content || group.description || 'No messages yet'}
+                {isDisabled 
+                  ? 'Enable public profile to access'
+                  : group.lastMessage?.content || group.description || 'No messages yet'}
               </p>
             </div>
           </button>

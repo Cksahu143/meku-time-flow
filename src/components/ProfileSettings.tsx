@@ -11,7 +11,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Settings, Upload, Bell, Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -23,7 +22,6 @@ export const ProfileSettings: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
-  const [isPublic, setIsPublic] = useState(false);
   const [loading, setLoading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -51,7 +49,6 @@ export const ProfileSettings: React.FC = () => {
       if (data) {
         setDisplayName(data.display_name || '');
         setBio(data.bio || '');
-        setIsPublic(data.is_public || false);
         setAvatarUrl(data.avatar_url || null);
       }
     } catch (error) {
@@ -121,7 +118,6 @@ export const ProfileSettings: React.FC = () => {
           email: user.email!,
           display_name: displayName,
           bio: bio,
-          is_public: isPublic,
           avatar_url: avatarUrl,
         });
 
@@ -235,19 +231,6 @@ export const ProfileSettings: React.FC = () => {
               <p className="text-xs text-muted-foreground text-right">
                 {bio.length}/500 characters
               </p>
-            </div>
-            <div className="flex items-center justify-between p-4 rounded-lg border border-border/50 hover:border-border transition-all hover-lift">
-              <div className="space-y-0.5">
-                <Label htmlFor="isPublic">Public Profile</Label>
-                <p className="text-sm text-muted-foreground">
-                  Allow others to find and view your profile
-                </p>
-              </div>
-              <Switch
-                id="isPublic"
-                checked={isPublic}
-                onCheckedChange={setIsPublic}
-              />
             </div>
             <Button onClick={handleSave} disabled={loading} className="w-full hover-scale shadow-elegant">
               {loading ? 'Saving...' : 'Save Profile'}
