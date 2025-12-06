@@ -19,7 +19,6 @@ import { ForgotPasswordDialog } from '@/components/ForgotPasswordDialog';
 interface Profile {
   id: string;
   username: string | null;
-  email: string;
   avatar_url: string | null;
   last_seen: string | null;
 }
@@ -58,7 +57,8 @@ const Auth = () => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, username, email, avatar_url, last_seen')
+        .select('id, username, avatar_url, last_seen')
+        .eq('is_public', true)
         .order('last_seen', { ascending: false })
         .limit(10);
 
@@ -260,7 +260,7 @@ const Auth = () => {
                       <Avatar>
                         <AvatarImage src={profile.avatar_url || undefined} />
                         <AvatarFallback className="bg-primary/10 text-primary">
-                          {(profile.username || profile.email || 'U').charAt(0).toUpperCase()}
+                          {(profile.username || 'U').charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       {isUserActive(profile.last_seen) && (
@@ -270,9 +270,6 @@ const Auth = () => {
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">
                         {profile.username || 'Anonymous'}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {profile.email}
                       </p>
                     </div>
                     {isUserActive(profile.last_seen) && (
