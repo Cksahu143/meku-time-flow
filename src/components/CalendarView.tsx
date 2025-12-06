@@ -1,8 +1,12 @@
 import { useState } from 'react';
 import { Task } from '@/types';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
+import { useExams, Exam } from '@/hooks/useExams';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { ExamFormDialog } from '@/components/exams/ExamFormDialog';
+import { ExamBadge } from '@/components/exams/ExamBadge';
 
 type CalendarViewType = 'month' | 'week';
 
@@ -10,6 +14,10 @@ export function CalendarView() {
   const [tasks] = useLocalStorage<Task[]>('tasks', []);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewType, setViewType] = useState<CalendarViewType>('month');
+  const [examDialogOpen, setExamDialogOpen] = useState(false);
+  const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
+
+  const { exams, loading, createExam, updateExam, deleteExam, getExamsForDate } = useExams();
 
   const getMonthData = () => {
     const year = currentDate.getFullYear();
@@ -77,19 +85,29 @@ export function CalendarView() {
     );
   };
 
+  const getExamPosition = (exam: Exam, date: Date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    const isStart = exam.start_date === dateStr;
+    const isEnd = (exam.end_date || exam.start_date) === dateStr;
+    const isMultiDay = exam.end_date && exam.end_date !== exam.start_date;
+    const isMiddle = isMultiDay && !isStart && !isEnd;
+
+    return { isStart, isEnd, isMiddle };
+  };
+
+  const handleExamClick = (exam: Exam) => {
+    setSelectedExam(exam);
+    setExamDialogOpen(true);
+  };
+
+  const handleAddExam = () => {
+    setSelectedExam(null);
+    setExamDialogOpen(true);
+  };
+
   const monthNames = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
   ];
 
   const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -103,6 +121,10 @@ export function CalendarView() {
         </div>
 
         <div className="flex items-center gap-4">
+          <Button onClick={handleAddExam} className="gap-2">
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Add Exam</span>
+          </Button>
           <div className="flex gap-2">
             <button
               onClick={() => setViewType('month')}
@@ -176,22 +198,46 @@ export function CalendarView() {
                 day
               );
               const hasTasks = hasTasksOnDate(date);
+              const dayExams = getExamsForDate(date);
               const today = isToday(date);
 
               return (
                 <div
                   key={day}
                   className={cn(
-                    'aspect-square p-2 rounded-lg border transition-all cursor-pointer',
-                    'hover:shadow-md hover:scale-105',
-                    today &&
-                      'bg-gradient-primary text-primary-foreground border-primary font-bold',
-                    !today && hasTasks && 'bg-accent/20 border-accent',
-                    !today && !hasTasks && 'bg-card border-border',
-                    'relative'
+                    'min-h-[80px] p-2 rounded-lg border transition-all',
+                    'hover:shadow-md',
+                    today && 'bg-gradient-primary text-primary-foreground border-primary font-bold',
+                    !today && (hasTasks || dayExams.length > 0) && 'bg-accent/20 border-accent',
+                    !today && !hasTasks && dayExams.length === 0 && 'bg-card border-border',
+                    'relative flex flex-col'
                   )}
                 >
-                  <div className="text-sm">{day}</div>
+                  <div className="text-sm mb-1">{day}</div>
+                  
+                  {/* Exams */}
+                  <div className="flex-1 space-y-1 overflow-hidden">
+                    {dayExams.slice(0, 2).map((exam) => {
+                      const { isStart, isEnd, isMiddle } = getExamPosition(exam, date);
+                      return (
+                        <ExamBadge
+                          key={exam.id}
+                          exam={exam}
+                          compact
+                          onClick={() => handleExamClick(exam)}
+                          isStart={isStart}
+                          isEnd={isEnd}
+                          isMiddle={isMiddle}
+                        />
+                      );
+                    })}
+                    {dayExams.length > 2 && (
+                      <div className="text-xs text-muted-foreground pl-1">
+                        +{dayExams.length - 2} more
+                      </div>
+                    )}
+                  </div>
+
                   {hasTasks && (
                     <div className="absolute bottom-1 right-1 w-2 h-2 rounded-full bg-accent animate-pulse" />
                   )}
@@ -204,6 +250,7 @@ export function CalendarView() {
         <div className="space-y-4">
           {getWeekData().map((date) => {
             const dayTasks = getTasksForDate(date);
+            const dayExams = getExamsForDate(date);
             const today = isToday(date);
 
             return (
@@ -236,15 +283,59 @@ export function CalendarView() {
                     </div>
                   </div>
 
-                  {dayTasks.length > 0 && (
-                    <div className="px-3 py-1 rounded-full bg-accent text-accent-foreground text-sm font-medium">
-                      {dayTasks.length} task{dayTasks.length > 1 ? 's' : ''}
-                    </div>
-                  )}
+                  <div className="flex gap-2">
+                    {dayExams.length > 0 && (
+                      <div className="px-3 py-1 rounded-full bg-destructive/20 text-destructive text-sm font-medium flex items-center gap-1">
+                        <BookOpen className="w-3 h-3" />
+                        {dayExams.length} exam{dayExams.length > 1 ? 's' : ''}
+                      </div>
+                    )}
+                    {dayTasks.length > 0 && (
+                      <div className="px-3 py-1 rounded-full bg-accent text-accent-foreground text-sm font-medium">
+                        {dayTasks.length} task{dayTasks.length > 1 ? 's' : ''}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
+                {/* Exams Section */}
+                {dayExams.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {dayExams.map((exam) => {
+                      const { isStart, isEnd, isMiddle } = getExamPosition(exam, date);
+                      return (
+                        <div
+                          key={exam.id}
+                          onClick={() => handleExamClick(exam)}
+                          className={cn(
+                            'flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all hover:scale-[1.02]',
+                            'bg-destructive/10 border border-destructive/20 hover:bg-destructive/20'
+                          )}
+                        >
+                          <BookOpen className="w-5 h-5 text-destructive flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-foreground truncate">{exam.title}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {exam.subject} • {exam.start_time.slice(0, 5)}
+                              {isStart && exam.end_date && exam.end_date !== exam.start_date && (
+                                <span className="ml-1 text-destructive">(Day 1)</span>
+                              )}
+                              {isEnd && exam.end_date && exam.end_date !== exam.start_date && (
+                                <span className="ml-1 text-destructive">(Final Day)</span>
+                              )}
+                              {isMiddle && (
+                                <span className="ml-1 text-destructive">(Continues)</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
                 {dayTasks.length > 0 && (
-                  <div className="space-y-2 mt-3 pt-3 border-t border-border">
+                  <div className="space-y-2 pt-3 border-t border-border">
                     {dayTasks.map((task) => (
                       <div
                         key={task.id}
@@ -270,6 +361,15 @@ export function CalendarView() {
           })}
         </div>
       )}
+
+      <ExamFormDialog
+        open={examDialogOpen}
+        onOpenChange={setExamDialogOpen}
+        exam={selectedExam}
+        onSave={createExam}
+        onUpdate={updateExam}
+        onDelete={deleteExam}
+      />
     </div>
   );
 }

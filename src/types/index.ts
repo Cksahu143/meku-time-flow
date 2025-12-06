@@ -118,3 +118,15 @@ export interface UserProfile {
   created_at: string;
   updated_at: string;
 }
+
+export interface Exam {
+  id: string;
+  user_id: string;
+  title: string;
+  subject: string;
+  start_date: string;
+  start_time: string;
+  end_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
