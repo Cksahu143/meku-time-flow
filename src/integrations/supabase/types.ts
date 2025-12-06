@@ -725,7 +725,54 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      profiles_secure: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string | null
+          display_name: string | null
+          email: string | null
+          email_visible: boolean | null
+          id: string | null
+          is_public: boolean | null
+          last_seen: string | null
+          profile_header_url: string | null
+          theme: string | null
+          updated_at: string | null
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          email?: never
+          email_visible?: never
+          id?: string | null
+          is_public?: boolean | null
+          last_seen?: string | null
+          profile_header_url?: string | null
+          theme?: string | null
+          updated_at?: string | null
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          email?: never
+          email_visible?: never
+          id?: string | null
+          is_public?: boolean | null
+          last_seen?: string | null
+          profile_header_url?: string | null
+          theme?: string | null
+          updated_at?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       is_group_creator: {

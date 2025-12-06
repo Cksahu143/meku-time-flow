@@ -160,6 +160,18 @@ export const useNotifications = () => {
     metadata?: Record<string, any>
   ) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('Cannot create notification: user not authenticated');
+        return;
+      }
+
+      // Include actor_id in metadata for RLS policy compliance
+      const enrichedMetadata = {
+        ...metadata,
+        actor_id: user.id
+      };
+
       const { error } = await supabase
         .from('notifications')
         .insert({
@@ -168,7 +180,7 @@ export const useNotifications = () => {
           title,
           message,
           link,
-          metadata: metadata || {}
+          metadata: enrichedMetadata
         });
 
       if (error) throw error;
