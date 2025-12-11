@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { Sidebar } from '@/components/Sidebar';
 import { MobileSidebar } from '@/components/MobileSidebar';
+import { DashboardView } from '@/components/DashboardView';
 import { TimetableView } from '@/components/TimetableView';
 import { CalendarView } from '@/components/CalendarView';
 import { TodoView } from '@/components/TodoView';
@@ -10,11 +12,13 @@ import { PomodoroView } from '@/components/PomodoroView';
 import { GroupsView } from '@/components/GroupsView';
 import { ResourcesView } from '@/components/ResourcesView';
 import { AnimatedBackground } from '@/components/AnimatedBackground';
+import { FloatingBackground } from '@/components/motion/FloatingBackground';
 import { LoadingScreen } from '@/components/LoadingScreen';
+import { PageTransition } from '@/components/motion/PageTransition';
 import { ViewType } from '@/types';
 
 const Index = () => {
-  const [currentView, setCurrentView] = useState<ViewType>('timetable');
+  const [currentView, setCurrentView] = useState<ViewType>('dashboard');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -41,23 +45,36 @@ const Index = () => {
     return <LoadingScreen />;
   }
 
+  const handleNavigate = (view: string) => {
+    setCurrentView(view as ViewType);
+  };
+
   return (
-    <div className="flex min-h-screen h-screen w-full bg-background overflow-hidden">
-      <div className="hidden md:block flex-shrink-0 animate-slide-in-left">
+    <div className="flex min-h-screen h-screen w-full bg-background overflow-hidden relative">
+      {/* Floating ambient background */}
+      <FloatingBackground />
+      
+      {/* Desktop Sidebar */}
+      <div className="hidden md:block flex-shrink-0 animate-slide-in-left relative z-10">
         <Sidebar currentView={currentView} onViewChange={setCurrentView} />
       </div>
+      
+      {/* Mobile Sidebar */}
       <MobileSidebar currentView={currentView} onViewChange={setCurrentView} />
       
       <AnimatedBackground viewType={currentView}>
-        <main className="flex-1 w-full h-screen overflow-y-auto overflow-x-hidden pt-16 md:pt-0">
-          <div className="animate-fade-in">
-            {currentView === 'timetable' && <TimetableView />}
-            {currentView === 'calendar' && <CalendarView />}
-            {currentView === 'todo' && <TodoView />}
-            {currentView === 'pomodoro' && <PomodoroView />}
-            {currentView === 'groups' && <GroupsView />}
-            {currentView === 'resources' && <ResourcesView />}
-          </div>
+        <main className="flex-1 w-full h-screen overflow-y-auto overflow-x-hidden pt-16 md:pt-0 relative z-10">
+          <AnimatePresence mode="wait">
+            <PageTransition key={currentView}>
+              {currentView === 'dashboard' && <DashboardView onNavigate={handleNavigate} />}
+              {currentView === 'timetable' && <TimetableView />}
+              {currentView === 'calendar' && <CalendarView />}
+              {currentView === 'todo' && <TodoView />}
+              {currentView === 'pomodoro' && <PomodoroView />}
+              {currentView === 'groups' && <GroupsView />}
+              {currentView === 'resources' && <ResourcesView />}
+            </PageTransition>
+          </AnimatePresence>
         </main>
       </AnimatedBackground>
     </div>

@@ -1,5 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, ListTodo, Timer, Moon, Sun, Palette, LogOut, Users, MessageSquare, HelpCircle, AlertCircle, BookOpen } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { 
+  Calendar, 
+  Clock, 
+  ListTodo, 
+  Timer, 
+  Moon, 
+  Sun, 
+  Palette, 
+  LogOut, 
+  Users, 
+  MessageSquare, 
+  HelpCircle, 
+  AlertCircle, 
+  BookOpen,
+  LayoutDashboard,
+  Sparkles
+} from 'lucide-react';
 import { ViewType } from '@/types';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/providers/ThemeProvider';
@@ -28,7 +45,6 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
   useEffect(() => {
     loadProfile();
 
-    // Subscribe to profile changes for real-time updates
     const setupSubscription = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -81,6 +97,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
   };
   
   const navItems = [
+    { id: 'dashboard' as ViewType, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'timetable' as ViewType, label: 'Timetable', icon: Clock },
     { id: 'calendar' as ViewType, label: 'Calendar', icon: Calendar },
     { id: 'todo' as ViewType, label: 'To-Do List', icon: ListTodo },
@@ -103,120 +120,157 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
   };
 
   return (
-    <aside className="w-60 h-screen bg-card border-r border-border flex flex-col shadow-md overflow-hidden">
-      <div className="p-4 border-b border-border flex-shrink-0">
+    <aside className="w-60 h-screen bg-card/80 backdrop-blur-xl border-r border-border/50 flex flex-col shadow-xl overflow-hidden">
+      {/* Header */}
+      <motion.div 
+        className="p-4 border-b border-border/50 flex-shrink-0"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
         <div className="flex items-center gap-3 mb-3">
-          <Avatar className="h-12 w-12 cursor-pointer" onClick={() => document.getElementById('avatar-upload')?.click()}>
-            <AvatarImage src={profile?.avatar_url || undefined} />
-            <AvatarFallback className="bg-primary/10 text-primary">
-              {(profile?.display_name || profile?.username || 'U').charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          <motion.div whileHover={{ scale: 1.1, rotate: 5 }} transition={{ type: 'spring' }}>
+            <Avatar className="h-12 w-12 cursor-pointer ring-2 ring-primary/20 hover:ring-primary/50 transition-all" onClick={() => document.getElementById('avatar-upload')?.click()}>
+              <AvatarImage src={profile?.avatar_url || undefined} />
+              <AvatarFallback className="bg-gradient-primary text-primary-foreground font-semibold">
+                {(profile?.display_name || profile?.username || 'U').charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+          </motion.div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent truncate">
-              EducationAssist
-            </h1>
-            <p className="text-xs text-muted-foreground">School Planner</p>
+            <div className="flex items-center gap-1">
+              <h1 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent truncate">
+                EDAS
+              </h1>
+              <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+            </div>
+            <p className="text-xs text-muted-foreground">Education Assistant</p>
           </div>
         </div>
         <div className="flex gap-1 justify-end flex-wrap">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowHelp(true)}
-            title="Help & Guide"
-            className="animate-pulse hover:animate-none"
-          >
-            <HelpCircle className="h-5 w-5 text-primary" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate('/active-users')}
-            title="View Active Users"
-          >
-            <Users className="h-5 w-5" />
-          </Button>
+          <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowHelp(true)}
+              title="Help & Guide"
+              className="hover:bg-primary/10"
+            >
+              <HelpCircle className="h-5 w-5 text-primary" />
+            </Button>
+          </motion.div>
+          <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/active-users')}
+              title="View Active Users"
+              className="hover:bg-primary/10"
+            >
+              <Users className="h-5 w-5" />
+            </Button>
+          </motion.div>
           <InvitationNotifications />
           <ProfileSettings />
         </div>
-      </div>
+      </motion.div>
 
-      <nav className="flex-1 p-3 space-y-2 overflow-y-auto">
-        {navItems.map((item) => {
+      {/* Navigation */}
+      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+        {navItems.map((item, index) => {
           const Icon = item.icon;
           const isActive = currentView === item.id;
 
           return (
-            <button
+            <motion.button
               key={item.id}
               onClick={() => onViewChange(item.id)}
               className={cn(
-                'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 relative',
-                'hover:scale-105 active:scale-95',
+                'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative group',
                 isActive
-                  ? 'bg-gradient-primary text-primary-foreground shadow-md'
-                  : 'text-foreground hover:bg-secondary',
+                  ? 'bg-gradient-primary text-primary-foreground shadow-lg'
+                  : 'text-foreground hover:bg-primary/10',
                 item.showWarning && !isActive && 'opacity-70'
               )}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.05 }}
+              whileHover={{ x: isActive ? 0 : 5 }}
+              whileTap={{ scale: 0.98 }}
             >
+              {/* Active indicator */}
+              {isActive && (
+                <motion.div
+                  className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary-foreground rounded-r-full"
+                  layoutId="activeIndicator"
+                  transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                />
+              )}
+              
               <div className="relative">
-                <Icon className={cn("w-4 h-4", item.showWarning && !isActive && "text-muted-foreground")} />
+                <motion.div
+                  whileHover={{ rotate: isActive ? 0 : 5 }}
+                  transition={{ type: 'spring', stiffness: 300 }}
+                >
+                  <Icon className={cn("w-4 h-4", item.showWarning && !isActive && "text-muted-foreground")} />
+                </motion.div>
                 {item.showWarning && (
                   <div className="absolute -top-1 -right-1 h-3 w-3 bg-yellow-500 rounded-full flex items-center justify-center">
                     <AlertCircle className="h-2 w-2 text-white" />
                   </div>
                 )}
               </div>
-              <span className={cn("font-medium text-sm", item.showWarning && !isActive && "text-muted-foreground")}>{item.label}</span>
-            </button>
+              <span className={cn("font-medium text-sm", item.showWarning && !isActive && "text-muted-foreground")}>
+                {item.label}
+              </span>
+            </motion.button>
           );
         })}
       </nav>
 
-      <div className="p-3 border-t border-border space-y-2 flex-shrink-0">
+      {/* Footer */}
+      <motion.div 
+        className="p-3 border-t border-border/50 space-y-2 flex-shrink-0 bg-card/50"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
         <div className="flex gap-1">
-          <Button
-            variant={theme === 'light' ? 'default' : 'outline'}
-            size="icon"
-            onClick={() => setTheme('light')}
-            className="flex-1"
-          >
-            <Sun className="w-4 h-4" />
-          </Button>
-          <Button
-            variant={theme === 'dark' ? 'default' : 'outline'}
-            size="icon"
-            onClick={() => setTheme('dark')}
-            className="flex-1"
-          >
-            <Moon className="w-4 h-4" />
-          </Button>
-          <Button
-            variant={theme === 'pastel' ? 'default' : 'outline'}
-            size="icon"
-            onClick={() => setTheme('pastel')}
-            className="flex-1"
-          >
-            <Palette className="w-4 h-4" />
-          </Button>
+          {[
+            { theme: 'light' as const, icon: Sun },
+            { theme: 'dark' as const, icon: Moon },
+            { theme: 'pastel' as const, icon: Palette },
+          ].map(({ theme: t, icon: ThemeIcon }) => (
+            <motion.div key={t} className="flex-1" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button
+                variant={theme === t ? 'default' : 'outline'}
+                size="icon"
+                onClick={() => setTheme(t)}
+                className="w-full"
+              >
+                <ThemeIcon className="w-4 h-4" />
+              </Button>
+            </motion.div>
+          ))}
         </div>
         <div className="flex gap-1">
           <MusicPlayer />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleSignOut}
-            className="flex-1"
-          >
-            <LogOut className="w-4 h-4 mr-1" />
-            <span className="text-xs">Sign Out</span>
-          </Button>
+          <motion.div className="flex-1" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSignOut}
+              className="w-full gap-1"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="text-xs">Sign Out</span>
+            </Button>
+          </motion.div>
         </div>
-        <div className="text-xs text-muted-foreground text-center">
-          © 2025 EducationAssist
-        </div>
-      </div>
+        <p className="text-xs text-muted-foreground text-center">
+          © 2025 EDAS
+        </p>
+      </motion.div>
       
       <HelpDialog open={showHelp} onOpenChange={setShowHelp} />
     </aside>
