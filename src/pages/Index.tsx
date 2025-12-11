@@ -8,6 +8,7 @@ import { CalendarView } from '@/components/CalendarView';
 import { TodoView } from '@/components/TodoView';
 import { PomodoroView } from '@/components/PomodoroView';
 import { GroupsView } from '@/components/GroupsView';
+import { ResourcesView } from '@/components/ResourcesView';
 import { AnimatedBackground } from '@/components/AnimatedBackground';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { ViewType } from '@/types';
@@ -55,6 +56,7 @@ const Index = () => {
             {currentView === 'todo' && <TodoView />}
             {currentView === 'pomodoro' && <PomodoroView />}
             {currentView === 'groups' && <GroupsView />}
+            {currentView === 'resources' && <ResourcesView />}
           </div>
         </main>
       </AnimatedBackground>
