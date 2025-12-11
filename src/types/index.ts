@@ -18,7 +18,17 @@ export interface Task {
   linkedPeriodId?: string;
 }
 
-export type ViewType = 'timetable' | 'calendar' | 'todo' | 'pomodoro' | 'groups';
+export type ViewType = 'timetable' | 'calendar' | 'todo' | 'pomodoro' | 'groups' | 'resources';
+
+export interface Resource {
+  id: string;
+  title: string;
+  subject: string;
+  type: 'pdf' | 'link' | 'video' | 'document';
+  description: string;
+  url?: string;
+  fileName?: string;
+}
 export type CalendarViewType = 'month' | 'week';
 
 export interface Group {
