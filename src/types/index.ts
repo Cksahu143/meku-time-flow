@@ -28,10 +28,25 @@ export interface Resource {
   description: string;
   url?: string;
   fileName?: string;
-  content?: string; // For text-type resources
+  content?: string;
+  category?: string;
+  tags?: string[];
+  isFavorite?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
+
+export const RESOURCE_CATEGORIES = [
+  'Notes',
+  'Textbooks',
+  'Practice Problems',
+  'Study Guides',
+  'Lectures',
+  'Reference',
+  'Other'
+] as const;
+
+export type ResourceCategory = typeof RESOURCE_CATEGORIES[number];
 
 export type CalendarViewType = 'month' | 'week';
 
