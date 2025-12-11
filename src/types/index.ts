@@ -18,17 +18,21 @@ export interface Task {
   linkedPeriodId?: string;
 }
 
-export type ViewType = 'timetable' | 'calendar' | 'todo' | 'pomodoro' | 'groups' | 'resources';
+export type ViewType = 'dashboard' | 'timetable' | 'calendar' | 'todo' | 'pomodoro' | 'groups' | 'resources';
 
 export interface Resource {
   id: string;
   title: string;
   subject: string;
-  type: 'pdf' | 'link' | 'video' | 'document';
+  type: 'pdf' | 'link' | 'video' | 'document' | 'text';
   description: string;
   url?: string;
   fileName?: string;
+  content?: string; // For text-type resources
+  createdAt?: string;
+  updatedAt?: string;
 }
+
 export type CalendarViewType = 'month' | 'week';
 
 export interface Group {

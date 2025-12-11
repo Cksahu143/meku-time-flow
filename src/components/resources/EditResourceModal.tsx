@@ -1,12 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Upload, Link as LinkIcon, Type } from 'lucide-react';
+import { Save, X, Upload, Link as LinkIcon, FileText } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,16 +21,21 @@ import {
 import { Resource } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 
-interface AddResourceModalProps {
-  onAddResource: (resource: Omit<Resource, 'id'>) => void;
+interface EditResourceModalProps {
+  resource: Resource | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSave: (resource: Resource) => void;
   subjects: string[];
 }
 
-export const AddResourceModal: React.FC<AddResourceModalProps> = ({
-  onAddResource,
+export const EditResourceModal: React.FC<EditResourceModalProps> = ({
+  resource,
+  open,
+  onOpenChange,
+  onSave,
   subjects,
 }) => {
-  const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState('');
   const [type, setType] = useState<Resource['type']>('pdf');
@@ -40,9 +44,22 @@ export const AddResourceModal: React.FC<AddResourceModalProps> = ({
   const [content, setContent] = useState('');
   const { toast } = useToast();
 
+  useEffect(() => {
+    if (resource) {
+      setTitle(resource.title);
+      setSubject(resource.subject);
+      setType(resource.type);
+      setUrl(resource.url || '');
+      setDescription(resource.description);
+      setContent(resource.content || '');
+    }
+  }, [resource]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!resource) return;
+
     if (!title || !subject || !description) {
       toast({
         variant: 'destructive',
@@ -52,50 +69,27 @@ export const AddResourceModal: React.FC<AddResourceModalProps> = ({
       return;
     }
 
-    if (type === 'text' && !content) {
-      toast({
-        variant: 'destructive',
-        title: 'Missing content',
-        description: 'Please add content for text resources.',
-      });
-      return;
-    }
-
-    onAddResource({
+    onSave({
+      ...resource,
       title,
       subject,
       type,
-      url: type !== 'text' ? url || undefined : undefined,
+      url: url || undefined,
       description,
       content: type === 'text' ? content : undefined,
-      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     });
 
     toast({
-      title: 'Resource added',
-      description: 'Your resource has been added successfully.',
+      title: 'Resource updated',
+      description: 'Your resource has been updated successfully.',
     });
 
-    // Reset form
-    setTitle('');
-    setSubject('');
-    setType('pdf');
-    setUrl('');
-    setDescription('');
-    setContent('');
-    setOpen(false);
+    onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-          <Button className="gap-2 shadow-md hover:shadow-glow transition-shadow">
-            <Plus className="h-4 w-4" />
-            Add Resource
-          </Button>
-        </motion.div>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px] bg-card/95 backdrop-blur-xl border-border/50">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -104,8 +98,8 @@ export const AddResourceModal: React.FC<AddResourceModalProps> = ({
         >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Plus className="h-5 w-5 text-primary" />
-              Add New Resource
+              <FileText className="h-5 w-5 text-primary" />
+              Edit Resource
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4 mt-4">
@@ -115,9 +109,9 @@ export const AddResourceModal: React.FC<AddResourceModalProps> = ({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
             >
-              <Label htmlFor="title">Title *</Label>
+              <Label htmlFor="edit-title">Title *</Label>
               <Input
-                id="title"
+                id="edit-title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Enter resource title"
@@ -131,7 +125,7 @@ export const AddResourceModal: React.FC<AddResourceModalProps> = ({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
             >
-              <Label htmlFor="subject">Subject *</Label>
+              <Label htmlFor="edit-subject">Subject *</Label>
               <Select value={subject} onValueChange={setSubject}>
                 <SelectTrigger className="bg-background/50">
                   <SelectValue placeholder="Select subject" />
@@ -152,7 +146,7 @@ export const AddResourceModal: React.FC<AddResourceModalProps> = ({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <Label htmlFor="type">Type *</Label>
+              <Label htmlFor="edit-type">Type *</Label>
               <Select value={type} onValueChange={(v) => setType(v as Resource['type'])}>
                 <SelectTrigger className="bg-background/50">
                   <SelectValue />
@@ -177,9 +171,9 @@ export const AddResourceModal: React.FC<AddResourceModalProps> = ({
                   exit={{ opacity: 0, height: 0 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <Label htmlFor="content">Content *</Label>
+                  <Label htmlFor="edit-content">Content *</Label>
                   <Textarea
-                    id="content"
+                    id="edit-content"
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
                     placeholder="Write your notes here..."
@@ -196,7 +190,7 @@ export const AddResourceModal: React.FC<AddResourceModalProps> = ({
                   exit={{ opacity: 0, height: 0 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <Label htmlFor="url">
+                  <Label htmlFor="edit-url">
                     {type === 'link' || type === 'video' ? 'URL' : 'File URL (optional)'}
                   </Label>
                   <div className="relative">
@@ -206,7 +200,7 @@ export const AddResourceModal: React.FC<AddResourceModalProps> = ({
                       <Upload className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     )}
                     <Input
-                      id="url"
+                      id="edit-url"
                       value={url}
                       onChange={(e) => setUrl(e.target.value)}
                       placeholder={type === 'link' || type === 'video' ? 'https://...' : 'Upload or paste URL'}
@@ -221,11 +215,11 @@ export const AddResourceModal: React.FC<AddResourceModalProps> = ({
               className="space-y-2"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.25 }}
+              transition={{ delay: 0.3 }}
             >
-              <Label htmlFor="description">Description *</Label>
+              <Label htmlFor="edit-description">Description *</Label>
               <Textarea
-                id="description"
+                id="edit-description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Brief description of the resource"
@@ -234,14 +228,24 @@ export const AddResourceModal: React.FC<AddResourceModalProps> = ({
               />
             </motion.div>
 
-            <motion.div
+            <motion.div 
+              className="flex gap-2 pt-2"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
+              transition={{ delay: 0.35 }}
             >
-              <Button type="submit" className="w-full gap-2">
-                <Plus className="h-4 w-4" />
-                Save Resource
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => onOpenChange(false)}
+                className="flex-1 gap-2"
+              >
+                <X className="h-4 w-4" />
+                Cancel
+              </Button>
+              <Button type="submit" className="flex-1 gap-2">
+                <Save className="h-4 w-4" />
+                Save Changes
               </Button>
             </motion.div>
           </form>
