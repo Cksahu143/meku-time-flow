@@ -28,8 +28,10 @@ export interface Resource {
   description: string;
   url?: string;
   fileName?: string;
+  fileSize?: number;
   content?: string;
   category?: string;
+  chapter?: string;
   tags?: string[];
   isFavorite?: boolean;
   createdAt?: string;
@@ -144,6 +146,7 @@ export interface UserProfile {
   avatar_url?: string;
   bio?: string;
   is_public?: boolean;
+  phone_number?: string;
   created_at: string;
   updated_at: string;
 }
