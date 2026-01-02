@@ -17,8 +17,8 @@ const Landing = () => {
     },
     {
       icon: <BookOpen className="w-10 h-10" />,
-      title: "Exam Calendar",
-      description: "Track all your exams and tests with multi-day support and reminders",
+      title: "Resources Tab",
+      description: "Store and organize all your study materials, PDFs, links, and notes",
       color: "text-destructive",
     },
     {
