@@ -15,7 +15,8 @@ import {
   AlertCircle, 
   BookOpen,
   LayoutDashboard,
-  Sparkles
+  Sparkles,
+  Mic
 } from 'lucide-react';
 import { ViewType } from '@/types';
 import { cn } from '@/lib/utils';
@@ -104,6 +105,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
     { id: 'pomodoro' as ViewType, label: 'Pomodoro', icon: Timer },
     { id: 'groups' as ViewType, label: 'Groups', icon: MessageSquare, showWarning: !profile?.is_public },
     { id: 'resources' as ViewType, label: 'Resources', icon: BookOpen },
+    { id: 'transcribe' as ViewType, label: 'Transcribe', icon: Mic },
   ];
 
   const handleSignOut = async () => {
