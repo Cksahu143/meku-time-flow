@@ -55,8 +55,9 @@ const Auth = () => {
 
   const fetchProfiles = async () => {
     try {
+      // Use profiles_secure view to respect email visibility settings
       const { data, error } = await supabase
-        .from('profiles')
+        .from('profiles_secure')
         .select('id, username, avatar_url, last_seen')
         .eq('is_public', true)
         .order('last_seen', { ascending: false })
