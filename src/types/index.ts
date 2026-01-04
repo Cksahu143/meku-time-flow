@@ -18,7 +18,7 @@ export interface Task {
   linkedPeriodId?: string;
 }
 
-export type ViewType = 'dashboard' | 'timetable' | 'calendar' | 'todo' | 'pomodoro' | 'groups' | 'resources';
+export type ViewType = 'dashboard' | 'timetable' | 'calendar' | 'todo' | 'pomodoro' | 'groups' | 'resources' | 'transcribe';
 
 export interface Resource {
   id: string;

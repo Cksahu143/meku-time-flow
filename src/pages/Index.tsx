@@ -11,6 +11,7 @@ import { TodoView } from '@/components/TodoView';
 import { PomodoroView } from '@/components/PomodoroView';
 import { GroupsView } from '@/components/GroupsView';
 import { ResourcesView } from '@/components/ResourcesView';
+import { TranscribeView } from '@/components/TranscribeView';
 import { AnimatedBackground } from '@/components/AnimatedBackground';
 import { FloatingBackground } from '@/components/motion/FloatingBackground';
 import { LoadingScreen } from '@/components/LoadingScreen';
@@ -73,6 +74,7 @@ const Index = () => {
               {currentView === 'pomodoro' && <PomodoroView />}
               {currentView === 'groups' && <GroupsView />}
               {currentView === 'resources' && <ResourcesView />}
+              {currentView === 'transcribe' && <TranscribeView />}
             </PageTransition>
           </AnimatePresence>
         </main>
