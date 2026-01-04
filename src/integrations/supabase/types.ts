@@ -811,6 +811,14 @@ export type Database = {
       }
     }
     Functions: {
+      get_filtered_email: {
+        Args: {
+          profile_email: string
+          profile_email_visible: boolean
+          profile_id: string
+        }
+        Returns: string
+      }
       is_group_creator: {
         Args: { _group_id: string; _user_id: string }
         Returns: boolean

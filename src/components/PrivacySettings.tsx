@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Lock, Mail, Shield, AlertTriangle, Smartphone, Trash2, Monitor, LogOut, Key } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, Shield, AlertTriangle, Smartphone, Trash2, Monitor, LogOut } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,8 +43,6 @@ export const PrivacySettings: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-  const [showTwoFactorSetup, setShowTwoFactorSetup] = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(true);
   const { toast } = useToast();
@@ -237,26 +235,6 @@ export const PrivacySettings: React.FC = () => {
     }
   };
 
-  const handleToggle2FA = () => {
-    if (twoFactorEnabled) {
-      setTwoFactorEnabled(false);
-      toast({
-        title: '2FA Disabled',
-        description: 'Two-factor authentication has been turned off',
-      });
-    } else {
-      setShowTwoFactorSetup(true);
-    }
-  };
-
-  const handleEnable2FA = () => {
-    setTwoFactorEnabled(true);
-    setShowTwoFactorSetup(false);
-    toast({
-      title: '2FA Enabled',
-      description: 'Two-factor authentication is now active on your account',
-    });
-  };
 
   const handleLogoutAllDevices = async () => {
     try {
@@ -357,37 +335,6 @@ export const PrivacySettings: React.FC = () => {
           </div>
         </div>
 
-        {/* Two-Factor Authentication Section */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Key className="h-5 w-5 text-primary" />
-            <h3 className="text-lg font-semibold">Two-Factor Authentication</h3>
-          </div>
-          
-          <div className="p-4 rounded-lg border border-border/50">
-            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-all">
-              <div className="space-y-0.5">
-                <Label htmlFor="twoFactor">Enable 2FA</Label>
-                <p className="text-sm text-muted-foreground">
-                  Add an extra layer of security to your account
-                </p>
-              </div>
-              <Switch
-                id="twoFactor"
-                checked={twoFactorEnabled}
-                onCheckedChange={handleToggle2FA}
-              />
-            </div>
-            {twoFactorEnabled && (
-              <div className="mt-3 p-3 rounded-lg bg-green-500/10 border border-green-500/30">
-                <p className="text-sm text-green-600 dark:text-green-400 flex items-center gap-2">
-                  <Shield className="h-4 w-4" />
-                  Two-factor authentication is enabled
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
 
         {/* Email Visibility Section */}
         <div className="space-y-4">
@@ -621,35 +568,6 @@ export const PrivacySettings: React.FC = () => {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* 2FA Setup Dialog */}
-        <AlertDialog open={showTwoFactorSetup} onOpenChange={setShowTwoFactorSetup}>
-          <AlertDialogContent className="animate-scale-in">
-            <AlertDialogHeader>
-              <AlertDialogTitle className="flex items-center gap-2">
-                <Key className="h-5 w-5" />
-                Set Up Two-Factor Authentication
-              </AlertDialogTitle>
-              <AlertDialogDescription className="space-y-3">
-                <p>Two-factor authentication adds an extra layer of security to your account by requiring a verification code in addition to your password.</p>
-                <div className="p-4 bg-muted rounded-lg space-y-2">
-                  <p className="font-medium text-foreground">How it works:</p>
-                  <ul className="text-sm space-y-1 list-disc list-inside">
-                    <li>You'll receive a code via email when signing in</li>
-                    <li>Enter the code to complete sign-in</li>
-                    <li>Codes expire after 10 minutes</li>
-                  </ul>
-                </div>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleEnable2FA}>
-                Enable 2FA
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </div>
     </ScrollArea>
   );
