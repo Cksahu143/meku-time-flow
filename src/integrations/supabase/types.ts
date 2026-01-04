@@ -560,6 +560,7 @@ export type Database = {
           id: string
           is_public: boolean | null
           last_seen: string | null
+          phone_number: string | null
           profile_header_url: string | null
           theme: string | null
           updated_at: string
@@ -575,6 +576,7 @@ export type Database = {
           id: string
           is_public?: boolean | null
           last_seen?: string | null
+          phone_number?: string | null
           profile_header_url?: string | null
           theme?: string | null
           updated_at?: string
@@ -590,6 +592,7 @@ export type Database = {
           id?: string
           is_public?: boolean | null
           last_seen?: string | null
+          phone_number?: string | null
           profile_header_url?: string | null
           theme?: string | null
           updated_at?: string
