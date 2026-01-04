@@ -8,6 +8,7 @@ import { GroupChat } from './groups/GroupChat';
 import { DirectChat } from './DirectChat';
 import { ConversationsList } from './ConversationsList';
 import { CreateGroupDialog } from './groups/CreateGroupDialog';
+import { StartChatDialog } from './chat/StartChatDialog';
 import { InvitationsPanel } from './groups/InvitationsPanel';
 import { AnimatedBackground } from './AnimatedBackground';
 import { Button } from './ui/button';
@@ -17,7 +18,7 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from './ui/resizable';
-import { Plus, Users } from 'lucide-react';
+import { Plus, Users, MessageSquarePlus } from 'lucide-react';
 import { Group, Conversation } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 
@@ -43,6 +44,7 @@ export const GroupsView = () => {
   } | null>(null);
   
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showStartChatDialog, setShowStartChatDialog] = useState(false);
   const [showInvitations, setShowInvitations] = useState(false);
   const [activeTab, setActiveTab] = useState<'groups' | 'chats'>('groups');
   const [isPublicProfile, setIsPublicProfile] = useState(true);
@@ -168,6 +170,24 @@ export const GroupsView = () => {
     }
   };
 
+  const handleChatCreated = (conversationId: string, userId: string, userName: string, avatar?: string) => {
+    const newConv: Conversation = {
+      id: conversationId,
+      user1_id: userId,
+      user2_id: userId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    setSelectedConversation({
+      conversation: newConv,
+      otherUserId: userId,
+      otherUserName: userName,
+      otherUserAvatar: avatar,
+    });
+    setSelectedGroup(null);
+    setActiveTab('chats');
+  };
+
   return (
     <AnimatedBackground viewType="groups">
       <div className="h-full flex">
@@ -186,7 +206,7 @@ export const GroupsView = () => {
                     >
                       <Users className="h-4 w-4" />
                     </Button>
-                    {activeTab === 'groups' && (
+                    {activeTab === 'groups' ? (
                       <Button
                         variant="default"
                         size="icon"
@@ -194,6 +214,15 @@ export const GroupsView = () => {
                         disabled={!isPublicProfile}
                       >
                         <Plus className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="default"
+                        size="icon"
+                        onClick={() => setShowStartChatDialog(true)}
+                        disabled={!isPublicProfile}
+                      >
+                        <MessageSquarePlus className="h-4 w-4" />
                       </Button>
                     )}
                   </div>
@@ -286,6 +315,12 @@ export const GroupsView = () => {
           open={showCreateDialog}
           onOpenChange={setShowCreateDialog}
           onCreateGroup={createGroup}
+        />
+
+        <StartChatDialog
+          open={showStartChatDialog}
+          onOpenChange={setShowStartChatDialog}
+          onChatCreated={handleChatCreated}
         />
       </div>
     </AnimatedBackground>
