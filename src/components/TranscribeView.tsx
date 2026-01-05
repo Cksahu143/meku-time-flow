@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Mic, 
   FileText, 
@@ -9,7 +9,12 @@ import {
   ExternalLink,
   Loader2,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Upload,
+  Link2,
+  FileAudio,
+  Sparkles,
+  Shield
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,6 +30,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { useSSO } from '@/hooks/useSSO';
 
 const TRANSCRIBE_APP_URL = 'https://bhakticonvert.lovable.app';
 const STORAGE_KEY = 'meku-resources';
@@ -44,6 +50,34 @@ export const TranscribeView: React.FC = () => {
   const [resourceTitle, setResourceTitle] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [iframeLoaded, setIframeLoaded] = useState(false);
+  const [ssoUrl, setSsoUrl] = useState<string | null>(null);
+  const [ssoLoading, setSsoLoading] = useState(true);
+  
+  const { generateSSOToken, buildSSOUrl } = useSSO();
+
+  // Generate SSO token and build URL on mount
+  useEffect(() => {
+    const initSSO = async () => {
+      setSsoLoading(true);
+      try {
+        const tokenData = await generateSSOToken();
+        if (tokenData?.token) {
+          const url = buildSSOUrl(TRANSCRIBE_APP_URL, tokenData.token);
+          setSsoUrl(url);
+        } else {
+          // Fall back to regular URL if SSO fails
+          setSsoUrl(TRANSCRIBE_APP_URL);
+        }
+      } catch (error) {
+        console.error('SSO initialization error:', error);
+        setSsoUrl(TRANSCRIBE_APP_URL);
+      } finally {
+        setSsoLoading(false);
+      }
+    };
+
+    initSSO();
+  }, [generateSSOToken, buildSSOUrl]);
 
   // Listen for postMessage from the embedded app
   useEffect(() => {
@@ -75,10 +109,8 @@ export const TranscribeView: React.FC = () => {
     setIsSaving(true);
     
     try {
-      // Get existing resources from localStorage
       const existingResources = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
       
-      // Create new resource
       const newResource = {
         id: crypto.randomUUID(),
         title: resourceTitle || 'AI Transcription',
@@ -97,7 +129,6 @@ export const TranscribeView: React.FC = () => {
         updatedAt: new Date().toISOString(),
       };
       
-      // Save to localStorage
       localStorage.setItem(STORAGE_KEY, JSON.stringify([newResource, ...existingResources]));
       
       toast({
@@ -144,7 +175,6 @@ export const TranscribeView: React.FC = () => {
         description: 'Transcription downloaded as TXT file.',
       });
     } else if (format === 'pdf') {
-      // Create a simple PDF using browser print
       const printWindow = window.open('', '_blank');
       if (printWindow) {
         printWindow.document.write(`
@@ -153,9 +183,9 @@ export const TranscribeView: React.FC = () => {
           <head>
             <title>${resourceTitle || 'Transcription'}</title>
             <style>
-              body { font-family: Arial, sans-serif; padding: 40px; line-height: 1.6; }
-              h1 { color: #333; border-bottom: 2px solid #333; padding-bottom: 10px; }
-              h2 { color: #555; margin-top: 30px; }
+              body { font-family: 'Inter', Arial, sans-serif; padding: 40px; line-height: 1.6; color: #1a1a2e; }
+              h1 { color: #0066ff; border-bottom: 2px solid #0066ff; padding-bottom: 10px; }
+              h2 { color: #0052cc; margin-top: 30px; }
               p { margin: 10px 0; }
             </style>
           </head>
@@ -178,56 +208,166 @@ export const TranscribeView: React.FC = () => {
     }
   }, [transcriptData, resourceTitle, toast]);
 
-  const handleOpenExternal = () => {
-    window.open(TRANSCRIBE_APP_URL, '_blank');
+  const handleOpenExternal = async () => {
+    if (ssoUrl) {
+      window.open(ssoUrl, '_blank');
+    } else {
+      window.open(TRANSCRIBE_APP_URL, '_blank');
+    }
   };
 
   return (
-    <div className="h-full flex flex-col p-4 md:p-6 space-y-4">
+    <motion.div 
+      className="h-full flex flex-col p-4 md:p-8 space-y-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
+    >
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
         className="flex items-center justify-between flex-wrap gap-4"
       >
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-gradient-primary">
-            <Mic className="h-6 w-6 text-primary-foreground" />
-          </div>
+        <div className="flex items-center gap-4">
+          <motion.div 
+            className="p-3 rounded-2xl bg-gradient-to-br from-primary to-primary/80 shadow-lg btn-glow"
+            whileHover={{ scale: 1.05, rotate: 3 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Mic className="h-7 w-7 text-primary-foreground" />
+          </motion.div>
           <div>
-            <h1 className="text-2xl font-bold">AI Transcribe</h1>
-            <p className="text-sm text-muted-foreground">
-              Convert audio & video to text with AI
+            <h1 className="text-2xl md:text-3xl font-bold text-gradient-blue">AI Transcribe</h1>
+            <p className="text-sm text-muted-foreground flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Convert audio, video, or links into English study notes
             </p>
           </div>
         </div>
         
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleOpenExternal}>
-            <ExternalLink className="h-4 w-4 mr-2" />
+        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleOpenExternal}
+            className="gap-2 hover-glow"
+          >
+            <ExternalLink className="h-4 w-4" />
             Open in New Tab
           </Button>
-        </div>
+        </motion.div>
       </motion.div>
 
-      {/* Info Card */}
-      <motion.div
+      {/* Stats Row */}
+      <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
+        transition={{ delay: 0.2 }}
+        className="grid grid-cols-2 md:grid-cols-5 gap-3"
       >
-        <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-primary mt-0.5" />
-              <div className="text-sm">
-                <p className="font-medium text-foreground">How it works</p>
-                <p className="text-muted-foreground">
-                  Upload your audio/video files or paste URLs in the tool below. 
-                  Once transcription is complete, you can save it to your Resources 
-                  or download as TXT/PDF.
-                </p>
-              </div>
+        {[
+          { icon: FileAudio, label: 'Transcription Items', value: '2,340' },
+          { icon: Loader2, label: 'Minutes processed', value: '415h' },
+          { icon: FileText, label: 'Study notebooks', value: '140+' },
+        ].map((stat, i) => (
+          <motion.div
+            key={stat.label}
+            className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border/50 shadow-sm"
+            whileHover={{ y: -2 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 + i * 0.1 }}
+          >
+            <stat.icon className="h-5 w-5 text-primary" />
+            <div>
+              <p className="text-lg font-bold text-foreground">{stat.value}</p>
+              <p className="text-xs text-muted-foreground">{stat.label}</p>
+            </div>
+          </motion.div>
+        ))}
+        <motion.div
+          className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border/50 shadow-sm col-span-2 md:col-span-2"
+          whileHover={{ y: -2 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+        >
+          <Shield className="h-5 w-5 text-success" />
+          <div>
+            <p className="text-sm font-medium text-foreground">No permanent storage</p>
+            <p className="text-xs text-muted-foreground">Built for students & teachers • Fast & lightweight</p>
+          </div>
+        </motion.div>
+      </motion.div>
+
+      {/* Action Cards */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="grid md:grid-cols-2 gap-6"
+      >
+        {/* AI Actions */}
+        <Card className="border-border/50 shadow-md hover:shadow-lg transition-shadow">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Sparkles className="h-5 w-5 text-primary" />
+              AI Actions
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { icon: Upload, label: 'Transcribe File', desc: 'Transform into detailed' },
+                { icon: Link2, label: 'Transcribe URL', desc: 'Transcribe URL video' },
+                { icon: FileText, label: 'View Recent Notes', desc: 'Open Recent Notes' },
+              ].map((action, i) => (
+                <motion.button
+                  key={action.label}
+                  className="flex flex-col items-center gap-2 p-4 rounded-xl bg-secondary/50 hover:bg-secondary border border-border/50 hover:border-primary/30 transition-all group"
+                  whileHover={{ y: -3, scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 + i * 0.1 }}
+                  onClick={() => iframeRef.current?.contentWindow?.postMessage({ type: 'ACTION', action: action.label }, '*')}
+                >
+                  <div className="p-3 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                    <action.icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <span className="text-sm font-medium text-foreground">{action.label}</span>
+                  <span className="text-xs text-muted-foreground text-center">{action.desc}</span>
+                </motion.button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" />
+              Files are processed temporarily, not stored permanently.
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* About Card */}
+        <Card className="border-border/50 shadow-md hover:shadow-lg transition-shadow">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg">About Cohen - EDAS</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Cohen-EDAS is your all-in-one school planning and AI companion. Designed to help students 
+              reduce pressure, not replace teachers. Convert any audio or video into organized study notes instantly.
+            </p>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" className="flex-1 gap-2">
+                <FileText className="h-4 w-4" />
+                Get Quick Info
+              </Button>
+              <Button variant="outline" size="sm" className="flex-1 gap-2">
+                <Sparkles className="h-4 w-4" />
+                Settings
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -237,61 +377,85 @@ export const TranscribeView: React.FC = () => {
       <motion.div
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.2 }}
-        className="flex-1 min-h-[500px] relative rounded-xl overflow-hidden border border-border shadow-lg"
+        transition={{ delay: 0.4 }}
+        className="flex-1 min-h-[400px] relative rounded-2xl overflow-hidden border border-border/50 shadow-lg bg-card"
       >
-        {!iframeLoaded && (
-          <div className="absolute inset-0 flex items-center justify-center bg-card">
-            <div className="text-center space-y-3">
-              <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-              <p className="text-sm text-muted-foreground">Loading transcription tool...</p>
-            </div>
-          </div>
-        )}
+        <AnimatePresence>
+          {(ssoLoading || !iframeLoaded) && (
+            <motion.div 
+              className="absolute inset-0 flex items-center justify-center bg-card z-10"
+              initial={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="text-center space-y-4">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
+                >
+                  <Loader2 className="h-10 w-10 text-primary mx-auto" />
+                </motion.div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {ssoLoading ? 'Authenticating via SSO...' : 'Loading transcription tool...'}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {ssoLoading ? 'Securely connecting to EDAS' : 'Please wait'}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         
-        <iframe
-          ref={iframeRef}
-          src={TRANSCRIBE_APP_URL}
-          className="w-full h-full border-0"
-          title="AI Transcription Tool"
-          allow="microphone; clipboard-write"
-          onLoad={() => setIframeLoaded(true)}
-          style={{ 
-            minHeight: '500px',
-            opacity: iframeLoaded ? 1 : 0,
-            transition: 'opacity 0.3s ease'
-          }}
-        />
+        {ssoUrl && (
+          <iframe
+            ref={iframeRef}
+            src={ssoUrl}
+            className="w-full h-full border-0"
+            title="AI Transcription Tool"
+            allow="microphone; clipboard-write"
+            onLoad={() => setIframeLoaded(true)}
+            style={{ 
+              minHeight: '400px',
+              opacity: iframeLoaded && !ssoLoading ? 1 : 0,
+              transition: 'opacity 0.3s ease'
+            }}
+          />
+        )}
       </motion.div>
 
       {/* Manual Input Section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
+        transition={{ delay: 0.5 }}
       >
-        <Card>
+        <Card className="border-border/50 shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <FileText className="h-5 w-5" />
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
               Manual Transcript Entry
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              If the embedded tool doesn't communicate automatically, you can paste your transcription results here to save them.
+              If the embedded tool doesn't communicate automatically, paste your results here to save them.
             </p>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setTranscriptData({ transcript: '', notes: '', summary: '' });
-                setResourceTitle('Manual Transcription');
-                setShowSaveDialog(true);
-              }}
-            >
-              <Save className="h-4 w-4 mr-2" />
-              Manually Enter Transcript
-            </Button>
+            <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setTranscriptData({ transcript: '', notes: '', summary: '' });
+                  setResourceTitle('Manual Transcription');
+                  setShowSaveDialog(true);
+                }}
+                className="gap-2"
+              >
+                <Save className="h-4 w-4" />
+                Manually Enter Transcript
+              </Button>
+            </motion.div>
           </CardContent>
         </Card>
       </motion.div>
@@ -301,7 +465,7 @@ export const TranscribeView: React.FC = () => {
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-500" />
+              <CheckCircle className="h-5 w-5 text-success" />
               Save Transcription
             </DialogTitle>
             <DialogDescription>
@@ -370,7 +534,7 @@ export const TranscribeView: React.FC = () => {
                 <X className="h-4 w-4 mr-1" />
                 Cancel
               </Button>
-              <Button onClick={handleSaveToResources} disabled={isSaving}>
+              <Button onClick={handleSaveToResources} disabled={isSaving} className="btn-glow">
                 {isSaving ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 ) : (
@@ -382,6 +546,6 @@ export const TranscribeView: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </motion.div>
   );
 };

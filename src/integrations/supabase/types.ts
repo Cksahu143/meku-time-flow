@@ -632,6 +632,45 @@ export type Database = {
           },
         ]
       }
+      sso_tokens: {
+        Row: {
+          created_at: string
+          edas_user_id: string
+          email: string
+          expires_at: string
+          id: string
+          name: string | null
+          role: string | null
+          token_hash: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          edas_user_id: string
+          email: string
+          expires_at: string
+          id?: string
+          name?: string | null
+          role?: string | null
+          token_hash: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          edas_user_id?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          name?: string | null
+          role?: string | null
+          token_hash?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       timetable_invitations: {
         Row: {
           created_at: string
@@ -814,6 +853,7 @@ export type Database = {
       }
     }
     Functions: {
+      cleanup_expired_sso_tokens: { Args: never; Returns: undefined }
       get_filtered_email: {
         Args: {
           profile_email: string
