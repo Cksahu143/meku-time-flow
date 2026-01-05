@@ -11,7 +11,12 @@ import {
   Target,
   Sparkles,
   ChevronRight,
-  Info
+  Info,
+  Upload,
+  Link2,
+  FileText,
+  Mic,
+  Shield
 } from 'lucide-react';
 import { MotionCard } from '@/components/motion/MotionCard';
 import { MagneticButton } from '@/components/motion/MagneticButton';
@@ -19,6 +24,7 @@ import { PageTransition, StaggerContainer, StaggerItem } from '@/components/moti
 import { DashboardCharts } from '@/components/dashboard/DashboardCharts';
 import { useCountUp } from '@/hooks/useMotion';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 
 interface StatCardProps {
@@ -27,19 +33,18 @@ interface StatCardProps {
   icon: React.ElementType;
   suffix?: string;
   delay?: number;
-  color?: string;
 }
 
 const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, suffix = '', delay = 0 }) => {
   const count = useCountUp(value, 2000);
 
   return (
-    <MotionCard delay={delay} className="p-6">
+    <MotionCard delay={delay} className="p-5 bg-card border-border/50">
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm text-muted-foreground font-medium">{title}</p>
           <motion.h3 
-            className="text-3xl font-bold mt-2 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent"
+            className="text-3xl font-bold mt-2 text-gradient-blue"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: delay + 0.3 }}
@@ -61,29 +66,33 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, suffix = 
 
 interface QuickActionProps {
   title: string;
+  description: string;
   icon: React.ElementType;
   onClick: () => void;
   delay?: number;
 }
 
-const QuickAction: React.FC<QuickActionProps> = ({ title, icon: Icon, onClick, delay = 0 }) => {
+const QuickAction: React.FC<QuickActionProps> = ({ title, description, icon: Icon, onClick, delay = 0 }) => {
   return (
     <motion.button
       onClick={onClick}
-      className="flex flex-col items-center gap-3 p-4 rounded-xl bg-card/50 border border-border/50 backdrop-blur-sm hover:bg-card hover:border-primary/30 transition-all group"
+      className="flex flex-col items-center gap-3 p-5 rounded-xl bg-card border border-border/50 hover:border-primary/30 hover:shadow-md transition-all group text-center"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, type: 'spring', stiffness: 200 }}
-      whileHover={{ scale: 1.05, y: -5 }}
-      whileTap={{ scale: 0.95 }}
+      transition={{ delay }}
+      whileHover={{ scale: 1.03, y: -4 }}
+      whileTap={{ scale: 0.97 }}
     >
       <motion.div 
-        className="p-3 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors"
+        className="p-4 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors"
         whileHover={{ rotate: 5 }}
       >
         <Icon className="h-6 w-6 text-primary" />
       </motion.div>
-      <span className="text-sm font-medium text-foreground">{title}</span>
+      <div>
+        <span className="text-sm font-semibold text-foreground block">{title}</span>
+        <span className="text-xs text-muted-foreground">{description}</span>
+      </div>
     </motion.button>
   );
 };
@@ -127,18 +136,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         supabase.from('group_members').select('id', { count: 'exact' }).eq('user_id', user.id),
       ]);
 
-      // Get resources from localStorage (since it's client-side storage)
       const storedResources = localStorage.getItem('edas_resources');
       const resourceCount = storedResources ? JSON.parse(storedResources).length : 0;
 
       setStats({
-        tasks: Math.floor(Math.random() * 15) + 5, // Tasks are local, simulate
+        tasks: Math.floor(Math.random() * 15) + 5,
         exams: examsResult.count || 0,
         groups: groupsResult.count || 0,
         resources: resourceCount,
       });
 
-      // Load recent activity from user_activities
+      // Load recent activity
       const { data: activities } = await supabase
         .from('user_activities')
         .select('*')
@@ -154,9 +162,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           type: a.activity_type,
         })));
       } else {
-        // Default activities if none exist
         setRecentActivity([
-          { id: '1', text: 'Welcome to EDAS!', time: 'Just now', type: 'welcome' },
+          { id: '1', text: 'Welcome to Cohen-EDAS!', time: 'Just now', type: 'welcome' },
           { id: '2', text: 'Explore your dashboard', time: 'Just now', type: 'info' },
         ]);
       }
@@ -189,64 +196,112 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   };
 
   const quickActions = [
-    { title: 'Timetable', icon: Clock, view: 'timetable' },
-    { title: 'Calendar', icon: Calendar, view: 'calendar' },
-    { title: 'Tasks', icon: ListTodo, view: 'todo' },
-    { title: 'Pomodoro', icon: Timer, view: 'pomodoro' },
-    { title: 'Groups', icon: Users, view: 'groups' },
-    { title: 'Resources', icon: BookOpen, view: 'resources' },
+    { title: 'Timetable', description: 'View schedule', icon: Clock, view: 'timetable' },
+    { title: 'Calendar', description: 'Track exams', icon: Calendar, view: 'calendar' },
+    { title: 'Tasks', description: 'Manage todos', icon: ListTodo, view: 'todo' },
+    { title: 'Pomodoro', description: 'Focus timer', icon: Timer, view: 'pomodoro' },
+    { title: 'Groups', description: 'Study chat', icon: Users, view: 'groups' },
+    { title: 'Resources', description: 'Your materials', icon: BookOpen, view: 'resources' },
+  ];
+
+  const aiActions = [
+    { title: 'Upload Audio/Video', icon: Upload, desc: 'Convert to notes' },
+    { title: 'Paste URL', icon: Link2, desc: 'Transcribe video' },
+    { title: 'Explore Resources', icon: BookOpen, desc: 'View materials' },
   ];
 
   return (
-    <PageTransition className="min-h-screen p-4 md:p-8">
+    <PageTransition className="min-h-screen p-4 md:p-8 bg-hero-gradient">
       {/* Hero Section */}
       <motion.div 
-        className="relative mb-8 p-8 rounded-2xl overflow-hidden"
+        className="relative mb-8 p-8 rounded-2xl overflow-hidden bg-card border border-border/50 shadow-lg"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, type: 'spring' }}
+        transition={{ duration: 0.5 }}
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-primary/5 to-transparent rounded-2xl" />
-        <div className="absolute inset-0 backdrop-blur-3xl rounded-2xl" />
+        {/* Decorative Elements */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-primary/10 rounded-full blur-2xl" />
         
-        <div className="relative z-10">
+        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div>
+            <motion.div 
+              className="flex items-center gap-2 mb-3"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <div className="p-1.5 rounded-lg bg-primary/10">
+                <Sparkles className="h-4 w-4 text-primary" />
+              </div>
+              <span className="text-sm text-primary font-medium">Your AI-powered school companion</span>
+            </motion.div>
+            
+            <motion.h1 
+              className="text-3xl md:text-4xl font-bold text-foreground mb-2"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              Cohen - <span className="text-gradient-blue">EDAS</span>
+            </motion.h1>
+            
+            <motion.p 
+              className="text-muted-foreground max-w-md"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+            >
+              Convert audio, video, or links into English study notes.
+            </motion.p>
+          </div>
+
+          {/* AI Actions in Hero */}
           <motion.div 
-            className="flex items-center gap-2 mb-2"
-            initial={{ opacity: 0, x: -20 }}
+            className="flex gap-3 flex-wrap"
+            initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
+            transition={{ delay: 0.5 }}
           >
-            <Sparkles className="h-5 w-5 text-primary animate-pulse" />
-            <span className="text-sm text-primary font-medium">Welcome back!</span>
+            {aiActions.map((action, i) => (
+              <motion.button
+                key={action.title}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground shadow-md btn-glow text-sm font-medium"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => onNavigate('transcribe')}
+              >
+                <action.icon className="h-4 w-4" />
+                {action.title}
+              </motion.button>
+            ))}
           </motion.div>
-          
-          <motion.h1 
-            className="text-3xl md:text-4xl font-bold text-foreground mb-2"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            Hello, {userName}
-          </motion.h1>
-          
-          <motion.p 
-            className="text-muted-foreground max-w-lg"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-          >
-            Ready to make today productive? Here's your dashboard overview.
-          </motion.p>
         </div>
       </motion.div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard title="Active Tasks" value={stats.tasks} icon={Target} delay={0.1} />
-        <StatCard title="Upcoming Exams" value={stats.exams} icon={Calendar} delay={0.2} />
-        <StatCard title="Study Groups" value={stats.groups} icon={Users} delay={0.3} />
-        <StatCard title="Resources" value={stats.resources} icon={BookOpen} delay={0.4} />
-      </div>
+      {/* Stats Row */}
+      <motion.div 
+        className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+      >
+        <StatCard title="Transcription Items" value={2340} icon={FileText} delay={0.1} />
+        <StatCard title="Minutes Processed" value={415} icon={Clock} suffix="h" delay={0.2} />
+        <StatCard title="Study Notebooks" value={140} icon={BookOpen} suffix="+" delay={0.3} />
+        <motion.div
+          className="col-span-2 flex items-center gap-4 p-4 rounded-xl bg-card border border-border/50 shadow-sm"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+        >
+          <Shield className="h-8 w-8 text-success" />
+          <div>
+            <p className="text-sm font-medium text-foreground">No permanent storage • No resale or retainability</p>
+            <p className="text-xs text-muted-foreground">Built for students & teachers • Fast & lightweight</p>
+          </div>
+        </motion.div>
+      </motion.div>
 
       {/* Charts Section */}
       <div className="mb-8">
@@ -278,6 +333,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             <QuickAction
               key={action.view}
               title={action.title}
+              description={action.description}
               icon={action.icon}
               onClick={() => onNavigate(action.view)}
               delay={0.5 + i * 0.05}
@@ -286,20 +342,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         </div>
       </motion.div>
 
-      {/* Recent Activity & Learn More */}
+      {/* Recent Activity & About */}
       <div className="grid md:grid-cols-2 gap-6">
-        <MotionCard delay={0.7} className="p-6">
+        <MotionCard delay={0.7} className="p-6 bg-card border-border/50">
           <h3 className="text-lg font-semibold mb-4">Recent Activity</h3>
           <StaggerContainer className="space-y-3">
             {recentActivity.map((activity) => (
               <StaggerItem key={activity.id}>
                 <motion.div 
-                  className="flex items-center gap-3 p-3 rounded-lg bg-background/50 hover:bg-background transition-colors"
-                  whileHover={{ x: 5 }}
+                  className="flex items-center gap-3 p-3 rounded-xl bg-secondary/50 hover:bg-secondary transition-colors"
+                  whileHover={{ x: 4 }}
                 >
-                  <div className="h-2 w-2 rounded-full bg-primary" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-primary" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium">{activity.text}</p>
+                    <p className="text-sm font-medium text-foreground">{activity.text}</p>
                     <p className="text-xs text-muted-foreground">{activity.time}</p>
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -309,33 +365,39 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           </StaggerContainer>
         </MotionCard>
 
-        <MotionCard delay={0.8} className="p-6">
-          <h3 className="text-lg font-semibold mb-4">About EDAS</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            EducationAssist (EDAS) is your all-in-one school planning companion. 
-            Manage your timetable, track tasks, study with Pomodoro, and collaborate with classmates.
+        <MotionCard delay={0.8} className="p-6 bg-card border-border/50">
+          <h3 className="text-lg font-semibold mb-4">About Cohen - EDAS</h3>
+          <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
+            Cohen-EDAS is your all-in-one school planning and AI companion. 
+            Designed to help students reduce pressure, not replace teachers. (FAQs)
           </p>
           
           <Sheet>
             <SheetTrigger asChild>
-              <MagneticButton variant="default" className="w-full gap-2">
-                <Info className="h-4 w-4" />
-                Learn More
-              </MagneticButton>
+              <div className="flex gap-2">
+                <MagneticButton variant="outline" className="flex-1 gap-2">
+                  <FileText className="h-4 w-4" />
+                  Get Quick Info
+                </MagneticButton>
+                <MagneticButton variant="outline" className="flex-1 gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  Settings
+                </MagneticButton>
+              </div>
             </SheetTrigger>
             <SheetContent className="overflow-y-auto">
               <SheetHeader>
-                <SheetTitle className="text-2xl">About EDAS</SheetTitle>
+                <SheetTitle className="text-2xl text-gradient-blue">About Cohen-EDAS</SheetTitle>
               </SheetHeader>
               <motion.div 
                 className="mt-6 space-y-6"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2, type: 'spring' }}
+                transition={{ delay: 0.2 }}
               >
                 <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
                   <h4 className="font-semibold mb-2">Created by</h4>
-                  <p className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                  <p className="text-xl font-bold text-gradient-blue">
                     Charukrishna Sahu
                   </p>
                 </div>
@@ -358,6 +420,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                       'Pomodoro Timer for Focused Study',
                       'Group Collaboration & Messaging',
                       'Resource Management with Categories',
+                      'AI Transcription for Audio/Video',
                     ].map((feature, i) => (
                       <li key={i} className="flex items-center gap-2">
                         <div className="h-1.5 w-1.5 rounded-full bg-primary" />
@@ -369,7 +432,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
                 <div className="pt-4 border-t border-border">
                   <p className="text-xs text-muted-foreground text-center">
-                    © 2025 EducationAssist. All rights reserved.
+                    © 2025 Cohen-EDAS. All rights reserved.
                   </p>
                 </div>
               </motion.div>

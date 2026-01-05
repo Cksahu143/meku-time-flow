@@ -3,66 +3,66 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar, CheckSquare, Clock, Layout, MessageSquare, BookOpen, GraduationCap, Users, Sparkles, ArrowRight, Star } from 'lucide-react';
+import { 
+  Calendar, 
+  CheckSquare, 
+  Clock, 
+  Layout, 
+  MessageSquare, 
+  BookOpen, 
+  GraduationCap, 
+  Users, 
+  Sparkles, 
+  ArrowRight, 
+  Star,
+  BookOpenCheck,
+  Mic,
+  Upload,
+  Link2,
+  Shield,
+  FileText
+} from 'lucide-react';
 
 const Landing = () => {
   const navigate = useNavigate();
 
   const features = [
     {
-      icon: <Layout className="w-10 h-10" />,
+      icon: <Layout className="w-8 h-8" />,
       title: "Smart Timetable",
       description: "Create and manage your class schedules with an intuitive visual interface",
-      color: "text-primary",
     },
     {
-      icon: <BookOpen className="w-10 h-10" />,
+      icon: <BookOpen className="w-8 h-8" />,
       title: "Resources Tab",
       description: "Store and organize all your study materials, PDFs, links, and notes",
-      color: "text-destructive",
     },
     {
-      icon: <Calendar className="w-10 h-10" />,
+      icon: <Calendar className="w-8 h-8" />,
       title: "Calendar View",
       description: "See all your events and deadlines in a comprehensive calendar layout",
-      color: "text-accent-foreground",
     },
     {
-      icon: <CheckSquare className="w-10 h-10" />,
+      icon: <CheckSquare className="w-8 h-8" />,
       title: "Task Management",
       description: "Keep track of assignments and tasks with our integrated todo system",
-      color: "text-primary",
     },
     {
-      icon: <Clock className="w-10 h-10" />,
+      icon: <Clock className="w-8 h-8" />,
       title: "Pomodoro Timer",
       description: "Boost productivity with built-in focus timer and break reminders",
-      color: "text-destructive",
     },
     {
-      icon: <MessageSquare className="w-10 h-10" />,
+      icon: <MessageSquare className="w-8 h-8" />,
       title: "Group Chats",
       description: "Collaborate with classmates in real-time group conversations",
-      color: "text-primary",
     }
   ];
 
-  const highlights = [
-    {
-      icon: <GraduationCap className="w-6 h-6" />,
-      title: "Built for Students",
-      description: "Designed specifically for academic success"
-    },
-    {
-      icon: <Users className="w-6 h-6" />,
-      title: "Collaborate",
-      description: "Share timetables and work together"
-    },
-    {
-      icon: <Star className="w-6 h-6" />,
-      title: "Stay Organized",
-      description: "Never miss an exam or deadline"
-    }
+  const stats = [
+    { value: '2,340', label: 'Transcription Items', icon: FileText },
+    { value: '415h', label: 'Minutes processed', icon: Clock },
+    { value: '140+', label: 'Study notebooks', icon: BookOpen },
   ];
 
   const containerVariants = {
@@ -82,142 +82,228 @@ const Landing = () => {
     <div className="min-h-screen bg-background overflow-hidden">
       {/* Header */}
       <motion.header 
-        className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50"
+        className="border-b border-border/50 bg-card/80 backdrop-blur-lg sticky top-0 z-50"
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ type: 'spring', stiffness: 100 }}
       >
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <motion.h1 
-            className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent flex items-center gap-2"
+          <motion.div 
+            className="flex items-center gap-3"
             whileHover={{ scale: 1.02 }}
           >
-            <GraduationCap className="w-8 h-8 text-primary" />
-            EducationAssist
-          </motion.h1>
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button onClick={() => navigate('/auth')} className="shadow-md gap-2">
-              Sign In
-              <ArrowRight className="w-4 h-4" />
-            </Button>
+            <div className="p-2 rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-md btn-glow">
+              <BookOpenCheck className="w-6 h-6 text-primary-foreground" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold">
+                <span className="text-gradient-blue">Cohen</span>
+                <span className="text-foreground"> - EDAS</span>
+              </h1>
+            </div>
           </motion.div>
+          
+          <div className="flex items-center gap-4">
+            <nav className="hidden md:flex items-center gap-6 text-sm">
+              <a href="#" className="text-foreground hover:text-primary transition-colors">Home</a>
+              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">Add Resource</a>
+            </nav>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button onClick={() => navigate('/auth')} className="shadow-md gap-2 btn-glow">
+                Sign In
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </motion.div>
+          </div>
         </div>
       </motion.header>
 
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20 text-center relative">
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
+      <section className="container mx-auto px-4 py-16 relative">
+        <div className="absolute inset-0 bg-hero-gradient pointer-events-none" />
         
-        {/* Floating elements */}
+        {/* Floating decorative elements */}
         <motion.div
-          className="absolute top-20 left-10 w-20 h-20 bg-primary/10 rounded-full blur-2xl"
-          animate={{ y: [0, -20, 0], scale: [1, 1.1, 1] }}
-          transition={{ duration: 5, repeat: Infinity }}
+          className="absolute top-20 right-20 w-72 h-72 bg-primary/5 rounded-full blur-3xl"
+          animate={{ y: [0, -30, 0], scale: [1, 1.1, 1] }}
+          transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
         />
         <motion.div
-          className="absolute bottom-20 right-10 w-32 h-32 bg-accent/10 rounded-full blur-3xl"
-          animate={{ y: [0, 20, 0], scale: [1, 1.2, 1] }}
-          transition={{ duration: 6, repeat: Infinity }}
+          className="absolute bottom-10 left-10 w-48 h-48 bg-primary/10 rounded-full blur-2xl"
+          animate={{ y: [0, 20, 0] }}
+          transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
         />
         
-        <div className="relative z-10">
-          <motion.div 
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
-          >
-            <Sparkles className="w-4 h-4 animate-pulse" />
-            Your Complete School Companion
-          </motion.div>
-          
-          <motion.h2 
-            className="text-5xl md:text-7xl font-bold mb-6"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, type: 'spring' }}
-          >
-            <span className="bg-gradient-to-r from-foreground via-foreground to-foreground/60 bg-clip-text text-transparent">
-              Your Ultimate
-            </span>
-            <br />
-            <span className="bg-gradient-to-r from-primary via-primary to-primary/60 bg-clip-text text-transparent">
-              School Planner
-            </span>
-          </motion.h2>
-          
-          <motion.p 
-            className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-          >
-            Organize your academic life with powerful tools for scheduling, exam tracking, task management, and productivity
-          </motion.p>
-          
-          <motion.div 
-            className="flex flex-col sm:flex-row gap-4 justify-center"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-          >
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button 
-                onClick={() => navigate('/auth')} 
-                size="lg" 
-                className="text-lg px-8 py-6 shadow-lg hover:shadow-xl transition-shadow gap-2"
-              >
-                Get Started Free
-                <ArrowRight className="w-5 h-5" />
-              </Button>
+        <div className="relative z-10 grid lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <motion.div 
+              className="flex items-center gap-2 mb-4"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <div className="p-2 rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-md">
+                <BookOpenCheck className="w-8 h-8 text-primary-foreground" />
+              </div>
             </motion.div>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button 
-                variant="outline"
-                size="lg" 
-                className="text-lg px-8 py-6"
-                onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
-              >
-                Learn More
-              </Button>
+            
+            <motion.h2 
+              className="text-4xl md:text-5xl font-bold mb-4"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <span className="text-gradient-blue">Cohen</span>
+              <span className="text-foreground"> - EDAS</span>
+            </motion.h2>
+            
+            <motion.p 
+              className="text-lg text-muted-foreground mb-6"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+            >
+              Your AI-powered school companion
+            </motion.p>
+            
+            <motion.p 
+              className="text-muted-foreground mb-8"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.45 }}
+            >
+              Convert audio, video, or links into English study notes.
+            </motion.p>
+
+            {/* Action Buttons */}
+            <motion.div 
+              className="flex flex-wrap gap-3 mb-8"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+            >
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button size="lg" className="gap-2 btn-glow" onClick={() => navigate('/auth')}>
+                  <Upload className="w-4 h-4" />
+                  Upload Audio/Video
+                </Button>
+              </motion.div>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button variant="outline" size="lg" className="gap-2">
+                  <Link2 className="w-4 h-4" />
+                  Paste URL
+                </Button>
+              </motion.div>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button variant="outline" size="lg" className="gap-2">
+                  <BookOpen className="w-4 h-4" />
+                  Explore Resources
+                </Button>
+              </motion.div>
             </motion.div>
+
+            {/* Stats */}
+            <motion.div 
+              className="flex flex-wrap gap-6"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+            >
+              {stats.map((stat, i) => (
+                <motion.div
+                  key={stat.label}
+                  className="flex items-center gap-2"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 + i * 0.1 }}
+                >
+                  <stat.icon className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-xl font-bold text-foreground">{stat.value}</p>
+                    <p className="text-xs text-muted-foreground">{stat.label}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
+
+            {/* Security Note */}
+            <motion.div
+              className="flex items-center gap-3 mt-6 p-3 rounded-xl bg-secondary/50 border border-border/50"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.8 }}
+            >
+              <Shield className="h-5 w-5 text-success" />
+              <div className="text-sm">
+                <span className="font-medium text-foreground">No permanent storage</span>
+                <span className="text-muted-foreground"> • No resale or retainability</span>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Hero Image Area - Decorative Cards */}
+          <motion.div
+            className="relative hidden lg:block"
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.5, duration: 0.6 }}
+          >
+            <div className="relative w-full h-[400px]">
+              {/* Floating cards */}
+              <motion.div
+                className="absolute top-0 right-0 w-48 h-32 bg-card rounded-2xl border border-border/50 shadow-lg p-4"
+                animate={{ y: [0, -10, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="p-1.5 rounded-lg bg-primary/10">
+                    <Mic className="h-4 w-4 text-primary" />
+                  </div>
+                  <span className="text-sm font-medium">Transcribing...</span>
+                </div>
+                <div className="space-y-1.5">
+                  <div className="h-2 bg-primary/20 rounded-full w-full" />
+                  <div className="h-2 bg-primary/10 rounded-full w-3/4" />
+                </div>
+              </motion.div>
+
+              <motion.div
+                className="absolute top-20 left-0 w-56 h-40 bg-card rounded-2xl border border-border/50 shadow-lg p-4"
+                animate={{ y: [0, 10, 0] }}
+                transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="p-1.5 rounded-lg bg-success/10">
+                    <FileText className="h-4 w-4 text-success" />
+                  </div>
+                  <span className="text-sm font-medium">Notes Ready</span>
+                </div>
+                <div className="space-y-2">
+                  <div className="h-2 bg-muted rounded-full w-full" />
+                  <div className="h-2 bg-muted rounded-full w-5/6" />
+                  <div className="h-2 bg-muted rounded-full w-4/5" />
+                </div>
+              </motion.div>
+
+              <motion.div
+                className="absolute bottom-10 right-10 w-44 h-28 bg-card rounded-2xl border border-border/50 shadow-lg p-4"
+                animate={{ y: [0, -8, 0] }}
+                transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-primary/10">
+                    <BookOpen className="h-4 w-4 text-primary" />
+                  </div>
+                  <span className="text-xs font-medium">Study Materials</span>
+                </div>
+              </motion.div>
+            </div>
           </motion.div>
         </div>
       </section>
 
-      {/* Highlights */}
-      <section className="container mx-auto px-4 py-12">
-        <motion.div 
-          className="grid grid-cols-1 md:grid-cols-3 gap-6"
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-        >
-          {highlights.map((item, index) => (
-            <motion.div 
-              key={index}
-              variants={itemVariants}
-              className="flex items-center gap-4 p-6 rounded-xl bg-card border border-border hover:border-primary/50 transition-all hover:shadow-lg group"
-              whileHover={{ y: -4 }}
-            >
-              <motion.div 
-                className="p-3 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
-                whileHover={{ rotate: 10 }}
-              >
-                {item.icon}
-              </motion.div>
-              <div>
-                <h4 className="font-semibold">{item.title}</h4>
-                <p className="text-sm text-muted-foreground">{item.description}</p>
-              </div>
-            </motion.div>
-          ))}
-        </motion.div>
-      </section>
-
       {/* Features Grid */}
-      <section id="features" className="container mx-auto px-4 py-16">
+      <section id="features" className="container mx-auto px-4 py-16 bg-secondary/20">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -239,10 +325,10 @@ const Landing = () => {
         >
           {features.map((feature, index) => (
             <motion.div key={index} variants={itemVariants}>
-              <Card className="border-2 hover:border-primary/50 transition-all hover:shadow-lg group h-full">
+              <Card className="border border-border/50 hover:border-primary/30 transition-all hover:shadow-lg group h-full bg-card">
                 <CardHeader>
                   <motion.div 
-                    className={`mb-4 ${feature.color}`}
+                    className="mb-4 text-primary"
                     whileHover={{ scale: 1.1, rotate: 5 }}
                     transition={{ type: 'spring', stiffness: 300 }}
                   >
@@ -268,8 +354,8 @@ const Landing = () => {
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
         >
-          <Card className="max-w-2xl mx-auto border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5 overflow-hidden relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-accent/5" />
+          <Card className="max-w-2xl mx-auto border border-primary/20 bg-card overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
             <CardHeader className="relative">
               <motion.div
                 initial={{ scale: 0 }}
@@ -289,7 +375,7 @@ const Landing = () => {
                 <Button 
                   onClick={() => navigate('/auth')} 
                   size="lg"
-                  className="text-lg px-8 py-6 gap-2"
+                  className="text-lg px-8 py-6 gap-2 btn-glow"
                 >
                   Create Your Account
                   <ArrowRight className="w-5 h-5" />
@@ -301,9 +387,9 @@ const Landing = () => {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border py-8 mt-20">
+      <footer className="border-t border-border/50 py-8 bg-card/50">
         <div className="container mx-auto px-4 text-center text-muted-foreground">
-          <p>© 2025 EducationAssist. All rights reserved.</p>
+          <p>© 2025 Cohen-EDAS. All rights reserved.</p>
         </div>
       </footer>
     </div>
