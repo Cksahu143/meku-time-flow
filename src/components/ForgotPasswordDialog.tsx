@@ -27,8 +27,8 @@ export const ForgotPasswordDialog: React.FC<ForgotPasswordDialogProps> = ({
   const [emailSent, setEmailSent] = useState(false);
   const { toast } = useToast();
 
-  // Use an env var so the redirect domain can be changed without editing code
-  const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL || 'https://edas.vercel.app';
+  // Use current origin for redirect so it works in any environment
+  const FRONTEND_URL = typeof window !== 'undefined' ? window.location.origin : 'https://edas.vercel.app';
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();

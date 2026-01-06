@@ -196,16 +196,45 @@ export const useMessages = (groupId: string | null) => {
     if (!newContent.trim()) return;
 
     try {
+      const updateData: Record<string, any> = {
+        content: newContent.trim(),
+        edited_at: new Date().toISOString(),
+      };
+
+      // Re-parse links on edit
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      const urls = newContent.match(urlRegex);
+      if (urls && urls.length > 0) {
+        try {
+          const url = new URL(urls[0]);
+          updateData.link_url = urls[0];
+          updateData.link_title = url.hostname;
+          updateData.link_description = urls[0];
+        } catch {
+          // Clear link data if no valid URL
+          updateData.link_url = null;
+          updateData.link_title = null;
+          updateData.link_description = null;
+          updateData.link_image = null;
+        }
+      } else {
+        // Clear link data if no URLs found
+        updateData.link_url = null;
+        updateData.link_title = null;
+        updateData.link_description = null;
+        updateData.link_image = null;
+      }
+
       const { error } = await supabase
         .from('messages')
-        .update({ content: newContent.trim(), edited_at: new Date().toISOString() })
+        .update(updateData)
         .eq('id', messageId);
 
       if (error) throw error;
 
       setMessages(prev => prev.map(msg =>
         msg.id === messageId
-          ? { ...msg, content: newContent.trim(), edited_at: new Date().toISOString() }
+          ? { ...msg, ...updateData }
           : msg
       ));
 
