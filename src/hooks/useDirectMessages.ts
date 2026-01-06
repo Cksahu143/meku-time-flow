@@ -179,9 +179,36 @@ export const useDirectMessages = (conversationId: string | null) => {
 
   const editMessage = async (messageId: string, newContent: string) => {
     try {
+      const updateData: Record<string, any> = {
+        content: newContent,
+        edited_at: new Date().toISOString(),
+      };
+
+      // Re-parse links on edit
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      const urls = newContent.match(urlRegex);
+      if (urls && urls.length > 0) {
+        try {
+          const url = new URL(urls[0]);
+          updateData.link_url = urls[0];
+          updateData.link_title = url.hostname;
+          updateData.link_description = urls[0];
+        } catch {
+          updateData.link_url = null;
+          updateData.link_title = null;
+          updateData.link_description = null;
+          updateData.link_image = null;
+        }
+      } else {
+        updateData.link_url = null;
+        updateData.link_title = null;
+        updateData.link_description = null;
+        updateData.link_image = null;
+      }
+
       const { error } = await supabase
         .from('direct_messages')
-        .update({ content: newContent, edited_at: new Date().toISOString() })
+        .update(updateData)
         .eq('id', messageId);
 
       if (error) throw error;
@@ -189,7 +216,7 @@ export const useDirectMessages = (conversationId: string | null) => {
       setMessages((current) =>
         current.map((msg) =>
           msg.id === messageId
-            ? { ...msg, content: newContent, edited_at: new Date().toISOString() }
+            ? { ...msg, ...updateData }
             : msg
         )
       );

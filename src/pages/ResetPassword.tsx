@@ -16,29 +16,44 @@ const ResetPassword = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [sessionReady, setSessionReady] = useState(false);
+  const [sessionError, setSessionError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
     // Check if user has a valid recovery session
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
-        setUserEmail(session.user.email || null);
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
         
-        // Fetch display name from profile
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('display_name, username')
-          .eq('id', session.user.id)
-          .single();
-        
-        if (profile) {
-          setDisplayName(profile.display_name || profile.username || session.user.email);
-        } else {
-          setDisplayName(session.user.email || 'User');
+        if (error) {
+          setSessionError('Unable to verify your session. Please try the reset link again.');
+          return;
         }
+        
+        if (session?.user) {
+          setSessionReady(true);
+          setUserEmail(session.user.email || null);
+          
+          // Fetch display name from profile
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('display_name, username')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (profile) {
+            setDisplayName(profile.display_name || profile.username || session.user.email);
+          } else {
+            setDisplayName(session.user.email || 'User');
+          }
+        } else {
+          // No session - might be loading from URL params
+          // Wait for auth state change
+        }
+      } catch (err) {
+        setSessionError('Something went wrong. Please try the reset link again.');
       }
     };
 
@@ -47,6 +62,8 @@ const ResetPassword = () => {
     // Listen for password recovery event
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
+        setSessionReady(true);
+        setSessionError(null);
         if (session?.user) {
           setUserEmail(session.user.email || null);
           
@@ -60,10 +77,23 @@ const ResetPassword = () => {
             setDisplayName(profile.display_name || profile.username || session.user.email);
           }
         }
+      } else if (event === 'SIGNED_IN' && session?.user) {
+        setSessionReady(true);
+        setUserEmail(session.user.email || null);
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Set a timeout for session loading
+    const timeout = setTimeout(() => {
+      if (!sessionReady && !sessionError) {
+        setSessionError('Your reset link may have expired. Please request a new password reset.');
+      }
+    }, 5000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   const handleResetPassword = async (e: React.FormEvent) => {
@@ -121,6 +151,56 @@ const ResetPassword = () => {
       setLoading(false);
     }
   };
+
+  // Show error state
+  if (sessionError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md animate-scale-in">
+          <CardHeader className="space-y-1 text-center">
+            <div className="mx-auto w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
+              <Lock className="h-6 w-6 text-destructive" />
+            </div>
+            <CardTitle className="text-2xl font-bold">
+              Reset Link Expired
+            </CardTitle>
+            <CardDescription className="text-base">
+              {sessionError}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button 
+              className="w-full" 
+              onClick={() => navigate('/auth')}
+            >
+              Back to Login
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show loading state while checking session
+  if (!sessionReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md animate-scale-in">
+          <CardHeader className="space-y-1 text-center">
+            <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4 animate-pulse">
+              <Lock className="h-6 w-6 text-primary" />
+            </div>
+            <CardTitle className="text-2xl font-bold">
+              Verifying Reset Link
+            </CardTitle>
+            <CardDescription>
+              Please wait while we verify your reset link...
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
