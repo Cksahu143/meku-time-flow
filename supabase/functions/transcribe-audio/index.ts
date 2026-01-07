@@ -28,6 +28,7 @@ serve(async (req) => {
     const formData = await req.formData();
     const audioFile = formData.get('audio') as File;
     const audioUrl = formData.get('url') as string;
+    const language = (formData.get('language') as string) || 'auto';
 
     if (!audioFile && !audioUrl) {
       return new Response(
@@ -39,7 +40,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('Processing transcription request with BhaktiConvert...');
+    console.log('Processing transcription request with BhaktiConvert, language:', language);
 
     let audioData: Blob;
     let fileName = 'audio.mp3';
@@ -83,7 +84,7 @@ serve(async (req) => {
         audio: base64Audio,
         fileName: fileName,
         mimeType: mimeType,
-        language: 'auto',
+        language: language,
       }),
     });
 

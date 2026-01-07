@@ -30,6 +30,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const STORAGE_KEY = 'meku-resources';
 
@@ -39,6 +46,13 @@ interface TranscriptData {
   summary?: string;
   title?: string;
 }
+
+const LANGUAGE_OPTIONS = [
+  { value: 'auto', label: 'Auto Detect' },
+  { value: 'en', label: 'English' },
+  { value: 'hi', label: 'Hindi' },
+  { value: 'or', label: 'Odia' },
+];
 
 export const TranscribeView: React.FC = () => {
   const { toast } = useToast();
@@ -51,6 +65,7 @@ export const TranscribeView: React.FC = () => {
   const [audioUrl, setAudioUrl] = useState('');
   const [showUrlDialog, setShowUrlDialog] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedLanguage, setSelectedLanguage] = useState('auto');
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -77,16 +92,17 @@ export const TranscribeView: React.FC = () => {
       }
 
       setSelectedFile(file);
-      transcribeFile(file);
+      transcribeFile(file, selectedLanguage);
     }
   };
 
-  const transcribeFile = async (file: File) => {
+  const transcribeFile = async (file: File, language: string = 'auto') => {
     setIsTranscribing(true);
     
     try {
       const formData = new FormData();
       formData.append('audio', file);
+      formData.append('language', language);
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -150,6 +166,7 @@ export const TranscribeView: React.FC = () => {
     try {
       const formData = new FormData();
       formData.append('url', audioUrl.trim());
+      formData.append('language', selectedLanguage);
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -359,13 +376,37 @@ export const TranscribeView: React.FC = () => {
         </div>
       </motion.div>
 
-      {/* Stats Row */}
+      {/* Language Selection & Stats Row */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="grid grid-cols-2 md:grid-cols-4 gap-3"
+        className="grid grid-cols-2 md:grid-cols-5 gap-3"
       >
+        {/* Language Selector */}
+        <motion.div
+          className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border/50 shadow-sm col-span-2 md:col-span-1"
+          whileHover={{ y: -2 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+        >
+          <div className="w-full">
+            <Label className="text-xs text-muted-foreground mb-1.5 block">Language</Label>
+            <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+              <SelectTrigger className="h-8">
+                <SelectValue placeholder="Select language" />
+              </SelectTrigger>
+              <SelectContent>
+                {LANGUAGE_OPTIONS.map((lang) => (
+                  <SelectItem key={lang.value} value={lang.value}>
+                    {lang.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </motion.div>
         {[
           { icon: FileAudio, label: 'Supported formats', value: 'MP3, WAV, M4A' },
           { icon: Upload, label: 'Max file size', value: '25 MB' },
