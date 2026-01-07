@@ -12,10 +12,10 @@ serve(async (req) => {
   }
 
   try {
-    const TRANSCRIPTION_API_KEY = Deno.env.get('TRANSCRIPTION_API_KEY');
+    const BHAKTICONVERT_API_KEY = Deno.env.get('BHAKTICONVERT_API_KEY');
     
-    if (!TRANSCRIPTION_API_KEY) {
-      console.error('TRANSCRIPTION_API_KEY not configured');
+    if (!BHAKTICONVERT_API_KEY) {
+      console.error('BHAKTICONVERT_API_KEY not configured');
       return new Response(
         JSON.stringify({ error: 'Transcription service not configured' }),
         { 
@@ -39,17 +39,18 @@ serve(async (req) => {
       );
     }
 
-    console.log('Processing transcription request...');
+    console.log('Processing transcription request with BhaktiConvert...');
 
     let audioData: Blob;
     let fileName = 'audio.mp3';
+    let mimeType = 'audio/mpeg';
 
     if (audioFile) {
       audioData = audioFile;
       fileName = audioFile.name || 'audio.mp3';
-      console.log(`Processing uploaded file: ${fileName}, size: ${audioFile.size}`);
+      mimeType = audioFile.type || 'audio/mpeg';
+      console.log(`Processing uploaded file: ${fileName}, size: ${audioFile.size}, type: ${mimeType}`);
     } else if (audioUrl) {
-      // Fetch audio from URL
       console.log(`Fetching audio from URL: ${audioUrl}`);
       const audioResponse = await fetch(audioUrl);
       if (!audioResponse.ok) {
@@ -57,96 +58,53 @@ serve(async (req) => {
       }
       audioData = await audioResponse.blob();
       fileName = audioUrl.split('/').pop() || 'audio.mp3';
+      mimeType = audioData.type || 'audio/mpeg';
       console.log(`Fetched audio from URL, size: ${audioData.size}`);
     } else {
       throw new Error('No audio source provided');
     }
 
-    // Convert to base64 for API
+    // Convert to base64 for BhaktiConvert API
     const arrayBuffer = await audioData.arrayBuffer();
     const base64Audio = btoa(
       new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
     );
 
-    // Call OpenAI Whisper API for transcription
-    console.log('Calling Whisper API for transcription...');
+    // Call BhaktiConvert API for transcription
+    console.log('Calling BhaktiConvert API for transcription...');
     
-    const whisperFormData = new FormData();
-    whisperFormData.append('file', new Blob([arrayBuffer], { type: audioData.type || 'audio/mpeg' }), fileName);
-    whisperFormData.append('model', 'whisper-1');
-    whisperFormData.append('response_format', 'verbose_json');
-
-    const whisperResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    const bhaktiConvertResponse = await fetch('https://ijxranhndtbihzwtflyo.supabase.co/functions/v1/transcribe', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${TRANSCRIPTION_API_KEY}`,
-      },
-      body: whisperFormData,
-    });
-
-    if (!whisperResponse.ok) {
-      const errorText = await whisperResponse.text();
-      console.error('Whisper API error:', errorText);
-      throw new Error(`Transcription failed: ${whisperResponse.statusText}`);
-    }
-
-    const transcriptionResult = await whisperResponse.json();
-    console.log('Transcription completed successfully');
-
-    // Generate summary using GPT
-    console.log('Generating summary and notes...');
-    
-    const summaryResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${TRANSCRIPTION_API_KEY}`,
         'Content-Type': 'application/json',
+        'X-API-Key': BHAKTICONVERT_API_KEY,
       },
       body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a helpful assistant that creates concise summaries and study notes from transcribed content. Format your response as JSON with "summary" and "notes" fields. Keep responses clear and educational.'
-          },
-          {
-            role: 'user',
-            content: `Please create a summary and study notes from this transcription:\n\n${transcriptionResult.text}`
-          }
-        ],
-        temperature: 0.5,
-        max_tokens: 1000,
+        audio: base64Audio,
+        fileName: fileName,
+        mimeType: mimeType,
+        language: 'auto',
       }),
     });
 
-    let summary = '';
-    let notes = '';
-
-    if (summaryResponse.ok) {
-      const summaryResult = await summaryResponse.json();
-      const content = summaryResult.choices?.[0]?.message?.content || '';
-      
-      try {
-        // Try to parse as JSON
-        const parsed = JSON.parse(content);
-        summary = parsed.summary || '';
-        notes = parsed.notes || '';
-      } catch {
-        // If not valid JSON, use raw content as summary
-        summary = content;
-      }
-      console.log('Summary generated successfully');
-    } else {
-      console.warn('Failed to generate summary, returning transcript only');
+    if (!bhaktiConvertResponse.ok) {
+      const errorText = await bhaktiConvertResponse.text();
+      console.error('BhaktiConvert API error:', errorText);
+      throw new Error(`Transcription failed: ${bhaktiConvertResponse.statusText}`);
     }
+
+    const transcriptionResult = await bhaktiConvertResponse.json();
+    console.log('Transcription completed successfully:', transcriptionResult);
 
     const response = {
       success: true,
       transcript: transcriptionResult.text,
-      summary: summary,
-      notes: notes,
-      duration: transcriptionResult.duration,
-      language: transcriptionResult.language,
+      originalText: transcriptionResult.originalText || '',
+      detectedLanguage: transcriptionResult.detectedLanguage || 'unknown',
+      languageName: transcriptionResult.languageName || 'Unknown',
+      wasTranslated: transcriptionResult.wasTranslated || false,
+      summary: '',
+      notes: '',
     };
 
     return new Response(
