@@ -45,6 +45,7 @@ export const RESOURCE_CATEGORIES = [
   'Study Guides',
   'Lectures',
   'Reference',
+  'AI Transcription Notes',
   'Other'
 ] as const;
 
