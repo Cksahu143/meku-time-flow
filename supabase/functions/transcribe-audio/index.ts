@@ -72,7 +72,19 @@ serve(async (req) => {
     );
 
     // Call BhaktiConvert API for transcription
-    console.log('Calling BhaktiConvert API for transcription...');
+    // Map language codes to proper format for the API
+    const languageMap: Record<string, string> = {
+      'auto': 'auto',
+      'en': 'english',
+      'hi': 'hindi', 
+      'or': 'odia',
+      'english': 'english',
+      'hindi': 'hindi',
+      'odia': 'odia',
+    };
+    
+    const mappedLanguage = languageMap[language.toLowerCase()] || language;
+    console.log('Calling BhaktiConvert API for transcription with language:', mappedLanguage);
     
     const bhaktiConvertResponse = await fetch('https://ijxranhndtbihzwtflyo.supabase.co/functions/v1/transcribe', {
       method: 'POST',
@@ -84,7 +96,8 @@ serve(async (req) => {
         audio: base64Audio,
         fileName: fileName,
         mimeType: mimeType,
-        language: language,
+        language: mappedLanguage,
+        forceLanguage: language !== 'auto', // Tell API to use specified language, not auto-detect
       }),
     });
 
@@ -97,12 +110,19 @@ serve(async (req) => {
     const transcriptionResult = await bhaktiConvertResponse.json();
     console.log('Transcription completed successfully:', transcriptionResult);
 
+    // If user explicitly selected a language, use that instead of API's detected language
+    const userSelectedLanguage = language !== 'auto' ? mappedLanguage : null;
+    const finalLanguage = userSelectedLanguage || transcriptionResult.detectedLanguage || 'unknown';
+    const finalLanguageName = userSelectedLanguage 
+      ? mappedLanguage.charAt(0).toUpperCase() + mappedLanguage.slice(1)
+      : transcriptionResult.languageName || 'Unknown';
+
     const response = {
       success: true,
       transcript: transcriptionResult.text,
       originalText: transcriptionResult.originalText || '',
-      detectedLanguage: transcriptionResult.detectedLanguage || 'unknown',
-      languageName: transcriptionResult.languageName || 'Unknown',
+      detectedLanguage: finalLanguage,
+      languageName: finalLanguageName,
       wasTranslated: transcriptionResult.wasTranslated || false,
       summary: '',
       notes: '',
