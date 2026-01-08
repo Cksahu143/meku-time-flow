@@ -38,7 +38,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-const STORAGE_KEY = 'meku-resources';
+const STORAGE_KEY = 'edas_resources';
 
 interface TranscriptData {
   transcript?: string;
@@ -244,19 +244,27 @@ export const TranscribeView: React.FC = () => {
     try {
       const existingResources = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
       
+      const languageInfo = transcriptData.wasTranslated 
+        ? `Detected: ${transcriptData.languageName || transcriptData.detectedLanguage} → Translated to English`
+        : transcriptData.detectedLanguage 
+          ? `Language: ${transcriptData.languageName || transcriptData.detectedLanguage}`
+          : '';
+
       const newResource = {
         id: crypto.randomUUID(),
         title: resourceTitle || 'AI Transcription',
         subject: 'AI Transcription Notes',
         type: 'text' as const,
-        description: transcriptData.summary || 'AI-generated transcription',
+        description: transcriptData.summary || `AI-generated transcription${languageInfo ? ` (${languageInfo})` : ''}`,
         content: [
-          transcriptData.transcript && `## Transcript\n\n${transcriptData.transcript}`,
+          languageInfo && `> ${languageInfo}\n`,
+          transcriptData.transcript && `## Transcript (English)\n\n${transcriptData.transcript}`,
+          transcriptData.wasTranslated && transcriptData.originalText && `## Original Text (${transcriptData.languageName || transcriptData.detectedLanguage})\n\n${transcriptData.originalText}`,
           transcriptData.notes && `## Notes\n\n${transcriptData.notes}`,
           transcriptData.summary && `## Summary\n\n${transcriptData.summary}`,
         ].filter(Boolean).join('\n\n---\n\n'),
         category: 'AI Transcription Notes',
-        tags: ['AI Transcription', 'Auto-generated'],
+        tags: ['AI Transcription', 'Auto-generated', ...(transcriptData.wasTranslated ? ['Translated'] : []), ...(transcriptData.languageName ? [transcriptData.languageName] : [])],
         isFavorite: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -694,7 +702,7 @@ export const TranscribeView: React.FC = () => {
             
             <div className="space-y-2">
               <Label htmlFor="transcript">
-                Transcript <span className="text-destructive">*</span>
+                Transcript (English) <span className="text-destructive">*</span>
               </Label>
               <Textarea
                 id="transcript"
@@ -707,6 +715,29 @@ export const TranscribeView: React.FC = () => {
                 <p className="text-xs text-destructive">Transcript is required to save</p>
               )}
             </div>
+
+            {/* Original Text (shown when translated) */}
+            {transcriptData?.wasTranslated && transcriptData?.originalText && (
+              <motion.div 
+                className="space-y-2"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+              >
+                <Label htmlFor="originalText" className="flex items-center gap-2">
+                  Original Text ({transcriptData.languageName || transcriptData.detectedLanguage})
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-medium">
+                    Original
+                  </span>
+                </Label>
+                <Textarea
+                  id="originalText"
+                  value={transcriptData.originalText}
+                  readOnly
+                  className="bg-muted/50 text-muted-foreground"
+                  rows={4}
+                />
+              </motion.div>
+            )}
             
             <div className="space-y-2">
               <Label htmlFor="notes">Notes (Optional)</Label>
