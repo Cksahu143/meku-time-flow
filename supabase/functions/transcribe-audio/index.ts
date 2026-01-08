@@ -97,7 +97,6 @@ serve(async (req) => {
         fileName: fileName,
         mimeType: mimeType,
         language: mappedLanguage,
-        forceLanguage: language !== 'auto', // Tell API to use specified language, not auto-detect
       }),
     });
 
