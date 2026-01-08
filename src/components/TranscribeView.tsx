@@ -45,6 +45,10 @@ interface TranscriptData {
   notes?: string;
   summary?: string;
   title?: string;
+  detectedLanguage?: string;
+  languageName?: string;
+  wasTranslated?: boolean;
+  originalText?: string;
 }
 
 const LANGUAGE_OPTIONS = [
@@ -128,6 +132,10 @@ export const TranscribeView: React.FC = () => {
         notes: result.notes,
         summary: result.summary,
         title: file.name.replace(/\.[^/.]+$/, ''),
+        detectedLanguage: result.detectedLanguage,
+        languageName: result.languageName,
+        wasTranslated: result.wasTranslated,
+        originalText: result.originalText,
       });
       setResourceTitle(file.name.replace(/\.[^/.]+$/, '') + ' - Transcription');
       setShowSaveDialog(true);
@@ -192,6 +200,10 @@ export const TranscribeView: React.FC = () => {
         notes: result.notes,
         summary: result.summary,
         title: 'URL Transcription',
+        detectedLanguage: result.detectedLanguage,
+        languageName: result.languageName,
+        wasTranslated: result.wasTranslated,
+        originalText: result.originalText,
       });
       setResourceTitle('URL Transcription - ' + new Date().toLocaleDateString());
       setShowSaveDialog(true);
@@ -243,7 +255,7 @@ export const TranscribeView: React.FC = () => {
           transcriptData.notes && `## Notes\n\n${transcriptData.notes}`,
           transcriptData.summary && `## Summary\n\n${transcriptData.summary}`,
         ].filter(Boolean).join('\n\n---\n\n'),
-        category: 'Notes',
+        category: 'AI Transcription Notes',
         tags: ['AI Transcription', 'Auto-generated'],
         isFavorite: false,
         createdAt: new Date().toISOString(),
@@ -646,6 +658,28 @@ export const TranscribeView: React.FC = () => {
               Review, edit, and save your transcription to Resources or download it.
             </DialogDescription>
           </DialogHeader>
+
+          {/* Language Detection Info */}
+          {transcriptData?.detectedLanguage && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-wrap items-center gap-2 p-3 rounded-lg bg-primary/10 border border-primary/20"
+            >
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">Detected Language:</span>
+                <span className="text-sm text-primary font-semibold">
+                  {transcriptData.languageName || transcriptData.detectedLanguage}
+                </span>
+              </div>
+              {transcriptData.wasTranslated && (
+                <span className="px-2 py-0.5 rounded-full bg-green-500/20 text-green-600 dark:text-green-400 text-xs font-medium">
+                  Translated to English
+                </span>
+              )}
+            </motion.div>
+          )}
           
           <div className="space-y-4 py-4">
             <div className="space-y-2">
