@@ -26,6 +26,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +34,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useNotifications, NotificationType } from '@/hooks/useNotifications';
+import { useGroupInvitations } from '@/hooks/useGroupInvitations';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -63,9 +65,16 @@ export default function NotificationHub() {
     getFilteredNotifications,
   } = useNotifications();
   
-  const [activeFilter, setActiveFilter] = useState<NotificationType | 'all'>('all');
+  const {
+    invitations: groupInvitations,
+    loading: invitationsLoading,
+    acceptInvitation,
+    declineInvitation,
+  } = useGroupInvitations();
+  
+  const [activeFilter, setActiveFilter] = useState<NotificationType | 'all' | 'invitations'>('all');
 
-  const filteredNotifications = getFilteredNotifications(activeFilter);
+  const filteredNotifications = activeFilter === 'invitations' ? [] : getFilteredNotifications(activeFilter === 'all' ? 'all' : activeFilter);
 
   const groupedNotifications = filteredNotifications.reduce((acc, notification) => {
     const date = new Date(notification.created_at).toDateString();
@@ -147,6 +156,59 @@ export default function NotificationHub() {
     );
   };
 
+  const GroupInvitationItem = ({ invitation }: { invitation: typeof groupInvitations[0] }) => {
+    return (
+      <div className="group p-4 rounded-lg border bg-primary/5 border-primary/20 transition-all duration-300 hover:shadow-md animate-fade-in">
+        <div className="flex items-start gap-3">
+          <Avatar className="h-10 w-10">
+            <AvatarImage src={invitation.groups?.avatar_url || undefined} />
+            <AvatarFallback className="bg-cyan-500/10 text-cyan-500">
+              {invitation.groups?.name?.slice(0, 2).toUpperCase() || 'GR'}
+            </AvatarFallback>
+          </Avatar>
+          
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold">
+              Group Invitation: {invitation.groups?.name}
+            </p>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Invited by {invitation.profiles?.display_name || invitation.profiles?.username || 'Unknown'}
+            </p>
+            
+            <div className="flex items-center gap-2 mt-2">
+              <Badge variant="outline" className="text-xs text-cyan-500 border-cyan-500/30">
+                Group Invite
+              </Badge>
+              <span className="text-xs text-muted-foreground">
+                {formatDistanceToNow(new Date(invitation.created_at), { addSuffix: true })}
+              </span>
+            </div>
+            
+            <div className="flex gap-2 mt-3">
+              <Button
+                size="sm"
+                onClick={() => acceptInvitation(invitation.id)}
+                className="flex-1"
+              >
+                <Check className="mr-1 h-3 w-3" />
+                Accept
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => declineInvitation(invitation.id)}
+                className="flex-1"
+              >
+                <X className="mr-1 h-3 w-3" />
+                Decline
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -164,9 +226,9 @@ export default function NotificationHub() {
             <div className="flex items-center gap-2">
               <Bell className="h-6 w-6 text-primary" />
               <h1 className="text-xl font-bold">Notification Hub</h1>
-              {unreadCount > 0 && (
+              {unreadCount + groupInvitations.length > 0 && (
                 <Badge variant="destructive" className="animate-bounce-subtle">
-                  {unreadCount}
+                  {unreadCount + groupInvitations.length}
                 </Badge>
               )}
             </div>
@@ -222,8 +284,23 @@ export default function NotificationHub() {
                 <Bell className="h-4 w-4" />
                 All notifications
                 <Badge variant="secondary" className="ml-auto">
-                  {notifications.length}
+                  {notifications.length + groupInvitations.length}
                 </Badge>
+              </Button>
+              
+              {/* Group Invitations filter */}
+              <Button
+                variant={activeFilter === 'invitations' ? 'default' : 'ghost'}
+                className="w-full justify-start gap-2"
+                onClick={() => setActiveFilter('invitations')}
+              >
+                <Users className={cn("h-4 w-4", activeFilter !== 'invitations' && "text-cyan-500")} />
+                Group Invitations
+                {groupInvitations.length > 0 && (
+                  <Badge variant="destructive" className="ml-auto animate-pulse">
+                    {groupInvitations.length}
+                  </Badge>
+                )}
               </Button>
               
               <Separator className="my-2" />
@@ -252,15 +329,42 @@ export default function NotificationHub() {
             </CardContent>
           </Card>
 
-          {/* Main content */}
           <div className="lg:col-span-3 space-y-4">
-            {loading ? (
+            {loading || invitationsLoading ? (
               <div className="space-y-4">
                 {[1, 2, 3].map(i => (
                   <div key={i} className="h-24 rounded-lg bg-muted animate-pulse" />
                 ))}
               </div>
-            ) : filteredNotifications.length === 0 ? (
+            ) : activeFilter === 'invitations' ? (
+              // Show only group invitations
+              groupInvitations.length === 0 ? (
+                <Card className="shadow-elegant animate-fade-in">
+                  <CardContent className="flex flex-col items-center justify-center py-16">
+                    <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                      <Users className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <h3 className="text-lg font-semibold mb-1">No group invitations</h3>
+                    <p className="text-muted-foreground text-center max-w-sm">
+                      You don't have any pending group invitations.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-3 animate-fade-in">
+                  <div className="sticky top-20 z-10 py-2 bg-background/95 backdrop-blur">
+                    <h3 className="text-sm font-medium text-muted-foreground">
+                      Pending Group Invitations
+                    </h3>
+                  </div>
+                  <div className="space-y-2">
+                    {groupInvitations.map(invitation => (
+                      <GroupInvitationItem key={invitation.id} invitation={invitation} />
+                    ))}
+                  </div>
+                </div>
+              )
+            ) : filteredNotifications.length === 0 && (activeFilter !== 'all' || groupInvitations.length === 0) ? (
               <Card className="shadow-elegant animate-fade-in">
                 <CardContent className="flex flex-col items-center justify-center py-16">
                   <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
@@ -275,24 +379,44 @@ export default function NotificationHub() {
                 </CardContent>
               </Card>
             ) : (
-              Object.entries(groupedNotifications).map(([date, notifs]) => (
-                <div key={date} className="space-y-3 animate-fade-in">
-                  <div className="sticky top-20 z-10 py-2 bg-background/95 backdrop-blur">
-                    <h3 className="text-sm font-medium text-muted-foreground">
-                      {new Date(date).toLocaleDateString('en-US', {
-                        weekday: 'long',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </h3>
+              <>
+                {/* Show group invitations at the top when viewing 'all' */}
+                {activeFilter === 'all' && groupInvitations.length > 0 && (
+                  <div className="space-y-3 animate-fade-in">
+                    <div className="sticky top-20 z-10 py-2 bg-background/95 backdrop-blur">
+                      <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <Users className="h-4 w-4 text-cyan-500" />
+                        Pending Group Invitations
+                      </h3>
+                    </div>
+                    <div className="space-y-2">
+                      {groupInvitations.map(invitation => (
+                        <GroupInvitationItem key={invitation.id} invitation={invitation} />
+                      ))}
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    {notifs.map(notification => (
-                      <NotificationItem key={notification.id} notification={notification} />
-                    ))}
+                )}
+                
+                {/* Regular notifications */}
+                {Object.entries(groupedNotifications).map(([date, notifs]) => (
+                  <div key={date} className="space-y-3 animate-fade-in">
+                    <div className="sticky top-20 z-10 py-2 bg-background/95 backdrop-blur">
+                      <h3 className="text-sm font-medium text-muted-foreground">
+                        {new Date(date).toLocaleDateString('en-US', {
+                          weekday: 'long',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </h3>
+                    </div>
+                    <div className="space-y-2">
+                      {notifs.map(notification => (
+                        <NotificationItem key={notification.id} notification={notification} />
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))
+                ))}
+              </>
             )}
           </div>
         </div>
