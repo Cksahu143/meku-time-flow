@@ -13,6 +13,37 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Users } from 'lucide-react';
 import { ForgotPasswordDialog } from '@/components/ForgotPasswordDialog';
+import { z } from 'zod';
+
+// Validation schemas for signup and signin
+const signUpSchema = z.object({
+  email: z.string()
+    .trim()
+    .email('Invalid email address')
+    .min(5, 'Email too short')
+    .max(255, 'Email too long'),
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .max(100, 'Password too long')
+    .regex(/[A-Z]/, 'Must contain uppercase letter')
+    .regex(/[a-z]/, 'Must contain lowercase letter')
+    .regex(/[0-9]/, 'Must contain number')
+    .regex(/[^A-Za-z0-9]/, 'Must contain special character'),
+  username: z.string()
+    .trim()
+    .min(3, 'Username must be at least 3 characters')
+    .max(30, 'Username too long')
+    .regex(/^[a-zA-Z0-9_-]+$/, 'Username: letters, numbers, underscore, hyphen only')
+});
+
+const signInSchema = z.object({
+  email: z.string()
+    .trim()
+    .email('Invalid email address')
+    .min(1, 'Email is required'),
+  password: z.string()
+    .min(1, 'Password is required')
+});
 
 
 
@@ -81,12 +112,26 @@ const Auth = () => {
     setLoading(true);
 
     try {
+      // Validate input using zod schema
+      const validationResult = signUpSchema.safeParse({ email, password, username });
+      
+      if (!validationResult.success) {
+        const firstError = validationResult.error.errors[0];
+        toast({
+          variant: 'destructive',
+          title: 'Validation Error',
+          description: firstError.message,
+        });
+        setLoading(false);
+        return;
+      }
+
       const { error } = await supabase.auth.signUp({
-        email,
-        password,
+        email: validationResult.data.email,
+        password: validationResult.data.password,
         options: {
           data: {
-            username,
+            username: validationResult.data.username,
           },
         },
       });
@@ -119,9 +164,23 @@ const Auth = () => {
     setLoading(true);
 
     try {
+      // Validate input using zod schema
+      const validationResult = signInSchema.safeParse({ email, password });
+      
+      if (!validationResult.success) {
+        const firstError = validationResult.error.errors[0];
+        toast({
+          variant: 'destructive',
+          title: 'Validation Error',
+          description: firstError.message,
+        });
+        setLoading(false);
+        return;
+      }
+
       const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: validationResult.data.email,
+        password: validationResult.data.password,
       });
 
       if (error) {
@@ -141,6 +200,15 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
+  // Password requirements hint for signup form
+  const passwordRequirements = [
+    'At least 8 characters',
+    'Uppercase letter (A-Z)',
+    'Lowercase letter (a-z)',
+    'Number (0-9)',
+    'Special character (!@#$%^&*)',
+  ];
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -233,6 +301,13 @@ const Auth = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                   />
+                  <ul className="text-xs text-muted-foreground space-y-1 mt-1">
+                    {passwordRequirements.map((req, index) => (
+                      <li key={index} className="flex items-center gap-1">
+                        <span className="text-muted-foreground">•</span> {req}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? 'Creating account...' : 'Sign Up'}
