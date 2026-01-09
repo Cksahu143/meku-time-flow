@@ -9,7 +9,7 @@ import { DirectChat } from './DirectChat';
 import { ConversationsList } from './ConversationsList';
 import { CreateGroupDialog } from './groups/CreateGroupDialog';
 import { StartChatDialog } from './chat/StartChatDialog';
-import { InvitationsPanel } from './groups/InvitationsPanel';
+
 import { AnimatedBackground } from './AnimatedBackground';
 import { Button } from './ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
@@ -18,7 +18,7 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from './ui/resizable';
-import { Plus, Users, MessageSquarePlus } from 'lucide-react';
+import { Plus, Users, MessageSquare } from 'lucide-react';
 import { Group, Conversation } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 
@@ -45,7 +45,7 @@ export const GroupsView = () => {
   
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showStartChatDialog, setShowStartChatDialog] = useState(false);
-  const [showInvitations, setShowInvitations] = useState(false);
+  
   const [activeTab, setActiveTab] = useState<'groups' | 'chats'>('groups');
   const [isPublicProfile, setIsPublicProfile] = useState(true);
   const [hasShownWarning, setHasShownWarning] = useState(false);
@@ -199,13 +199,6 @@ export const GroupsView = () => {
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-semibold">Messages</h2>
                   <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => setShowInvitations(!showInvitations)}
-                    >
-                      <Users className="h-4 w-4" />
-                    </Button>
                     {activeTab === 'groups' ? (
                       <Button
                         variant="default"
@@ -222,7 +215,7 @@ export const GroupsView = () => {
                         onClick={() => setShowStartChatDialog(true)}
                         disabled={!isPublicProfile}
                       >
-                        <MessageSquarePlus className="h-4 w-4" />
+                        <MessageSquare className="h-4 w-4" />
                       </Button>
                     )}
                   </div>
@@ -236,30 +229,26 @@ export const GroupsView = () => {
                 </Tabs>
               </div>
 
-              {showInvitations ? (
-                <InvitationsPanel onClose={() => setShowInvitations(false)} />
-              ) : (
-                <Tabs value={activeTab} className="flex-1 flex flex-col">
-                  <TabsContent value="groups" className="flex-1 m-0">
-                    <GroupList
-                      groups={groups}
-                      loading={groupsLoading}
-                      selectedGroup={selectedGroup}
-                      onSelectGroup={handleSelectGroup}
-                      isDisabled={!isPublicProfile}
-                    />
-                  </TabsContent>
-                  <TabsContent value="chats" className="flex-1 m-0">
-                    <ConversationsList
-                      conversations={conversations}
-                      loading={conversationsLoading}
-                      selectedConversationId={selectedConversation?.conversation.id || null}
-                      onSelectConversation={handleSelectConversation}
-                      isDisabled={!isPublicProfile}
-                    />
-                  </TabsContent>
-                </Tabs>
-              )}
+              <Tabs value={activeTab} className="flex-1 flex flex-col">
+                <TabsContent value="groups" className="flex-1 m-0">
+                  <GroupList
+                    groups={groups}
+                    loading={groupsLoading}
+                    selectedGroup={selectedGroup}
+                    onSelectGroup={handleSelectGroup}
+                    isDisabled={!isPublicProfile}
+                  />
+                </TabsContent>
+                <TabsContent value="chats" className="flex-1 m-0">
+                  <ConversationsList
+                    conversations={conversations}
+                    loading={conversationsLoading}
+                    selectedConversationId={selectedConversation?.conversation.id || null}
+                    onSelectConversation={handleSelectConversation}
+                    isDisabled={!isPublicProfile}
+                  />
+                </TabsContent>
+              </Tabs>
             </div>
           </ResizablePanel>
 
