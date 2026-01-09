@@ -23,7 +23,6 @@ export default function EditProfile() {
     bio: '',
     avatar_url: '',
     profile_header_url: '',
-    phone_number: '',
   });
 
   useEffect(() => {
@@ -49,7 +48,6 @@ export default function EditProfile() {
           bio: data.bio || '',
           avatar_url: data.avatar_url || '',
           profile_header_url: data.profile_header_url || '',
-          phone_number: data.phone_number || '',
         });
       }
       setLoading(false);
@@ -101,7 +99,6 @@ export default function EditProfile() {
         bio: formData.bio || null,
         avatar_url: formData.avatar_url || null,
         profile_header_url: formData.profile_header_url || null,
-        phone_number: formData.phone_number || null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', userId);
@@ -210,21 +207,6 @@ export default function EditProfile() {
               />
             </div>
 
-            {/* Phone Number */}
-            <div className="space-y-2">
-              <Label htmlFor="phone_number">Phone Number</Label>
-              <Input
-                id="phone_number"
-                type="tel"
-                value={formData.phone_number}
-                onChange={(e) => setFormData(prev => ({ ...prev, phone_number: e.target.value }))}
-                placeholder="+1234567890"
-                className="transition-all focus:scale-[1.01]"
-              />
-              <p className="text-xs text-muted-foreground">
-                Others can find you by this phone number to start chats
-              </p>
-            </div>
 
             {/* Bio */}
             <div className="space-y-2">
