@@ -22,7 +22,6 @@ import { OnlineStatus } from '@/components/chat/OnlineStatus';
 interface Profile {
   id: string;
   username: string | null;
-  email: string;
   avatar_url: string | null;
   last_seen: string | null;
   display_name: string | null;
@@ -75,13 +74,15 @@ const ActiveUsers = () => {
 
   const fetchProfiles = async () => {
     try {
+      // Use profiles_secure view to respect email visibility settings and privacy
       const { data, error } = await supabase
-        .from('profiles')
-        .select('id, username, email, avatar_url, last_seen, display_name')
+        .from('profiles_secure')
+        .select('id, username, avatar_url, last_seen, display_name')
+        .eq('is_public', true)
         .order('last_seen', { ascending: false });
 
       if (error) throw error;
-      if (data) setProfiles(data);
+      if (data) setProfiles(data as Profile[]);
     } catch (error) {
       console.error('Error fetching profiles:', error);
     } finally {
@@ -102,14 +103,15 @@ const ActiveUsers = () => {
 
       if (follows && follows.length > 0) {
         const followingIds = follows.map(f => f.following_id);
+        // Use profiles_secure view to respect privacy settings
         const { data: followingData, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, username, email, avatar_url, last_seen, display_name')
+          .from('profiles_secure')
+          .select('id, username, avatar_url, last_seen, display_name')
           .in('id', followingIds)
           .order('last_seen', { ascending: false });
 
         if (profilesError) throw profilesError;
-        if (followingData) setFollowingProfiles(followingData);
+        if (followingData) setFollowingProfiles(followingData as Profile[]);
       } else {
         setFollowingProfiles([]);
       }
@@ -153,7 +155,7 @@ const ActiveUsers = () => {
               <Avatar className="h-14 w-14">
                 <AvatarImage src={profile.avatar_url || undefined} />
                 <AvatarFallback className="bg-primary/10 text-primary text-lg">
-                  {(profile.display_name || profile.username || profile.email || 'U').charAt(0).toUpperCase()}
+                  {(profile.display_name || profile.username || 'U').charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div className="absolute -bottom-0.5 -right-0.5">
@@ -167,9 +169,6 @@ const ActiveUsers = () => {
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-lg truncate">
                 {profile.display_name || profile.username || 'Anonymous'}
-              </p>
-              <p className="text-sm text-muted-foreground truncate">
-                {profile.email}
               </p>
               <OnlineStatus 
                 isOnline={isUserActive(profile.last_seen)} 

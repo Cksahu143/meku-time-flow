@@ -19,6 +19,16 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
+import { z } from 'zod';
+
+// Password validation schema - consistent with Auth.tsx
+const passwordSchema = z.string()
+  .min(8, 'Password must be at least 8 characters')
+  .max(100, 'Password too long')
+  .regex(/[A-Z]/, 'Must contain uppercase letter')
+  .regex(/[a-z]/, 'Must contain lowercase letter')
+  .regex(/[0-9]/, 'Must contain number')
+  .regex(/[^A-Za-z0-9]/, 'Must contain special character');
 
 interface Session {
   id: string;
@@ -159,11 +169,14 @@ export const PrivacySettings: React.FC = () => {
       return;
     }
 
-    if (newPassword.length < 6) {
+    // Validate new password with zod schema
+    const validationResult = passwordSchema.safeParse(newPassword);
+    if (!validationResult.success) {
+      const firstError = validationResult.error.errors[0];
       toast({
         variant: 'destructive',
-        title: 'Password too short',
-        description: 'Password must be at least 6 characters long',
+        title: 'Password Requirements',
+        description: firstError.message,
       });
       return;
     }
@@ -463,7 +476,14 @@ export const PrivacySettings: React.FC = () => {
                 Change Password
               </AlertDialogTitle>
               <AlertDialogDescription>
-                Enter your new password below. Make sure it's at least 6 characters long.
+                Enter your new password below. It must meet the following requirements:
+                <ul className="text-xs text-muted-foreground mt-2 space-y-1">
+                  <li>• At least 8 characters</li>
+                  <li>• Uppercase letter (A-Z)</li>
+                  <li>• Lowercase letter (a-z)</li>
+                  <li>• Number (0-9)</li>
+                  <li>• Special character (!@#$%^&*)</li>
+                </ul>
               </AlertDialogDescription>
             </AlertDialogHeader>
             
