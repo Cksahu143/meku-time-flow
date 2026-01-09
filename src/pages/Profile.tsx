@@ -50,9 +50,10 @@ export default function Profile() {
   }, [userId]);
 
   const fetchProfile = async (id: string) => {
+    // Explicitly select only public profile fields - exclude phone_number for privacy
     const { data, error } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id, username, display_name, avatar_url, bio, profile_header_url, created_at')
       .eq('id', id)
       .maybeSingle();
     
