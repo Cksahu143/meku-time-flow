@@ -41,36 +41,30 @@ export const StartChatDialog = ({ open, onOpenChange, onChatCreated }: StartChat
 
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      // Use secure edge function to lookup user by phone (phone number never exposed to client)
+      const { data, error } = await supabase.functions.invoke('lookup-user-by-phone', {
+        body: { phone_number: phoneNumber.trim() },
+      });
 
-      // Clean phone number - remove spaces, dashes, parentheses
-      const cleanedPhone = phoneNumber.replace(/[\s\-\(\)]/g, '');
-
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('id, display_name, username, email, avatar_url')
-        .eq('phone_number', cleanedPhone)
-        .single();
-
-      if (error || !profile) {
-        toast({
-          title: 'User not found',
-          description: 'No user found with this phone number',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      if (profile.id === user.id) {
+      if (error) {
         toast({
           title: 'Error',
-          description: "You can't start a chat with yourself",
+          description: 'Failed to search for user',
           variant: 'destructive',
         });
         return;
       }
 
+      if (!data.found) {
+        toast({
+          title: 'User not found',
+          description: data.error || 'No user found with this phone number',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const profile = data.profile;
       const conversationId = await createOrGetConversation(profile.id);
       if (conversationId) {
         const userName = profile.display_name || profile.username || profile.email;
