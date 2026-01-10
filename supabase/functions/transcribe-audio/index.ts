@@ -5,6 +5,59 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Validate URL to prevent SSRF attacks
+function isValidAudioUrl(url: string): { valid: boolean; reason?: string } {
+  try {
+    const parsed = new URL(url);
+    
+    // Only allow HTTP(S) protocols
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return { valid: false, reason: 'Only HTTP and HTTPS protocols are allowed' };
+    }
+    
+    const hostname = parsed.hostname.toLowerCase();
+    
+    // Block localhost and loopback addresses
+    if (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '::1' ||
+      hostname === '[::1]'
+    ) {
+      return { valid: false, reason: 'Localhost addresses are not allowed' };
+    }
+    
+    // Block private IP ranges
+    if (
+      hostname.startsWith('10.') ||
+      hostname.startsWith('192.168.') ||
+      hostname.match(/^172\.(1[6-9]|2[0-9]|3[0-1])\./) ||
+      hostname.startsWith('169.254.') || // Link-local / Cloud metadata
+      hostname === '169.254.169.254' // AWS/GCP metadata endpoint
+    ) {
+      return { valid: false, reason: 'Private IP addresses are not allowed' };
+    }
+    
+    // Block direct IP address access (numeric hostnames)
+    if (hostname.match(/^[0-9.]+$/)) {
+      return { valid: false, reason: 'Direct IP address access is not allowed' };
+    }
+    
+    // Block common internal hostnames
+    if (
+      hostname.endsWith('.local') ||
+      hostname.endsWith('.internal') ||
+      hostname.endsWith('.localhost')
+    ) {
+      return { valid: false, reason: 'Internal hostnames are not allowed' };
+    }
+    
+    return { valid: true };
+  } catch {
+    return { valid: false, reason: 'Invalid URL format' };
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -52,15 +105,89 @@ serve(async (req) => {
       mimeType = audioFile.type || 'audio/mpeg';
       console.log(`Processing uploaded file: ${fileName}, size: ${audioFile.size}, type: ${mimeType}`);
     } else if (audioUrl) {
-      console.log(`Fetching audio from URL: ${audioUrl}`);
-      const audioResponse = await fetch(audioUrl);
-      if (!audioResponse.ok) {
-        throw new Error(`Failed to fetch audio from URL: ${audioResponse.statusText}`);
+      // Validate URL to prevent SSRF attacks
+      const validation = isValidAudioUrl(audioUrl);
+      if (!validation.valid) {
+        console.warn(`Blocked SSRF attempt: ${validation.reason} - URL: ${audioUrl.substring(0, 100)}`);
+        return new Response(
+          JSON.stringify({ error: `Invalid audio URL: ${validation.reason}` }),
+          { 
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
       }
-      audioData = await audioResponse.blob();
-      fileName = audioUrl.split('/').pop() || 'audio.mp3';
-      mimeType = audioData.type || 'audio/mpeg';
-      console.log(`Fetched audio from URL, size: ${audioData.size}`);
+      
+      console.log(`Fetching audio from URL: ${audioUrl}`);
+      
+      // Add timeout and security controls
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+      
+      try {
+        const audioResponse = await fetch(audioUrl, {
+          signal: controller.signal,
+          redirect: 'manual', // Prevent redirect attacks
+        });
+        clearTimeout(timeoutId);
+        
+        // Check if response is a redirect (potential attack vector)
+        if (audioResponse.status >= 300 && audioResponse.status < 400) {
+          return new Response(
+            JSON.stringify({ error: 'URL redirects are not allowed for security reasons' }),
+            { 
+              status: 400, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
+        }
+        
+        if (!audioResponse.ok) {
+          throw new Error(`Failed to fetch audio from URL: ${audioResponse.statusText}`);
+        }
+        
+        // Check content length before downloading (max 25MB)
+        const contentLength = audioResponse.headers.get('content-length');
+        const maxSize = 25 * 1024 * 1024; // 25MB
+        if (contentLength && parseInt(contentLength) > maxSize) {
+          return new Response(
+            JSON.stringify({ error: 'Audio file is too large (max 25MB)' }),
+            { 
+              status: 400, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
+        }
+        
+        audioData = await audioResponse.blob();
+        
+        // Double-check actual size after download
+        if (audioData.size > maxSize) {
+          return new Response(
+            JSON.stringify({ error: 'Audio file is too large (max 25MB)' }),
+            { 
+              status: 400, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
+        }
+        
+        fileName = audioUrl.split('/').pop()?.split('?')[0] || 'audio.mp3';
+        mimeType = audioData.type || 'audio/mpeg';
+        console.log(`Fetched audio from URL, size: ${audioData.size}`);
+      } catch (error: unknown) {
+        clearTimeout(timeoutId);
+        if (error instanceof Error && error.name === 'AbortError') {
+          return new Response(
+            JSON.stringify({ error: 'Request timed out while fetching audio' }),
+            { 
+              status: 408, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
+        }
+        throw error;
+      }
     } else {
       throw new Error('No audio source provided');
     }
