@@ -113,15 +113,12 @@ export const useDirectMessages = (conversationId: string | null) => {
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('voice-messages')
-        .getPublicUrl(uploadData.path);
-
+      // Store the path instead of full URL for RLS policy compatibility
       const { error } = await supabase.from('direct_messages').insert({
         conversation_id: conversationId,
         sender_id: user.id,
         content: '[Voice Message]',
-        voice_url: publicUrl,
+        voice_url: uploadData.path,
         voice_duration: duration,
       });
 
