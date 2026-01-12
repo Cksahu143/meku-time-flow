@@ -17,11 +17,13 @@ import { FloatingBackground } from '@/components/motion/FloatingBackground';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { PageTransition } from '@/components/motion/PageTransition';
 import { ViewType } from '@/types';
+import { useRBACContext } from '@/contexts/RBACContext';
 
 const Index = () => {
   const [currentView, setCurrentView] = useState<ViewType>('dashboard');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { canAccessView, loading: rbacLoading } = useRBACContext();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -42,12 +44,23 @@ const Index = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  if (loading) {
+  if (loading || rbacLoading) {
     return <LoadingScreen />;
   }
 
   const handleNavigate = (view: string) => {
-    setCurrentView(view as ViewType);
+    const viewType = view as ViewType;
+    // Only navigate if user has permission
+    if (canAccessView(viewType)) {
+      setCurrentView(viewType);
+    }
+  };
+
+  const handleViewChange = (view: ViewType) => {
+    // Only change view if user has permission
+    if (canAccessView(view)) {
+      setCurrentView(view);
+    }
   };
 
   return (
@@ -57,11 +70,11 @@ const Index = () => {
       
       {/* Desktop Sidebar */}
       <div className="hidden md:block flex-shrink-0 animate-slide-in-left relative z-10">
-        <Sidebar currentView={currentView} onViewChange={setCurrentView} />
+        <Sidebar currentView={currentView} onViewChange={handleViewChange} />
       </div>
       
       {/* Mobile Sidebar */}
-      <MobileSidebar currentView={currentView} onViewChange={setCurrentView} />
+      <MobileSidebar currentView={currentView} onViewChange={handleViewChange} />
       
       <AnimatedBackground viewType={currentView}>
         <main className="flex-1 w-full h-screen overflow-y-auto overflow-x-hidden pt-16 md:pt-0 relative z-10">
