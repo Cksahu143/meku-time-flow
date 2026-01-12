@@ -121,6 +121,7 @@ export function useRBAC() {
       groups: 'can_view_groups',
       resources: 'can_view_resources',
       transcribe: 'can_view_transcribe',
+      'role-management': 'can_change_any_role',
     };
 
     const permission = viewPermissionMap[view];
