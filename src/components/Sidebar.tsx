@@ -18,7 +18,8 @@ import {
   Sparkles,
   Mic,
   BookOpenCheck,
-  Lock
+  Lock,
+  Shield
 } from 'lucide-react';
 import { ViewType } from '@/types';
 import { cn } from '@/lib/utils';
@@ -45,7 +46,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { canAccessView } = useRBACContext();
+  const { canAccessView, hasPermission, userRole } = useRBACContext();
   const [profile, setProfile] = useState<{ avatar_url: string | null; display_name: string | null; username: string | null; is_public: boolean | null } | null>(null);
   const [showHelp, setShowHelp] = useState(false);
 
@@ -102,6 +103,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
       console.error('Error loading profile:', error);
     }
   };
+  const canManageRoles = hasPermission('can_change_any_role') || userRole === 'platform_admin';
   
   const navItems = [
     { id: 'dashboard' as ViewType, label: 'Dashboard', icon: LayoutDashboard },
@@ -112,6 +114,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
     { id: 'groups' as ViewType, label: 'Study Chat', icon: MessageSquare, showWarning: !profile?.is_public },
     { id: 'resources' as ViewType, label: 'Resources', icon: BookOpen },
     { id: 'transcribe' as ViewType, label: 'Transcribe', icon: Mic },
+    ...(canManageRoles ? [{ id: 'role-management' as ViewType, label: 'Role Management', icon: Shield }] : []),
   ];
 
   const handleSignOut = async () => {

@@ -12,6 +12,7 @@ import { PomodoroView } from '@/components/PomodoroView';
 import { GroupsView } from '@/components/GroupsView';
 import { ResourcesView } from '@/components/ResourcesView';
 import { TranscribeView } from '@/components/TranscribeView';
+import { RoleManagementView } from '@/components/RoleManagementView';
 import { AnimatedBackground } from '@/components/AnimatedBackground';
 import { FloatingBackground } from '@/components/motion/FloatingBackground';
 import { LoadingScreen } from '@/components/LoadingScreen';
@@ -88,6 +89,7 @@ const Index = () => {
               {currentView === 'groups' && <GroupsView />}
               {currentView === 'resources' && <ResourcesView />}
               {currentView === 'transcribe' && <TranscribeView />}
+              {currentView === 'role-management' && <RoleManagementView />}
             </PageTransition>
           </AnimatePresence>
         </main>
