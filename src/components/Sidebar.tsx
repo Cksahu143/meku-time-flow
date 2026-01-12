@@ -17,7 +17,8 @@ import {
   LayoutDashboard,
   Sparkles,
   Mic,
-  BookOpenCheck
+  BookOpenCheck,
+  Lock
 } from 'lucide-react';
 import { ViewType } from '@/types';
 import { cn } from '@/lib/utils';
@@ -31,6 +32,9 @@ import { ProfileSettings } from '@/components/ProfileSettings';
 import { MusicPlayer } from '@/components/MusicPlayer';
 import { HelpDialog } from '@/components/HelpDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { RoleBadge } from '@/components/RoleBadge';
+import { useRBACContext } from '@/contexts/RBACContext';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface SidebarProps {
   currentView: ViewType;
@@ -41,6 +45,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { canAccessView } = useRBACContext();
   const [profile, setProfile] = useState<{ avatar_url: string | null; display_name: string | null; username: string | null; is_public: boolean | null } | null>(null);
   const [showHelp, setShowHelp] = useState(false);
 
@@ -170,9 +175,12 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
               </AvatarFallback>
             </Avatar>
             <div className="text-xs">
-              <p className="font-medium text-foreground truncate max-w-[100px]">
-                {profile?.display_name || profile?.username || 'Student'}
-              </p>
+              <div className="flex items-center gap-1.5">
+                <p className="font-medium text-foreground truncate max-w-[80px]">
+                  {profile?.display_name || profile?.username || 'Student'}
+                </p>
+                <RoleBadge size="sm" showIcon={false} />
+              </div>
               <p className="text-muted-foreground">Online</p>
             </div>
           </motion.div>
@@ -211,38 +219,46 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         {navItems.map((item, index) => {
           const Icon = item.icon;
           const isActive = currentView === item.id;
+          const hasAccess = canAccessView(item.id);
 
-          return (
+          const button = (
             <motion.button
               key={item.id}
-              onClick={() => onViewChange(item.id)}
+              onClick={() => hasAccess && onViewChange(item.id)}
+              disabled={!hasAccess}
               className={cn(
                 'w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 relative group',
                 isActive
                   ? 'bg-primary text-primary-foreground shadow-md btn-glow'
                   : 'text-foreground hover:bg-secondary/80',
-                item.showWarning && !isActive && 'opacity-70'
+                item.showWarning && !isActive && 'opacity-70',
+                !hasAccess && 'opacity-50 cursor-not-allowed'
               )}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: index * 0.05 }}
-              whileHover={{ x: isActive ? 0 : 4 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ x: hasAccess && !isActive ? 4 : 0 }}
+              whileTap={{ scale: hasAccess ? 0.98 : 1 }}
             >
               <div className="relative">
                 <motion.div
-                  whileHover={{ rotate: isActive ? 0 : 5 }}
+                  whileHover={{ rotate: hasAccess && !isActive ? 5 : 0 }}
                   transition={{ type: 'spring', stiffness: 300 }}
                 >
-                  <Icon className={cn("w-5 h-5", item.showWarning && !isActive && "text-muted-foreground")} />
+                  <Icon className={cn("w-5 h-5", (item.showWarning || !hasAccess) && !isActive && "text-muted-foreground")} />
                 </motion.div>
-                {item.showWarning && (
+                {item.showWarning && hasAccess && (
                   <div className="absolute -top-1 -right-1 h-3 w-3 bg-yellow-500 rounded-full flex items-center justify-center">
                     <AlertCircle className="h-2 w-2 text-white" />
                   </div>
                 )}
+                {!hasAccess && (
+                  <div className="absolute -top-1 -right-1 h-3 w-3 bg-muted-foreground rounded-full flex items-center justify-center">
+                    <Lock className="h-2 w-2 text-white" />
+                  </div>
+                )}
               </div>
-              <span className={cn("font-medium text-sm", item.showWarning && !isActive && "text-muted-foreground")}>
+              <span className={cn("font-medium text-sm", (item.showWarning || !hasAccess) && !isActive && "text-muted-foreground")}>
                 {item.label}
               </span>
               
@@ -256,6 +272,22 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
               )}
             </motion.button>
           );
+
+          if (!hasAccess) {
+            return (
+              <Tooltip key={item.id}>
+                <TooltipTrigger asChild>
+                  {button}
+                </TooltipTrigger>
+                <TooltipContent side="right" className="flex items-center gap-2">
+                  <Lock className="h-3 w-3" />
+                  You don't have permission to access this
+                </TooltipContent>
+              </Tooltip>
+            );
+          }
+
+          return button;
         })}
       </nav>
 

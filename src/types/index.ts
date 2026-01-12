@@ -163,3 +163,29 @@ export interface Exam {
   created_at: string;
   updated_at: string;
 }
+
+// RBAC Types
+export type AppRole = 'student' | 'teacher' | 'school_admin' | 'platform_admin';
+
+export interface UserRole {
+  id: string;
+  user_id: string;
+  role: AppRole;
+  school_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Permission {
+  id: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+}
+
+export interface RolePermission {
+  id: string;
+  role: AppRole;
+  permission_id: string;
+  created_at: string;
+}
