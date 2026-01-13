@@ -122,6 +122,7 @@ export function useRBAC() {
       resources: 'can_view_resources',
       transcribe: 'can_view_transcribe',
       'role-management': 'can_change_any_role',
+      'schools-management': 'can_manage_schools',
     };
 
     const permission = viewPermissionMap[view];
@@ -132,6 +133,13 @@ export function useRBAC() {
       if (hasPermission('can_change_any_role')) return true;
       if (userRole === 'platform_admin') return true;
       if (userRole === 'school_admin' && (hasPermission('can_manage_students') || hasPermission('can_manage_teachers'))) return true;
+      return false;
+    }
+    
+    // Special case for schools-management: only platform admins
+    if (view === 'schools-management') {
+      if (hasPermission('can_manage_schools')) return true;
+      if (userRole === 'platform_admin') return true;
       return false;
     }
     

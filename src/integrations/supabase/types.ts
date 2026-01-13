@@ -508,6 +508,33 @@ export type Database = {
           },
         ]
       }
+      platform_settings: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       post_likes: {
         Row: {
           created_at: string
@@ -656,11 +683,16 @@ export type Database = {
           code: string
           created_at: string
           email: string | null
+          features_enabled: Json | null
           id: string
           is_active: boolean
           logo_url: string | null
+          max_students: number | null
+          max_teachers: number | null
           name: string
           phone: string | null
+          subscription_expires_at: string | null
+          subscription_tier: string | null
           updated_at: string
         }
         Insert: {
@@ -668,11 +700,16 @@ export type Database = {
           code: string
           created_at?: string
           email?: string | null
+          features_enabled?: Json | null
           id?: string
           is_active?: boolean
           logo_url?: string | null
+          max_students?: number | null
+          max_teachers?: number | null
           name: string
           phone?: string | null
+          subscription_expires_at?: string | null
+          subscription_tier?: string | null
           updated_at?: string
         }
         Update: {
@@ -680,11 +717,16 @@ export type Database = {
           code?: string
           created_at?: string
           email?: string | null
+          features_enabled?: Json | null
           id?: string
           is_active?: boolean
           logo_url?: string | null
+          max_students?: number | null
+          max_teachers?: number | null
           name?: string
           phone?: string | null
+          subscription_expires_at?: string | null
+          subscription_tier?: string | null
           updated_at?: string
         }
         Relationships: []

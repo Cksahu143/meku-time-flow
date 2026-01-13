@@ -13,6 +13,7 @@ import { GroupsView } from '@/components/GroupsView';
 import { ResourcesView } from '@/components/ResourcesView';
 import { TranscribeView } from '@/components/TranscribeView';
 import { RoleManagementView } from '@/components/RoleManagementView';
+import { SchoolsManagementView } from '@/components/SchoolsManagementView';
 import { AnimatedBackground } from '@/components/AnimatedBackground';
 import { FloatingBackground } from '@/components/motion/FloatingBackground';
 import { LoadingScreen } from '@/components/LoadingScreen';
@@ -90,6 +91,7 @@ const Index = () => {
               {currentView === 'resources' && <ResourcesView />}
               {currentView === 'transcribe' && <TranscribeView />}
               {currentView === 'role-management' && <RoleManagementView />}
+              {currentView === 'schools-management' && <SchoolsManagementView />}
             </PageTransition>
           </AnimatePresence>
         </main>
