@@ -19,7 +19,8 @@ import {
   Mic,
   BookOpenCheck,
   Lock,
-  Shield
+  Shield,
+  Building
 } from 'lucide-react';
 import { ViewType } from '@/types';
 import { cn } from '@/lib/utils';
@@ -106,6 +107,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
 
   // Check if user can manage roles (platform admin or school admin)
   const showRoleManagement = canManageUsers() || hasPermission('can_change_any_role') || userRole === 'platform_admin' || userRole === 'school_admin';
+  const showSchoolsManagement = userRole === 'platform_admin' || hasPermission('can_manage_schools');
   
   const navItems = [
     { id: 'dashboard' as ViewType, label: 'Dashboard', icon: LayoutDashboard },
@@ -117,6 +119,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
     { id: 'resources' as ViewType, label: 'Resources', icon: BookOpen },
     { id: 'transcribe' as ViewType, label: 'Transcribe', icon: Mic },
     ...(showRoleManagement ? [{ id: 'role-management' as ViewType, label: 'Role Management', icon: Shield }] : []),
+    ...(showSchoolsManagement ? [{ id: 'schools-management' as ViewType, label: 'Schools', icon: Building }] : []),
   ];
 
   const handleSignOut = async () => {
