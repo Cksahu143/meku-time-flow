@@ -126,14 +126,30 @@ export function useRBAC() {
 
     const permission = viewPermissionMap[view];
     if (!permission) return false;
+    
+    // Special case for role-management: school admins with manage permissions can access
+    if (view === 'role-management') {
+      if (hasPermission('can_change_any_role')) return true;
+      if (userRole === 'platform_admin') return true;
+      if (userRole === 'school_admin' && (hasPermission('can_manage_students') || hasPermission('can_manage_teachers'))) return true;
+      return false;
+    }
+    
     return hasPermission(permission);
-  }, [hasPermission]);
+  }, [hasPermission, userRole]);
 
   // Get role configuration for display
   const getRoleConfig = useCallback(() => {
     if (!userRole) return null;
     return ROLE_CONFIG[userRole];
   }, [userRole]);
+
+  // Check if user can manage users (school admins within their school, platform admins globally)
+  const canManageUsers = useCallback((): boolean => {
+    if (hasPermission('can_change_any_role')) return true;
+    if (userRole === 'school_admin' && hasPermission('can_manage_students')) return true;
+    return false;
+  }, [hasPermission, userRole]);
 
   return {
     userRole,
@@ -145,6 +161,7 @@ export function useRBAC() {
     hasMinimumRole,
     canAccessView,
     getRoleConfig,
+    canManageUsers,
     refreshRole: fetchUserRole,
   };
 }

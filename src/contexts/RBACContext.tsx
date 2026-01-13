@@ -1,5 +1,5 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import { useRBAC, AppRole } from '@/hooks/useRBAC';
+import { useRBAC, AppRole, ROLE_CONFIG } from '@/hooks/useRBAC';
 
 interface RBACContextValue {
   userRole: AppRole | null;
@@ -11,6 +11,7 @@ interface RBACContextValue {
   hasMinimumRole: (minRole: AppRole) => boolean;
   canAccessView: (view: string) => boolean;
   getRoleConfig: () => { label: string; color: string; bgColor: string } | null;
+  canManageUsers: () => boolean;
   refreshRole: () => Promise<void>;
 }
 
@@ -33,3 +34,7 @@ export function useRBACContext() {
   }
   return context;
 }
+
+// Re-export types and constants for convenience
+export { ROLE_CONFIG };
+export type { AppRole };
