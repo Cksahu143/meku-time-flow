@@ -1,7 +1,8 @@
 import React from 'react';
-import { useRBAC, AppRole } from '@/hooks/useRBAC';
+import { useRBACContext, type AppRole } from '@/contexts/RBACContext';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Lock } from 'lucide-react';
+
 
 interface PermissionGuardProps {
   permission?: string;
@@ -22,7 +23,7 @@ export function PermissionGuard({
   showTooltip = true,
   tooltipMessage = "You don't have permission to do this",
 }: PermissionGuardProps) {
-  const { hasPermission, hasRole, hasMinimumRole, loading } = useRBAC();
+  const { hasPermission, hasRole, hasMinimumRole, loading } = useRBACContext();
 
   if (loading) {
     return null;
@@ -81,7 +82,7 @@ export function withPermission<P extends object>(
 
 // Hook for disabling elements based on permission
 export function useDisabledByPermission(permission: string) {
-  const { hasPermission, loading } = useRBAC();
+  const { hasPermission, loading } = useRBACContext();
   
   const isDisabled = !hasPermission(permission);
   const tooltipProps = isDisabled

@@ -36,41 +36,64 @@ export function useRBAC() {
   const [schoolId, setSchoolId] = useState<string | null>(null);
 
   const fetchUserRole = useCallback(async () => {
+    setLoading(true);
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (!user) {
         setUserRole(null);
         setPermissions([]);
-        setLoading(false);
+        setSchoolId(null);
         return;
       }
 
-      // Fetch user role
-      const { data: roleData, error: roleError } = await supabase
+      // Resolve role + school in a way that's resilient to missing rows / RLS / .single() pitfalls
+      let resolvedRole: AppRole = 'student';
+      let resolvedSchoolId: string | null = null;
+
+      const { data: roleRow, error: roleRowError } = await supabase
         .from('user_roles')
         .select('role, school_id')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (roleError) {
-        console.error('Error fetching user role:', roleError);
-        // Default to student if no role found
-        setUserRole('student');
-      } else if (roleData) {
-        setUserRole(roleData.role as AppRole);
-        setSchoolId(roleData.school_id);
+      if (roleRowError) {
+        console.error('Error fetching user role row:', roleRowError);
       }
 
-      // Fetch permissions for the user's role
+      if (roleRow?.role) {
+        resolvedRole = roleRow.role as AppRole;
+        resolvedSchoolId = roleRow.school_id ?? null;
+      } else {
+        // Fallback: use backend function (bypasses table RLS) to at least get the role.
+        const { data: rpcRole, error: rpcError } = await supabase.rpc('get_user_role', {
+          _user_id: user.id,
+        });
+
+        if (rpcError) {
+          console.error('Error fetching role via get_user_role():', rpcError);
+        } else if (rpcRole) {
+          resolvedRole = rpcRole as AppRole;
+        }
+      }
+
+      setUserRole(resolvedRole);
+      setSchoolId(resolvedSchoolId);
+
+      // Fetch permissions for the resolved role
       const { data: permData, error: permError } = await supabase
         .from('role_permissions')
-        .select(`
-          permissions (name)
-        `)
-        .eq('role', roleData?.role || 'student');
+        .select(`permissions (name)`)
+        .eq('role', resolvedRole);
 
-      if (!permError && permData) {
-        const permNames = permData
+      if (permError) {
+        console.error('Error fetching role permissions:', permError);
+        setPermissions([]);
+      } else {
+        const permNames = (permData ?? [])
           .map((p: any) => p.permissions?.name)
           .filter(Boolean);
         setPermissions(permNames);
@@ -78,6 +101,8 @@ export function useRBAC() {
     } catch (error) {
       console.error('Error in fetchUserRole:', error);
       setUserRole('student');
+      setPermissions([]);
+      setSchoolId(null);
     } finally {
       setLoading(false);
     }
