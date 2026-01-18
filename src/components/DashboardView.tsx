@@ -16,7 +16,9 @@ import {
   Link2,
   FileText,
   Mic,
-  Shield
+  Shield,
+  Building2,
+  Settings
 } from 'lucide-react';
 import { MotionCard } from '@/components/motion/MotionCard';
 import { MagneticButton } from '@/components/motion/MagneticButton';
@@ -26,6 +28,9 @@ import { useCountUp } from '@/hooks/useMotion';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
+import { RoleCard, RoleBadge } from '@/components/RoleBadge';
+import { useRBACContext } from '@/contexts/RBACContext';
+import { PermissionGuard } from '@/components/PermissionGuard';
 
 interface StatCardProps {
   title: string;
@@ -106,6 +111,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   const [stats, setStats] = useState({ tasks: 0, exams: 0, groups: 0, resources: 0 });
   const [recentActivity, setRecentActivity] = useState<Array<{ id: string; text: string; time: string; type: string }>>([]);
   const [loading, setLoading] = useState(true);
+  const { userRole, canManageUsers, hasPermission, canAccessView } = useRBACContext();
 
   useEffect(() => {
     loadDashboardData();
@@ -210,14 +216,59 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     { title: 'Explore Resources', icon: BookOpen, desc: 'View materials' },
   ];
 
+  // Admin quick actions based on role
+  const adminActions = [
+    ...(canManageUsers() ? [{ title: 'Manage Users', icon: Users, view: 'role-management', desc: 'User roles' }] : []),
+    ...(canAccessView('schools-management') ? [{ title: 'Manage Schools', icon: Building2, view: 'schools-management', desc: 'Schools' }] : []),
+  ];
+
   return (
     <PageTransition className="min-h-screen p-4 md:p-8 bg-hero-gradient">
+      {/* Role Card - Prominent display */}
+      <motion.div 
+        className="mb-6"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <RoleCard />
+      </motion.div>
+
+      {/* Admin Quick Actions - Only for admins */}
+      {adminActions.length > 0 && (
+        <motion.div 
+          className="mb-6 p-4 rounded-xl bg-card border border-border/50 shadow-sm"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <Settings className="h-4 w-4 text-primary" />
+            <span className="text-sm font-semibold text-foreground">Admin Actions</span>
+            <RoleBadge size="sm" animated />
+          </div>
+          <div className="flex gap-3 flex-wrap">
+            {adminActions.map((action) => (
+              <motion.button
+                key={action.view}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground text-sm font-medium transition-colors"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => onNavigate(action.view)}
+              >
+                <action.icon className="h-4 w-4 text-primary" />
+                {action.title}
+              </motion.button>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
       {/* Hero Section */}
       <motion.div 
         className="relative mb-8 p-8 rounded-2xl overflow-hidden bg-card border border-border/50 shadow-lg"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.5, delay: 0.15 }}
       >
         {/* Decorative Elements */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
@@ -229,19 +280,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
               className="flex items-center gap-2 mb-3"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
+              transition={{ delay: 0.25 }}
             >
               <div className="p-1.5 rounded-lg bg-primary/10">
                 <Sparkles className="h-4 w-4 text-primary" />
               </div>
-              <span className="text-sm text-primary font-medium">Your AI-powered school companion</span>
+              <span className="text-sm text-primary font-medium">Welcome back, {userName}!</span>
             </motion.div>
             
             <motion.h1 
               className="text-3xl md:text-4xl font-bold text-foreground mb-2"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
+              transition={{ delay: 0.35 }}
             >
               Cohen - <span className="text-gradient-blue">EDAS</span>
             </motion.h1>
@@ -250,7 +301,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
               className="text-muted-foreground max-w-md"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
+              transition={{ delay: 0.45 }}
             >
               Convert audio, video, or links into English study notes.
             </motion.p>
@@ -261,7 +312,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             className="flex gap-3 flex-wrap"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.5 }}
+            transition={{ delay: 0.55 }}
           >
             {aiActions.map((action, i) => (
               <motion.button

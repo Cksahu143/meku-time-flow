@@ -183,13 +183,12 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
               </AvatarFallback>
             </Avatar>
             <div className="text-xs">
-              <div className="flex items-center gap-1.5">
-                <p className="font-medium text-foreground truncate max-w-[80px]">
-                  {profile?.display_name || profile?.username || 'Student'}
-                </p>
-                <RoleBadge size="sm" showIcon={false} />
+              <p className="font-medium text-foreground truncate max-w-[100px]">
+                {profile?.display_name || profile?.username || 'User'}
+              </p>
+              <div className="mt-0.5">
+                <RoleBadge size="sm" showIcon={true} animated />
               </div>
-              <p className="text-muted-foreground">Online</p>
             </div>
           </motion.div>
           
