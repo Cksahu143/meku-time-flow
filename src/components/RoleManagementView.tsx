@@ -357,15 +357,19 @@ export function RoleManagementView() {
       // Test 3: Check current user's role
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const { data: currentRole } = await supabase
+        const { data: currentRole, error: currentRoleError } = await supabase
           .from('user_roles')
           .select('role, school_id')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
         
         results.push({
-          success: !!currentRole,
-          message: currentRole ? `Current user role: ${currentRole.role} ${currentRole.school_id ? `(School: ${currentRole.school_id.substring(0, 8)}...)` : '(No school)'} ✓` : 'Failed to get current user role'
+          success: !currentRoleError && !!currentRole,
+          message: currentRoleError
+            ? `Failed to get current user role: ${currentRoleError.message}`
+            : currentRole
+              ? `Current user role: ${currentRole.role} ${currentRole.school_id ? `(School: ${currentRole.school_id.substring(0, 8)}...)` : '(No school)'} ✓`
+              : 'No role row found for current user'
         });
       }
 

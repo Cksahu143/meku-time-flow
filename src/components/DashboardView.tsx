@@ -31,6 +31,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { RoleCard, RoleBadge } from '@/components/RoleBadge';
 import { useRBACContext } from '@/contexts/RBACContext';
 import { PermissionGuard } from '@/components/PermissionGuard';
+import { MyPermissionsPanel } from '@/components/MyPermissionsPanel';
 
 interface StatCardProps {
   title: string;
@@ -231,6 +232,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         animate={{ opacity: 1, y: 0 }}
       >
         <RoleCard />
+      </motion.div>
+
+      {/* My Permissions */}
+      <motion.div
+        className="mb-6"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.08 }}
+      >
+        <MyPermissionsPanel />
       </motion.div>
 
       {/* Admin Quick Actions - Only for admins */}

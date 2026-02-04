@@ -1020,6 +1020,7 @@ export type Database = {
     }
     Functions: {
       cleanup_expired_sso_tokens: { Args: never; Returns: undefined }
+      current_user_school_id: { Args: never; Returns: string }
       get_filtered_email: {
         Args: {
           profile_email: string
