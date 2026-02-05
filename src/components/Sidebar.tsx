@@ -192,14 +192,14 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
             </div>
           </motion.div>
           
-          <div className="flex gap-1">
+          <div className="flex items-center gap-1">
             <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowHelp(true)}
                 title="Help & Guide"
-                className="h-8 w-8 hover:bg-primary/10"
+                className="h-8 w-8 hover:bg-primary/10 border border-transparent hover:border-primary/20"
               >
                 <HelpCircle className="h-4 w-4 text-primary" />
               </Button>
@@ -210,13 +210,17 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
                 size="icon"
                 onClick={() => navigate('/active-users')}
                 title="View Active Users"
-                className="h-8 w-8 hover:bg-primary/10"
+                className="h-8 w-8 hover:bg-primary/10 border border-transparent hover:border-primary/20"
               >
-                <Users className="h-4 w-4" />
+                <Users className="h-4 w-4 text-muted-foreground hover:text-primary" />
               </Button>
             </motion.div>
-            <InvitationNotifications />
-            <ProfileSettings />
+            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+              <InvitationNotifications />
+            </motion.div>
+            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+              <ProfileSettings />
+            </motion.div>
           </div>
         </div>
       </motion.div>

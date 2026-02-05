@@ -31,12 +31,17 @@ export const InvitationNotifications: React.FC = () => {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="relative h-8 w-8 hover:bg-primary/10 border border-transparent hover:border-primary/20"
+          title="Notifications"
+        >
+          <Bell className="h-4 w-4 text-muted-foreground hover:text-primary" />
           {combinedCount > 0 && (
             <Badge 
               variant="destructive" 
-              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs animate-bounce-subtle"
+              className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center p-0 text-[10px] animate-bounce-subtle"
             >
               {combinedCount}
             </Badge>
