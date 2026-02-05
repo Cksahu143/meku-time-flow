@@ -682,7 +682,7 @@ export function RoleManagementView() {
                       <TableHead>User</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Current Role</TableHead>
-                      {isPlatformAdmin && <TableHead>School</TableHead>}
+                      <TableHead>School</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -717,72 +717,117 @@ export function RoleManagementView() {
                             <span className="ml-1">{ROLE_CONFIG[user.role].label}</span>
                           </Badge>
                         </TableCell>
-                        {isPlatformAdmin && (
-                          <TableCell>
-                            <Select 
-                              value={user.school_id || 'none'} 
-                              onValueChange={(value) => handleAssignSchool(user.user_id, value === 'none' ? null : value)}
-                              disabled={updating === user.user_id}
-                            >
-                              <SelectTrigger className="w-36 h-8 text-xs">
-                                <SelectValue placeholder="No school" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none">No School</SelectItem>
-                                {schools.map(school => (
-                                  <SelectItem key={school.id} value={school.id}>{school.name}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                        )}
+                        <TableCell>
+                          {user.school_name ? (
+                            <Badge variant="outline" className="gap-1">
+                              <Building className="h-3 w-3" />
+                              {user.school_name}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">No school</span>
+                          )}
+                        </TableCell>
                         <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={updating === user.user_id}
-                                className="gap-1"
-                              >
-                                {updating === user.user_id ? (
-                                  <RefreshCw className="h-3 w-3 animate-spin" />
-                                ) : (
-                                  <>
-                                    Change Role
-                                    <ChevronDown className="h-3 w-3" />
-                                  </>
-                                )}
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
-                              <DropdownMenuLabel>Assign Role</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              {assignableRoles.map((role) => (
-                                <DropdownMenuItem
-                                  key={role}
-                                  onClick={() => handleRoleChange(user.user_id, role)}
-                                  className="flex items-center justify-between"
+                          <div className="flex items-center justify-end gap-2">
+                            {/* Change Role Button */}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={updating === user.user_id}
+                                  className="gap-1"
                                 >
-                                  <div className="flex items-center gap-2">
-                                    <span className={ROLE_CONFIG[role].color}>
-                                      {ROLE_ICONS[role]}
-                                    </span>
-                                    {ROLE_CONFIG[role].label}
-                                  </div>
-                                  {user.role === role && (
-                                    <Check className="h-4 w-4 text-primary" />
+                                  {updating === user.user_id ? (
+                                    <RefreshCw className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <>
+                                      <Shield className="h-3 w-3" />
+                                      Change Role
+                                      <ChevronDown className="h-3 w-3" />
+                                    </>
                                   )}
-                                </DropdownMenuItem>
-                              ))}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuLabel>Assign Role</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                {assignableRoles.map((role) => (
+                                  <DropdownMenuItem
+                                    key={role}
+                                    onClick={() => handleRoleChange(user.user_id, role)}
+                                    className="flex items-center justify-between"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <span className={ROLE_CONFIG[role].color}>
+                                        {ROLE_ICONS[role]}
+                                      </span>
+                                      {ROLE_CONFIG[role].label}
+                                    </div>
+                                    {user.role === role && (
+                                      <Check className="h-4 w-4 text-primary" />
+                                    )}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+
+                            {/* Assign School Button - Platform Admin Only */}
+                            {isPlatformAdmin && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={updating === user.user_id}
+                                    className="gap-1"
+                                  >
+                                    <Building className="h-3 w-3" />
+                                    Assign School
+                                    <ChevronDown className="h-3 w-3" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-48">
+                                  <DropdownMenuLabel>Assign to School</DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => handleAssignSchool(user.user_id, null)}
+                                    className="flex items-center justify-between"
+                                  >
+                                    <span className="text-muted-foreground">No School</span>
+                                    {!user.school_id && <Check className="h-4 w-4 text-primary" />}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  {schools.map((school) => (
+                                    <DropdownMenuItem
+                                      key={school.id}
+                                      onClick={() => handleAssignSchool(user.user_id, school.id)}
+                                      className="flex items-center justify-between"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <Building className="h-3 w-3 text-muted-foreground" />
+                                        {school.name}
+                                      </div>
+                                      {user.school_id === school.id && (
+                                        <Check className="h-4 w-4 text-primary" />
+                                      )}
+                                    </DropdownMenuItem>
+                                  ))}
+                                  {schools.length === 0 && (
+                                    <DropdownMenuItem disabled className="text-muted-foreground">
+                                      No schools available
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
                     {filteredUsers.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={isPlatformAdmin ? 5 : 4} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                           No users found matching your search
                         </TableCell>
                       </TableRow>
