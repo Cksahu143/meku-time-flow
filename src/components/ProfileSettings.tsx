@@ -144,8 +144,13 @@ export const ProfileSettings: React.FC = () => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="hover-scale transition-all">
-          <Settings className="h-5 w-5" />
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-8 w-8 hover:bg-primary/10 border border-transparent hover:border-primary/20 transition-all"
+          title="Settings"
+        >
+          <Settings className="h-4 w-4 text-muted-foreground hover:text-primary" />
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto animate-scale-in">
