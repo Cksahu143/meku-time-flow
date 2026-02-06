@@ -161,10 +161,11 @@ export function useRBAC() {
       return false;
     }
     
-    // Special case for schools-management: only platform admins
+    // Special case for schools-management: platform admins AND school admins
     if (view === 'schools-management') {
       if (hasPermission('can_manage_schools')) return true;
       if (userRole === 'platform_admin') return true;
+      if (userRole === 'school_admin') return true; // School admins can manage all schools
       return false;
     }
     
