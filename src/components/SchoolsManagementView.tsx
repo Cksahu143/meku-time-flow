@@ -149,9 +149,10 @@ export function SchoolsManagementView() {
   const [expandedSchool, setExpandedSchool] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
-  const { hasPermission, userRole } = useRBACContext();
+  const { hasPermission, userRole, schoolId } = useRBACContext();
 
   const isPlatformAdmin = userRole === 'platform_admin';
+  const isSchoolAdmin = userRole === 'school_admin';
 
   const [formData, setFormData] = useState({
     name: '',
@@ -172,17 +173,26 @@ export function SchoolsManagementView() {
   const fetchSchools = async () => {
     try {
       setLoading(true);
-      const { data: schoolsData, error: schoolsError } = await supabase
-        .from('schools')
-        .select('*')
-        .order('name');
+      
+      // Build the query - school admins only see their own school
+      let query = supabase.from('schools').select('*');
+      
+      if (isSchoolAdmin && schoolId) {
+        query = query.eq('id', schoolId);
+      }
+      
+      const { data: schoolsData, error: schoolsError } = await query.order('name');
 
       if (schoolsError) throw schoolsError;
 
       // Get user counts for each school
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('school_id, role');
+      let roleQuery = supabase.from('user_roles').select('school_id, role');
+      
+      if (isSchoolAdmin && schoolId) {
+        roleQuery = roleQuery.eq('school_id', schoolId);
+      }
+      
+      const { data: roleData, error: roleError } = await roleQuery;
 
       if (roleError) throw roleError;
 
@@ -417,7 +427,8 @@ export function SchoolsManagementView() {
     totalTeachers: schools.reduce((sum, s) => sum + (s.teacher_count || 0), 0),
   };
 
-  if (!isPlatformAdmin) {
+  // Access control: Platform admins see all, school admins see only their school
+  if (!isPlatformAdmin && !isSchoolAdmin) {
     return (
       <div className="flex items-center justify-center h-full">
         <Card className="max-w-md">
@@ -425,7 +436,24 @@ export function SchoolsManagementView() {
             <Building className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <CardTitle>Access Restricted</CardTitle>
             <CardDescription>
-              Only Platform Admins can access Schools Management.
+              Only Platform Admins and School Owners can access Schools Management.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
+  // School admin without a school assignment
+  if (isSchoolAdmin && !schoolId) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Card className="max-w-md">
+          <CardHeader className="text-center">
+            <Building className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <CardTitle>No School Assigned</CardTitle>
+            <CardDescription>
+              You are a School Admin but haven't been assigned to a school yet. Please contact a Platform Admin to assign you to a school.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -446,79 +474,137 @@ export function SchoolsManagementView() {
               <Building className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Schools Management</h1>
+              <h1 className="text-2xl font-bold text-foreground">
+                {isSchoolAdmin ? 'My School' : 'Schools Management'}
+              </h1>
               <p className="text-muted-foreground text-sm">
-                Create, edit, and manage all schools on the platform
+                {isSchoolAdmin 
+                  ? 'Manage your school settings, features, and users' 
+                  : 'Create, edit, and manage all schools on the platform'}
               </p>
             </div>
           </div>
-          <Button onClick={() => { resetForm(); setShowCreateDialog(true); }} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Create School
-          </Button>
+          {isPlatformAdmin && (
+            <Button onClick={() => { resetForm(); setShowCreateDialog(true); }} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Create School
+            </Button>
+          )}
         </div>
       </motion.div>
 
-      {/* Stats Cards */}
-      <motion.div
-        className="grid grid-cols-2 md:grid-cols-4 gap-4"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-      >
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Schools</p>
-                <p className="text-2xl font-bold">{totalStats.schools}</p>
+      {/* Stats Cards - Only show for Platform Admins */}
+      {isPlatformAdmin && (
+        <motion.div
+          className="grid grid-cols-2 md:grid-cols-4 gap-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Schools</p>
+                  <p className="text-2xl font-bold">{totalStats.schools}</p>
+                </div>
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Building className="h-5 w-5 text-primary" />
+                </div>
               </div>
-              <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900">
-                <Building className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Active Schools</p>
+                  <p className="text-2xl font-bold">{totalStats.activeSchools}</p>
+                </div>
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Check className="h-5 w-5 text-primary" />
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Active Schools</p>
-                <p className="text-2xl font-bold">{totalStats.activeSchools}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Students</p>
+                  <p className="text-2xl font-bold">{totalStats.totalStudents}</p>
+                </div>
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <GraduationCap className="h-5 w-5 text-primary" />
+                </div>
               </div>
-              <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900">
-                <Check className="h-5 w-5 text-green-600 dark:text-green-400" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Teachers</p>
+                  <p className="text-2xl font-bold">{totalStats.totalTeachers}</p>
+                </div>
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <BookOpen className="h-5 w-5 text-primary" />
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Students</p>
-                <p className="text-2xl font-bold">{totalStats.totalStudents}</p>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* School Admin Stats - Show their school stats */}
+      {isSchoolAdmin && schools.length > 0 && (
+        <motion.div
+          className="grid grid-cols-2 md:grid-cols-3 gap-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">My Students</p>
+                  <p className="text-2xl font-bold">{schools[0]?.student_count || 0}</p>
+                </div>
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <GraduationCap className="h-5 w-5 text-primary" />
+                </div>
               </div>
-              <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900">
-                <GraduationCap className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">My Teachers</p>
+                  <p className="text-2xl font-bold">{schools[0]?.teacher_count || 0}</p>
+                </div>
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <BookOpen className="h-5 w-5 text-primary" />
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Teachers</p>
-                <p className="text-2xl font-bold">{totalStats.totalTeachers}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Subscription</p>
+                  <p className="text-lg font-bold capitalize">{schools[0]?.subscription_tier || 'Free'}</p>
+                </div>
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <CreditCard className="h-5 w-5 text-primary" />
+                </div>
               </div>
-              <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900">
-                <BookOpen className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
 
       {/* Schools Table */}
       <motion.div
@@ -693,46 +779,50 @@ export function SchoolsManagementView() {
 
                           {/* Actions */}
                           <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
-                            <Button variant="outline" size="sm" onClick={() => handleToggleActive(school)}>
-                              {school.is_active ? (
-                                <>
-                                  <ToggleRight className="h-4 w-4 mr-1" />
-                                  Deactivate
-                                </>
-                              ) : (
-                                <>
-                                  <ToggleLeft className="h-4 w-4 mr-1" />
-                                  Activate
-                                </>
-                              )}
-                            </Button>
+                            {isPlatformAdmin && (
+                              <Button variant="outline" size="sm" onClick={() => handleToggleActive(school)}>
+                                {school.is_active ? (
+                                  <>
+                                    <ToggleRight className="h-4 w-4 mr-1" />
+                                    Deactivate
+                                  </>
+                                ) : (
+                                  <>
+                                    <ToggleLeft className="h-4 w-4 mr-1" />
+                                    Activate
+                                  </>
+                                )}
+                              </Button>
+                            )}
                             <Button variant="outline" size="sm" onClick={() => openEditDialog(school)}>
                               <Edit className="h-4 w-4 mr-1" />
                               Edit
                             </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="destructive" size="sm">
-                                  <Trash2 className="h-4 w-4 mr-1" />
-                                  Delete
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete School</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to delete {school.name}? This action cannot be undone.
-                                    All users must be unassigned from this school first.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleDeleteSchool(school)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            {isPlatformAdmin && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="destructive" size="sm">
+                                    <Trash2 className="h-4 w-4 mr-1" />
                                     Delete
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete School</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete {school.name}? This action cannot be undone.
+                                      All users must be unassigned from this school first.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteSchool(school)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
                           </div>
                         </div>
                       </CollapsibleContent>

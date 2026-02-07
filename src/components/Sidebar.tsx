@@ -47,7 +47,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { canAccessView, hasPermission, userRole, canManageUsers } = useRBACContext();
+  const { canAccessView, hasPermission, userRole, canManageUsers, schoolId } = useRBACContext();
   const [profile, setProfile] = useState<{ avatar_url: string | null; display_name: string | null; username: string | null; is_public: boolean | null } | null>(null);
   const [showHelp, setShowHelp] = useState(false);
 
@@ -107,7 +107,10 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
 
   // Check if user can manage roles (platform admin or school admin)
   const showRoleManagement = canManageUsers() || hasPermission('can_change_any_role') || userRole === 'platform_admin' || userRole === 'school_admin';
-  const showSchoolsManagement = userRole === 'platform_admin' || hasPermission('can_manage_schools');
+  const showSchoolsManagement = userRole === 'platform_admin' || hasPermission('can_manage_schools') || (userRole === 'school_admin' && schoolId);
+  
+  // Dynamic label for schools management based on role
+  const schoolsLabel = userRole === 'school_admin' ? 'My School' : 'Schools';
   
   const navItems = [
     { id: 'dashboard' as ViewType, label: 'Dashboard', icon: LayoutDashboard },
@@ -119,7 +122,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
     { id: 'resources' as ViewType, label: 'Resources', icon: BookOpen },
     { id: 'transcribe' as ViewType, label: 'Transcribe', icon: Mic },
     ...(showRoleManagement ? [{ id: 'role-management' as ViewType, label: 'Role Management', icon: Shield }] : []),
-    ...(showSchoolsManagement ? [{ id: 'schools-management' as ViewType, label: 'Schools', icon: Building }] : []),
+    ...(showSchoolsManagement ? [{ id: 'schools-management' as ViewType, label: schoolsLabel, icon: Building }] : []),
   ];
 
   const handleSignOut = async () => {
