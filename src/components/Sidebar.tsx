@@ -20,7 +20,11 @@ import {
   BookOpenCheck,
   Lock,
   Shield,
-  Building
+  Building,
+  Megaphone,
+  UserCheck,
+  BarChart3,
+  Settings2
 } from 'lucide-react';
 import { ViewType } from '@/types';
 import { cn } from '@/lib/utils';
@@ -109,6 +113,12 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
   const showRoleManagement = canManageUsers() || hasPermission('can_change_any_role') || userRole === 'platform_admin' || userRole === 'school_admin';
   const showSchoolsManagement = userRole === 'platform_admin' || hasPermission('can_manage_schools') || (userRole === 'school_admin' && schoolId);
   
+  // Check for new feature visibility
+  const showAnnouncements = hasPermission('can_view_announcements') || hasPermission('can_post_announcements') || userRole === 'platform_admin' || userRole === 'school_admin' || userRole === 'teacher';
+  const showAttendance = hasPermission('can_mark_attendance') || userRole === 'platform_admin' || userRole === 'school_admin' || userRole === 'teacher';
+  const showAnalytics = hasPermission('can_view_analytics') || hasPermission('can_view_platform_analytics') || userRole === 'platform_admin' || userRole === 'school_admin';
+  const showFeatureToggles = hasPermission('can_toggle_features') || hasPermission('can_manage_features') || userRole === 'platform_admin';
+  
   // Dynamic label for schools management based on role
   const schoolsLabel = userRole === 'school_admin' ? 'My School' : 'Schools';
   
@@ -121,8 +131,12 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
     { id: 'groups' as ViewType, label: 'Study Chat', icon: MessageSquare, showWarning: !profile?.is_public },
     { id: 'resources' as ViewType, label: 'Resources', icon: BookOpen },
     { id: 'transcribe' as ViewType, label: 'Transcribe', icon: Mic },
+    ...(showAnnouncements ? [{ id: 'announcements' as ViewType, label: 'Announcements', icon: Megaphone }] : []),
+    ...(showAttendance ? [{ id: 'attendance' as ViewType, label: 'Attendance', icon: UserCheck }] : []),
+    ...(showAnalytics ? [{ id: 'analytics' as ViewType, label: 'Analytics', icon: BarChart3 }] : []),
     ...(showRoleManagement ? [{ id: 'role-management' as ViewType, label: 'Role Management', icon: Shield }] : []),
     ...(showSchoolsManagement ? [{ id: 'schools-management' as ViewType, label: schoolsLabel, icon: Building }] : []),
+    ...(showFeatureToggles ? [{ id: 'feature-toggles' as ViewType, label: 'Feature Toggles', icon: Settings2 }] : []),
   ];
 
   const handleSignOut = async () => {

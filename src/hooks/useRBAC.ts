@@ -148,6 +148,10 @@ export function useRBAC() {
       transcribe: 'can_view_transcribe',
       'role-management': 'can_change_any_role',
       'schools-management': 'can_manage_schools',
+      announcements: 'can_view_announcements',
+      attendance: 'can_mark_attendance',
+      analytics: 'can_view_analytics',
+      'feature-toggles': 'can_toggle_features',
     };
 
     const permission = viewPermissionMap[view];
@@ -169,8 +173,36 @@ export function useRBAC() {
       return false;
     }
     
+    // Special case for announcements: teachers, school admins, and platform admins can access
+    if (view === 'announcements') {
+      if (hasPermission('can_view_announcements') || hasPermission('can_post_announcements')) return true;
+      if (userRole === 'platform_admin' || userRole === 'school_admin' || userRole === 'teacher') return true;
+      return false;
+    }
+    
+    // Special case for attendance: teachers, school admins, and platform admins can access
+    if (view === 'attendance') {
+      if (hasPermission('can_mark_attendance')) return true;
+      if (userRole === 'platform_admin' || userRole === 'school_admin' || userRole === 'teacher') return true;
+      return false;
+    }
+    
+    // Special case for analytics: school admins and platform admins can access
+    if (view === 'analytics') {
+      if (hasPermission('can_view_analytics') || hasPermission('can_view_platform_analytics')) return true;
+      if (userRole === 'platform_admin' || userRole === 'school_admin') return true;
+      return false;
+    }
+    
+    // Special case for feature-toggles: platform admins can access
+    if (view === 'feature-toggles') {
+      if (hasPermission('can_toggle_features') || hasPermission('can_manage_features')) return true;
+      if (userRole === 'platform_admin') return true;
+      return false;
+    }
+    
     return hasPermission(permission);
-  }, [hasPermission, userRole]);
+  }, [hasPermission, userRole, schoolId]);
 
   // Get role configuration for display
   const getRoleConfig = useCallback(() => {
