@@ -22,79 +22,103 @@ const ResetPassword = () => {
   const { toast } = useToast();
 
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    let isSubscribed = true;
+
+    // Check if we have a recovery token in the URL hash
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const accessToken = hashParams.get('access_token');
+    const tokenType = hashParams.get('type');
+    const hasRecoveryToken = accessToken && tokenType === 'recovery';
+
+    const fetchUserProfile = async (userId: string, email: string | null) => {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('display_name, username')
+        .eq('id', userId)
+        .single();
+      
+      if (profile) {
+        setDisplayName(profile.display_name || profile.username || email);
+      } else {
+        setDisplayName(email || 'User');
+      }
+    };
+
     // Check if user has a valid recovery session
     const checkSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
-          setSessionError('Unable to verify your session. Please try the reset link again.');
+          if (isSubscribed) {
+            setSessionError('Unable to verify your session. Please try the reset link again.');
+          }
           return;
         }
         
         if (session?.user) {
-          setSessionReady(true);
-          setUserEmail(session.user.email || null);
-          
-          // Fetch display name from profile
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('display_name, username')
-            .eq('id', session.user.id)
-            .single();
-          
-          if (profile) {
-            setDisplayName(profile.display_name || profile.username || session.user.email);
-          } else {
-            setDisplayName(session.user.email || 'User');
+          if (isSubscribed) {
+            setSessionReady(true);
+            setUserEmail(session.user.email || null);
+            await fetchUserProfile(session.user.id, session.user.email || null);
           }
-        } else {
-          // No session - might be loading from URL params
-          // Wait for auth state change
         }
       } catch (err) {
-        setSessionError('Something went wrong. Please try the reset link again.');
+        if (isSubscribed) {
+          setSessionError('Something went wrong. Please try the reset link again.');
+        }
       }
     };
 
-    checkSession();
-
-    // Listen for password recovery event
+    // Listen for password recovery event FIRST before checking session
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!isSubscribed) return;
+      
+      console.log('Auth state change:', event, session?.user?.email);
+      
       if (event === 'PASSWORD_RECOVERY') {
         setSessionReady(true);
         setSessionError(null);
         if (session?.user) {
           setUserEmail(session.user.email || null);
-          
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('display_name, username')
-            .eq('id', session.user.id)
-            .single();
-          
-          if (profile) {
-            setDisplayName(profile.display_name || profile.username || session.user.email);
-          }
+          await fetchUserProfile(session.user.id, session.user.email || null);
         }
+        // Clear the hash from URL for cleaner UX
+        window.history.replaceState(null, '', window.location.pathname);
       } else if (event === 'SIGNED_IN' && session?.user) {
-        setSessionReady(true);
-        setUserEmail(session.user.email || null);
+        // Only set session ready if we have a recovery token or already ready
+        if (hasRecoveryToken || sessionReady) {
+          setSessionReady(true);
+          setUserEmail(session.user.email || null);
+        }
       }
     });
 
-    // Set a timeout for session loading
-    const timeout = setTimeout(() => {
-      if (!sessionReady && !sessionError) {
-        setSessionError('Your reset link may have expired. Please request a new password reset.');
+    // Small delay to let the auth listener process the hash first
+    setTimeout(() => {
+      checkSession();
+    }, 100);
+
+    // Set a longer timeout for session loading - give more time for token processing
+    timeoutId = setTimeout(() => {
+      if (isSubscribed && !sessionReady && !sessionError) {
+        // Only show error if there was no recovery token in URL
+        if (!hasRecoveryToken) {
+          setSessionError('Your reset link may have expired. Please request a new password reset.');
+        } else {
+          // If there was a token but we still don't have a session, it's likely expired
+          setSessionError('Your reset link has expired. Please request a new password reset.');
+        }
       }
-    }, 5000);
+    }, 10000); // Extended to 10 seconds
 
     return () => {
+      isSubscribed = false;
       subscription.unsubscribe();
-      clearTimeout(timeout);
+      clearTimeout(timeoutId);
     };
-  }, []);
+  }, [sessionReady]);
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
