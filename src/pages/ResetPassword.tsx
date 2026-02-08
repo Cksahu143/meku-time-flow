@@ -111,7 +111,7 @@ const ResetPassword = () => {
           setSessionError('Your reset link has expired. Please request a new password reset.');
         }
       }
-    }, 10000); // Extended to 10 seconds
+    }, 3600000); // 1 hour timeout
 
     return () => {
       isSubscribed = false;
