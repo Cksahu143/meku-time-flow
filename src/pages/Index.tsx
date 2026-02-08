@@ -14,6 +14,10 @@ import { ResourcesView } from '@/components/ResourcesView';
 import { TranscribeView } from '@/components/TranscribeView';
 import { RoleManagementView } from '@/components/RoleManagementView';
 import { SchoolsManagementView } from '@/components/SchoolsManagementView';
+import { AnnouncementsView } from '@/components/AnnouncementsView';
+import { AttendanceView } from '@/components/AttendanceView';
+import { AnalyticsView } from '@/components/AnalyticsView';
+import { FeatureTogglesView } from '@/components/FeatureTogglesView';
 import { AnimatedBackground } from '@/components/AnimatedBackground';
 import { FloatingBackground } from '@/components/motion/FloatingBackground';
 import { LoadingScreen } from '@/components/LoadingScreen';
@@ -90,8 +94,12 @@ const Index = () => {
               {currentView === 'groups' && <GroupsView />}
               {currentView === 'resources' && <ResourcesView />}
               {currentView === 'transcribe' && <TranscribeView />}
+              {currentView === 'announcements' && <AnnouncementsView />}
+              {currentView === 'attendance' && <AttendanceView />}
+              {currentView === 'analytics' && <AnalyticsView />}
               {currentView === 'role-management' && <RoleManagementView />}
               {currentView === 'schools-management' && <SchoolsManagementView />}
+              {currentView === 'feature-toggles' && <FeatureTogglesView />}
             </PageTransition>
           </AnimatePresence>
         </main>
