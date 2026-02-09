@@ -18,6 +18,7 @@ import { AnnouncementsView } from '@/components/AnnouncementsView';
 import { AttendanceView } from '@/components/AttendanceView';
 import { AnalyticsView } from '@/components/AnalyticsView';
 import { FeatureTogglesView } from '@/components/FeatureTogglesView';
+import { ClassesManagementView } from '@/components/ClassesManagementView';
 import { AnimatedBackground } from '@/components/AnimatedBackground';
 import { FloatingBackground } from '@/components/motion/FloatingBackground';
 import { LoadingScreen } from '@/components/LoadingScreen';
@@ -97,6 +98,7 @@ const Index = () => {
               {currentView === 'announcements' && <AnnouncementsView />}
               {currentView === 'attendance' && <AttendanceView />}
               {currentView === 'analytics' && <AnalyticsView />}
+              {currentView === 'classes-management' && <ClassesManagementView />}
               {currentView === 'role-management' && <RoleManagementView />}
               {currentView === 'schools-management' && <SchoolsManagementView />}
               {currentView === 'feature-toggles' && <FeatureTogglesView />}

@@ -148,6 +148,7 @@ export function useRBAC() {
       transcribe: 'can_view_transcribe',
       'role-management': 'can_change_any_role',
       'schools-management': 'can_manage_schools',
+      'classes-management': 'can_manage_classes',
       announcements: 'can_view_announcements',
       attendance: 'can_mark_attendance',
       analytics: 'can_view_analytics',
@@ -198,6 +199,13 @@ export function useRBAC() {
     if (view === 'feature-toggles') {
       if (hasPermission('can_toggle_features') || hasPermission('can_manage_features')) return true;
       if (userRole === 'platform_admin') return true;
+      return false;
+    }
+    
+    // Special case for classes-management: school admins and platform admins can access
+    if (view === 'classes-management') {
+      if (hasPermission('can_manage_classes')) return true;
+      if (userRole === 'platform_admin' || userRole === 'school_admin') return true;
       return false;
     }
     
