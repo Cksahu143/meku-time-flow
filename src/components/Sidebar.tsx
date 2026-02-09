@@ -24,7 +24,8 @@ import {
   Megaphone,
   UserCheck,
   BarChart3,
-  Settings2
+  Settings2,
+  GraduationCap
 } from 'lucide-react';
 import { ViewType } from '@/types';
 import { cn } from '@/lib/utils';
@@ -118,6 +119,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
   const showAttendance = hasPermission('can_mark_attendance') || userRole === 'platform_admin' || userRole === 'school_admin' || userRole === 'teacher';
   const showAnalytics = hasPermission('can_view_analytics') || hasPermission('can_view_platform_analytics') || userRole === 'platform_admin' || userRole === 'school_admin';
   const showFeatureToggles = hasPermission('can_toggle_features') || hasPermission('can_manage_features') || userRole === 'platform_admin';
+  const showClassesManagement = userRole === 'platform_admin' || userRole === 'school_admin' || hasPermission('can_manage_classes');
   
   // Dynamic label for schools management based on role
   const schoolsLabel = userRole === 'school_admin' ? 'My School' : 'Schools';
@@ -133,6 +135,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
     { id: 'transcribe' as ViewType, label: 'Transcribe', icon: Mic },
     ...(showAnnouncements ? [{ id: 'announcements' as ViewType, label: 'Announcements', icon: Megaphone }] : []),
     ...(showAttendance ? [{ id: 'attendance' as ViewType, label: 'Attendance', icon: UserCheck }] : []),
+    ...(showClassesManagement ? [{ id: 'classes-management' as ViewType, label: 'Classes', icon: GraduationCap }] : []),
     ...(showAnalytics ? [{ id: 'analytics' as ViewType, label: 'Analytics', icon: BarChart3 }] : []),
     ...(showRoleManagement ? [{ id: 'role-management' as ViewType, label: 'Role Management', icon: Shield }] : []),
     ...(showSchoolsManagement ? [{ id: 'schools-management' as ViewType, label: schoolsLabel, icon: Building }] : []),
