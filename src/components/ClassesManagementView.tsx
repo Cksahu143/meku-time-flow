@@ -33,6 +33,17 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useRBACContext } from '@/contexts/RBACContext';
 import { cn } from '@/lib/utils';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
+
+const CLASSES_PER_PAGE = 20;
+const STUDENTS_PER_PAGE = 25;
 
 interface ClassData {
   id: string;
@@ -100,6 +111,8 @@ export function ClassesManagementView() {
   const [showPromoteDialog, setShowPromoteDialog] = useState(false);
   const [selectedStudentsToPromote, setSelectedStudentsToPromote] = useState<string[]>([]);
   const [targetClassForPromotion, setTargetClassForPromotion] = useState<string>('');
+  const [classesPage, setClassesPage] = useState(1);
+  const [studentsPage, setStudentsPage] = useState(1);
   const { toast } = useToast();
   const { userRole, schoolId, hasPermission } = useRBACContext();
 
@@ -506,6 +519,22 @@ export function ClassesManagementView() {
     );
   }, [classes, searchQuery]);
 
+  const totalClassPages = Math.ceil(filteredClasses.length / CLASSES_PER_PAGE);
+  const paginatedClasses = useMemo(() => {
+    const start = (classesPage - 1) * CLASSES_PER_PAGE;
+    return filteredClasses.slice(start, start + CLASSES_PER_PAGE);
+  }, [filteredClasses, classesPage]);
+
+  const totalStudentPages = Math.ceil(classStudents.length / STUDENTS_PER_PAGE);
+  const paginatedStudents = useMemo(() => {
+    const start = (studentsPage - 1) * STUDENTS_PER_PAGE;
+    return classStudents.slice(start, start + STUDENTS_PER_PAGE);
+  }, [classStudents, studentsPage]);
+
+  // Reset pages when data changes
+  useEffect(() => { setClassesPage(1); }, [searchQuery]);
+  useEffect(() => { setStudentsPage(1); }, [selectedClass]);
+
   const unassignedStudents = useMemo(() => {
     const enrolledIds = new Set(classStudents.map(s => s.student_id));
     return availableStudents.filter(s => !enrolledIds.has(s.id));
@@ -705,36 +734,61 @@ export function ClassesManagementView() {
                   {classes.length === 0 ? 'No classes created yet' : 'No matching classes'}
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {filteredClasses.map((cls, index) => (
-                    <motion.button
-                      key={cls.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.03 }}
-                      onClick={() => setSelectedClass(cls)}
-                      className={cn(
-                        'w-full p-3 rounded-lg border text-left transition-all',
-                        selectedClass?.id === cls.id
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : 'bg-card border-border/50 hover:bg-secondary/50'
-                      )}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">{cls.name}</p>
-                          <p className={cn(
-                            'text-xs',
-                            selectedClass?.id === cls.id ? 'text-primary-foreground/80' : 'text-muted-foreground'
-                          )}>
-                            {cls.grade_level}{cls.section ? ` - ${cls.section}` : ''}
-                          </p>
+                <>
+                  <div className="space-y-2">
+                    {paginatedClasses.map((cls, index) => (
+                      <motion.button
+                        key={cls.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.03 }}
+                        onClick={() => setSelectedClass(cls)}
+                        className={cn(
+                          'w-full p-3 rounded-lg border text-left transition-all',
+                          selectedClass?.id === cls.id
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-card border-border/50 hover:bg-secondary/50'
+                        )}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">{cls.name}</p>
+                            <p className={cn(
+                              'text-xs',
+                              selectedClass?.id === cls.id ? 'text-primary-foreground/80' : 'text-muted-foreground'
+                            )}>
+                              {cls.grade_level}{cls.section ? ` - ${cls.section}` : ''}
+                            </p>
+                          </div>
+                          <ChevronRight className="h-4 w-4" />
                         </div>
-                        <ChevronRight className="h-4 w-4" />
-                      </div>
-                    </motion.button>
-                  ))}
-                </div>
+                      </motion.button>
+                    ))}
+                  </div>
+                  {totalClassPages > 1 && (
+                    <Pagination className="mt-3">
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious 
+                            onClick={() => setClassesPage(p => Math.max(1, p - 1))}
+                            className={classesPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                          />
+                        </PaginationItem>
+                        <PaginationItem>
+                          <span className="text-xs text-muted-foreground px-2">
+                            {classesPage} / {totalClassPages}
+                          </span>
+                        </PaginationItem>
+                        <PaginationItem>
+                          <PaginationNext 
+                            onClick={() => setClassesPage(p => Math.min(totalClassPages, p + 1))}
+                            className={classesPage === totalClassPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  )}
+                </>
               )}
             </ScrollArea>
           </CardContent>
@@ -930,44 +984,69 @@ export function ClassesManagementView() {
                           No students assigned to this class
                         </div>
                       ) : (
-                        <div className="space-y-2">
-                          {classStudents.map((student, index) => (
-                            <motion.div
-                              key={student.id}
-                              initial={{ opacity: 0, x: -20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: index * 0.02 }}
-                              className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-card"
-                            >
-                              {student.roll_number && (
-                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary">
-                                  {student.roll_number}
+                        <>
+                          <div className="space-y-2">
+                            {paginatedStudents.map((student, index) => (
+                              <motion.div
+                                key={student.id}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: index * 0.02 }}
+                                className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-card"
+                              >
+                                {student.roll_number && (
+                                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary">
+                                    {student.roll_number}
+                                  </div>
+                                )}
+                                <Avatar className="h-9 w-9">
+                                  <AvatarImage src={student.profile?.avatar_url || undefined} />
+                                  <AvatarFallback>
+                                    {(student.profile?.display_name || student.profile?.username || 'U').charAt(0).toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium truncate">
+                                    {student.profile?.display_name || student.profile?.username || 'Unknown'}
+                                  </p>
                                 </div>
-                              )}
-                              <Avatar className="h-9 w-9">
-                                <AvatarImage src={student.profile?.avatar_url || undefined} />
-                                <AvatarFallback>
-                                  {(student.profile?.display_name || student.profile?.username || 'U').charAt(0).toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium truncate">
-                                  {student.profile?.display_name || student.profile?.username || 'Unknown'}
-                                </p>
-                              </div>
-                              {canManage && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-destructive hover:text-destructive"
-                                  onClick={() => handleRemoveStudent(student.id)}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </motion.div>
-                          ))}
-                        </div>
+                                {canManage && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-destructive hover:text-destructive"
+                                    onClick={() => handleRemoveStudent(student.id)}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </motion.div>
+                            ))}
+                          </div>
+                          {totalStudentPages > 1 && (
+                            <Pagination className="mt-3">
+                              <PaginationContent>
+                                <PaginationItem>
+                                  <PaginationPrevious 
+                                    onClick={() => setStudentsPage(p => Math.max(1, p - 1))}
+                                    className={studentsPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                                  />
+                                </PaginationItem>
+                                <PaginationItem>
+                                  <span className="text-xs text-muted-foreground px-2">
+                                    {studentsPage} / {totalStudentPages}
+                                  </span>
+                                </PaginationItem>
+                                <PaginationItem>
+                                  <PaginationNext 
+                                    onClick={() => setStudentsPage(p => Math.min(totalStudentPages, p + 1))}
+                                    className={studentsPage === totalStudentPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                                  />
+                                </PaginationItem>
+                              </PaginationContent>
+                            </Pagination>
+                          )}
+                        </>
                       )}
                     </ScrollArea>
                   </TabsContent>

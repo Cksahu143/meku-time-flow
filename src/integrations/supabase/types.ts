@@ -1297,6 +1297,10 @@ export type Database = {
       }
     }
     Functions: {
+      class_belongs_to_school: {
+        Args: { _class_id: string; _school_id: string }
+        Returns: boolean
+      }
       cleanup_expired_sso_tokens: { Args: never; Returns: undefined }
       current_user_school_id: { Args: never; Returns: string }
       get_filtered_email: {
@@ -1328,6 +1332,10 @@ export type Database = {
       }
       is_group_member: {
         Args: { _group_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_student_in_class: {
+        Args: { _class_id: string; _student_id: string }
         Returns: boolean
       }
     }
