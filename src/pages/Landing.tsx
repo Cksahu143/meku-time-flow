@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   Calendar, 
   CheckSquare, 
@@ -25,6 +26,23 @@ import {
 
 const Landing = () => {
   const navigate = useNavigate();
+
+  // Redirect to app if already authenticated (handles Google OAuth redirect)
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        navigate('/app');
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        navigate('/app');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   const features = [
     {

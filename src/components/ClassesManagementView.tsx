@@ -112,12 +112,31 @@ export function ClassesManagementView() {
     max_students: 40,
   });
 
+  const [schools, setSchools] = useState<{ id: string; name: string }[]>([]);
+  const [selectedSchoolId, setSelectedSchoolId] = useState<string>(schoolId || '');
+
   const canManage = userRole === 'platform_admin' || userRole === 'school_admin' || hasPermission('can_manage_classes');
+
+  // For platform admins, fetch all schools so they can select one
+  useEffect(() => {
+    if (userRole === 'platform_admin') {
+      supabase.from('schools').select('id, name').eq('is_active', true).then(({ data }) => {
+        setSchools(data || []);
+        if (data && data.length > 0 && !selectedSchoolId) {
+          setSelectedSchoolId(data[0].id);
+        }
+      });
+    } else if (schoolId) {
+      setSelectedSchoolId(schoolId);
+    }
+  }, [userRole, schoolId]);
+
+  const effectiveSchoolId = userRole === 'platform_admin' ? selectedSchoolId : schoolId;
 
   useEffect(() => {
     fetchClasses();
     fetchTeachers();
-  }, [schoolId]);
+  }, [effectiveSchoolId]);
 
   useEffect(() => {
     if (selectedClass) {
@@ -131,8 +150,8 @@ export function ClassesManagementView() {
       setLoading(true);
       let query = supabase.from('classes').select('*').eq('is_active', true).order('grade_level');
       
-      if (schoolId && userRole !== 'platform_admin') {
-        query = query.eq('school_id', schoolId);
+      if (effectiveSchoolId) {
+        query = query.eq('school_id', effectiveSchoolId);
       }
 
       const { data, error } = await query;
@@ -157,8 +176,8 @@ export function ClassesManagementView() {
         .select('user_id')
         .eq('role', 'teacher');
       
-      if (schoolId && userRole !== 'platform_admin') {
-        query = query.eq('school_id', schoolId);
+      if (effectiveSchoolId) {
+        query = query.eq('school_id', effectiveSchoolId);
       }
 
       const { data: roleData, error: roleError } = await query;
@@ -228,8 +247,8 @@ export function ClassesManagementView() {
         .select('user_id')
         .eq('role', 'student');
       
-      if (schoolId && userRole !== 'platform_admin') {
-        query = query.eq('school_id', schoolId);
+      if (effectiveSchoolId) {
+        query = query.eq('school_id', effectiveSchoolId);
       }
 
       const { data: roleData, error: roleError } = await query;
@@ -264,12 +283,12 @@ export function ClassesManagementView() {
     }
 
     try {
-      const targetSchoolId = schoolId;
+      const targetSchoolId = effectiveSchoolId;
       if (!targetSchoolId) {
         toast({
           variant: 'destructive',
           title: 'Error',
-          description: 'No school selected',
+          description: 'No school selected. Please select a school first.',
         });
         return;
       }
@@ -501,7 +520,7 @@ export function ClassesManagementView() {
     return classes.filter(c => c.id !== selectedClass?.id);
   }, [classes, selectedClass]);
 
-  if (!schoolId && userRole !== 'platform_admin') {
+  if (!effectiveSchoolId && userRole !== 'platform_admin') {
     return (
       <div className="p-6 max-w-6xl mx-auto">
         <Card className="border-border/50">
@@ -534,6 +553,20 @@ export function ClassesManagementView() {
           <p className="text-muted-foreground mt-1">
             Manage classes, assign students and teachers
           </p>
+          {userRole === 'platform_admin' && schools.length > 0 && (
+            <div className="mt-2 max-w-xs">
+              <Select value={selectedSchoolId} onValueChange={setSelectedSchoolId}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="Select school" />
+                </SelectTrigger>
+                <SelectContent>
+                  {schools.map(s => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
         {canManage && (

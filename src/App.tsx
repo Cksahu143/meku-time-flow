@@ -16,7 +16,20 @@ import EditProfile from "./pages/EditProfile";
 import NotificationHub from "./pages/NotificationHub";
 import ResetPassword from "./pages/ResetPassword";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+      staleTime: 30 * 1000, // 30s
+      gcTime: 5 * 60 * 1000, // 5min
+      refetchOnWindowFocus: false,
+    },
+    mutations: {
+      retry: 1,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
