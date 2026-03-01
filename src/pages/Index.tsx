@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { Sidebar } from '@/components/Sidebar';
@@ -87,21 +88,23 @@ const Index = () => {
         <main className="flex-1 w-full h-screen overflow-y-auto overflow-x-hidden pt-16 md:pt-0 relative z-10">
           <AnimatePresence mode="wait">
             <PageTransition key={currentView}>
-              {currentView === 'dashboard' && <DashboardView onNavigate={handleNavigate} />}
-              {currentView === 'timetable' && <TimetableView />}
-              {currentView === 'calendar' && <CalendarView />}
-              {currentView === 'todo' && <TodoView />}
-              {currentView === 'pomodoro' && <PomodoroView />}
-              {currentView === 'groups' && <GroupsView />}
-              {currentView === 'resources' && <ResourcesView />}
-              {currentView === 'transcribe' && <TranscribeView />}
-              {currentView === 'announcements' && <AnnouncementsView />}
-              {currentView === 'attendance' && <AttendanceView />}
-              {currentView === 'analytics' && <AnalyticsView />}
-              {currentView === 'classes-management' && <ClassesManagementView />}
-              {currentView === 'role-management' && <RoleManagementView />}
-              {currentView === 'schools-management' && <SchoolsManagementView />}
-              {currentView === 'feature-toggles' && <FeatureTogglesView />}
+              <ErrorBoundary>
+                {currentView === 'dashboard' && <DashboardView onNavigate={handleNavigate} />}
+                {currentView === 'timetable' && <TimetableView />}
+                {currentView === 'calendar' && <CalendarView />}
+                {currentView === 'todo' && <TodoView />}
+                {currentView === 'pomodoro' && <PomodoroView />}
+                {currentView === 'groups' && <GroupsView />}
+                {currentView === 'resources' && <ResourcesView />}
+                {currentView === 'transcribe' && <TranscribeView />}
+                {currentView === 'announcements' && <AnnouncementsView />}
+                {currentView === 'attendance' && <AttendanceView />}
+                {currentView === 'analytics' && <AnalyticsView />}
+                {currentView === 'classes-management' && <ClassesManagementView />}
+                {currentView === 'role-management' && <RoleManagementView />}
+                {currentView === 'schools-management' && <SchoolsManagementView />}
+                {currentView === 'feature-toggles' && <FeatureTogglesView />}
+              </ErrorBoundary>
             </PageTransition>
           </AnimatePresence>
         </main>
