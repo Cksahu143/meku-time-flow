@@ -26,6 +26,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { useRBACContext } from '@/contexts/RBACContext';
 import { format, addDays, subDays, startOfWeek, endOfWeek, isToday } from 'date-fns';
 import { cn } from '@/lib/utils';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
+
+const STUDENTS_PER_PAGE = 25;
 
 interface AttendanceRecord {
   id: string;
@@ -61,6 +70,7 @@ export function AttendanceView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [submitting, setSubmitting] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
   const { hasPermission, userRole, schoolId } = useRBACContext();
 
@@ -157,6 +167,15 @@ export function AttendanceView() {
       return matchesSearch && matchesFilter;
     });
   }, [studentsWithAttendance, searchQuery, filterStatus]);
+
+  const totalPages = Math.ceil(filteredStudents.length / STUDENTS_PER_PAGE);
+  const paginatedStudents = useMemo(() => {
+    const start = (currentPage - 1) * STUDENTS_PER_PAGE;
+    return filteredStudents.slice(start, start + STUDENTS_PER_PAGE);
+  }, [filteredStudents, currentPage]);
+
+  // Reset page when filters change
+  useEffect(() => { setCurrentPage(1); }, [searchQuery, filterStatus, selectedDate]);
 
   const stats = useMemo(() => {
     const total = students.length;
@@ -420,66 +439,91 @@ export function AttendanceView() {
               {students.length === 0 ? 'No students in this school' : 'No matching students'}
             </div>
           ) : (
-            <div className="space-y-2">
-              {filteredStudents.map((student, index) => (
-                <motion.div
-                  key={student.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.02 }}
-                  className={cn(
-                    'flex items-center gap-4 p-3 rounded-lg border border-border/50 transition-colors',
-                    student.attendance ? 'bg-card' : 'bg-muted/30'
-                  )}
-                >
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={student.avatar_url || undefined} />
-                    <AvatarFallback>
-                      {(student.display_name || student.username || 'U').charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">
-                      {student.display_name || student.username || 'Unknown'}
-                    </p>
-                    {student.attendance && (
-                      <Badge 
-                        variant="secondary" 
-                        className={cn('text-xs', statusConfig[student.attendance.status].textColor)}
-                      >
-                        {statusConfig[student.attendance.status].label}
-                      </Badge>
+            <>
+              <div className="space-y-2">
+                {paginatedStudents.map((student, index) => (
+                  <motion.div
+                    key={student.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.02 }}
+                    className={cn(
+                      'flex items-center gap-4 p-3 rounded-lg border border-border/50 transition-colors',
+                      student.attendance ? 'bg-card' : 'bg-muted/30'
                     )}
-                  </div>
+                  >
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={student.avatar_url || undefined} />
+                      <AvatarFallback>
+                        {(student.display_name || student.username || 'U').charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
 
-                  {canMark && (
-                    <div className="flex items-center gap-1">
-                      {Object.entries(statusConfig).map(([status, config]) => {
-                        const Icon = config.icon;
-                        const isActive = student.attendance?.status === status;
-                        return (
-                          <Button
-                            key={status}
-                            variant={isActive ? 'default' : 'outline'}
-                            size="icon"
-                            className={cn(
-                              'h-8 w-8',
-                              isActive && config.color
-                            )}
-                            onClick={() => markAttendance(student.id, status as any)}
-                            disabled={submitting === student.id}
-                            title={config.label}
-                          >
-                            <Icon className="h-4 w-4" />
-                          </Button>
-                        );
-                      })}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">
+                        {student.display_name || student.username || 'Unknown'}
+                      </p>
+                      {student.attendance && (
+                        <Badge 
+                          variant="secondary" 
+                          className={cn('text-xs', statusConfig[student.attendance.status].textColor)}
+                        >
+                          {statusConfig[student.attendance.status].label}
+                        </Badge>
+                      )}
                     </div>
-                  )}
-                </motion.div>
-              ))}
-            </div>
+
+                    {canMark && (
+                      <div className="flex items-center gap-1">
+                        {Object.entries(statusConfig).map(([status, config]) => {
+                          const Icon = config.icon;
+                          const isActive = student.attendance?.status === status;
+                          return (
+                            <Button
+                              key={status}
+                              variant={isActive ? 'default' : 'outline'}
+                              size="icon"
+                              className={cn(
+                                'h-8 w-8',
+                                isActive && config.color
+                              )}
+                              onClick={() => markAttendance(student.id, status as any)}
+                              disabled={submitting === student.id}
+                              title={config.label}
+                            >
+                              <Icon className="h-4 w-4" />
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </div>
+              {totalPages > 1 && (
+                <Pagination className="mt-4">
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious 
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                    <PaginationItem>
+                      <span className="text-sm text-muted-foreground px-2">
+                        Page {currentPage} of {totalPages}
+                      </span>
+                    </PaginationItem>
+                    <PaginationItem>
+                      <PaginationNext 
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
