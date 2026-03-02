@@ -111,7 +111,7 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
           Education, <span className="text-primary">Simplified.</span>
         </h1>
         <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
-          EDAS (Education Digital Assistant System) eliminates the chaos of fragmented educational tools 
+          EDAS (Education Assist) eliminates the chaos of fragmented educational tools 
           by unifying everything students, teachers, and administrators need into one intelligent platform.
         </p>
       </motion.div>

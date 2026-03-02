@@ -242,7 +242,7 @@ const Auth = () => {
         <Card className="w-full md:w-2/3">
         <CardHeader className="space-y-1">
           <CardTitle className="text-3xl font-bold text-center bg-gradient-primary bg-clip-text text-transparent">
-            EducationAssist
+            Education Assist
           </CardTitle>
           <CardDescription className="text-center">
             School Planner - Sign in or create an account

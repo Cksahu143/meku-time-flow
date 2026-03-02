@@ -70,7 +70,7 @@ export function LoadingScreen() {
         {/* App Name */}
         <div className="space-y-2">
           <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            EducationAssist
+            Education Assist
           </h1>
           <p className="text-muted-foreground">Loading your school planner...</p>
         </div>
