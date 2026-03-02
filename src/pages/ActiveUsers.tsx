@@ -218,7 +218,7 @@ const ActiveUsers = () => {
               Users
             </h1>
             <p className="text-muted-foreground">
-              Connect with other EducationAssist users
+              Connect with other Education Assist users
             </p>
           </div>
         </div>
