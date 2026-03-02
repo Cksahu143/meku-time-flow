@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export type AppRole = 'student' | 'teacher' | 'school_admin' | 'platform_admin';
@@ -34,9 +34,13 @@ export function useRBAC() {
   const [permissions, setPermissions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [schoolId, setSchoolId] = useState<string | null>(null);
+  const initialLoadDone = useRef(false);
 
   const fetchUserRole = useCallback(async () => {
-    setLoading(true);
+    // Only show loading spinner on first load, not on tab-refocus re-fetches
+    if (!initialLoadDone.current) {
+      setLoading(true);
+    }
 
     try {
       // Use getSession() instead of getUser() to avoid navigator.locks contention
@@ -105,6 +109,7 @@ export function useRBAC() {
       setSchoolId(null);
     } finally {
       setLoading(false);
+      initialLoadDone.current = true;
     }
   }, []);
 
