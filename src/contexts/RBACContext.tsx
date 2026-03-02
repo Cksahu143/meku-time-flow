@@ -30,7 +30,20 @@ export function RBACProvider({ children }: { children: ReactNode }) {
 export function useRBACContext() {
   const context = useContext(RBACContext);
   if (context === undefined) {
-    throw new Error('useRBACContext must be used within a RBACProvider');
+    // Return safe defaults instead of throwing — prevents blank screen on HMR / race conditions
+    return {
+      userRole: null,
+      permissions: [],
+      loading: true,
+      schoolId: null,
+      hasPermission: () => false,
+      hasRole: () => false,
+      hasMinimumRole: () => false,
+      canAccessView: () => false,
+      getRoleConfig: () => null,
+      canManageUsers: () => false,
+      refreshRole: async () => {},
+    } as RBACContextValue;
   }
   return context;
 }
