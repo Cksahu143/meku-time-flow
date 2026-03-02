@@ -33,29 +33,10 @@ export function MyPermissionsPanel({ className }: { className?: string }) {
         setLoading(true);
         setError(null);
 
-        let data;
-        let permError;
-        try {
-          const result = await supabase
-            .from('permissions')
-            .select('id, name, description')
-            .order('name');
-          data = result.data;
-          permError = result.error;
-        } catch (fetchErr: any) {
-          if (fetchErr?.name === 'AbortError' || fetchErr?.message?.includes('Lock broken')) {
-            console.warn('Auth lock contention in permissions fetch, retrying…');
-            await new Promise((r) => setTimeout(r, 300));
-            const result = await supabase
-              .from('permissions')
-              .select('id, name, description')
-              .order('name');
-            data = result.data;
-            permError = result.error;
-          } else {
-            throw fetchErr;
-          }
-        }
+        const { data, error: permError } = await supabase
+          .from('permissions')
+          .select('id, name, description')
+          .order('name');
 
         if (permError) throw permError;
         if (!mounted) return;

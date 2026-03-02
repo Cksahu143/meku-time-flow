@@ -39,21 +39,9 @@ export function useRBAC() {
     setLoading(true);
 
     try {
-      let user;
-      try {
-        const { data } = await supabase.auth.getUser();
-        user = data.user;
-      } catch (authErr: any) {
-        // Suppress lock-steal AbortError from concurrent auth calls
-        if (authErr?.name === 'AbortError' || authErr?.message?.includes('Lock broken')) {
-          console.warn('Auth lock contention, retrying…');
-          await new Promise((r) => setTimeout(r, 200));
-          const { data } = await supabase.auth.getUser();
-          user = data.user;
-        } else {
-          throw authErr;
-        }
-      }
+      // Use getSession() instead of getUser() to avoid navigator.locks contention
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user ?? null;
 
       if (!user) {
         setUserRole(null);
@@ -123,8 +111,9 @@ export function useRBAC() {
   useEffect(() => {
     fetchUserRole();
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+    // Listen for auth changes — avoid async work inside the callback to prevent lock contention
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, _session) => {
+      // Fire and forget — don't await inside onAuthStateChange
       fetchUserRole();
     });
 
