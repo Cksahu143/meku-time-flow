@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Users, Shield, Search, ChevronDown, Check, Crown, GraduationCap, BookOpen, Building, Plus, TestTube, RefreshCw } from 'lucide-react';
+import { Users, Shield, Search, ChevronDown, Check, Crown, GraduationCap, BookOpen, Building, Plus, TestTube, RefreshCw, UserPlus, UserMinus, Mail } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useRBACContext } from '@/contexts/RBACContext';
@@ -82,6 +82,11 @@ export function RoleManagementView() {
   const [testing, setTesting] = useState(false);
   const [showAddSchoolDialog, setShowAddSchoolDialog] = useState(false);
   const [newSchool, setNewSchool] = useState({ name: '', code: '', email: '' });
+  const [showAddUserDialog, setShowAddUserDialog] = useState(false);
+  const [addUserEmail, setAddUserEmail] = useState('');
+  const [addUserRole, setAddUserRole] = useState<'student' | 'teacher'>('student');
+  const [addingUser, setAddingUser] = useState(false);
+  const [showRemoveUserDialog, setShowRemoveUserDialog] = useState<string | null>(null);
   const { toast } = useToast();
   const { hasPermission, userRole, schoolId, refreshRole } = useRBACContext();
 
@@ -326,6 +331,141 @@ export function RoleManagementView() {
     }
   };
 
+  const handleAddUserToSchool = async () => {
+    if (!addUserEmail.trim()) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Please enter an email address' });
+      return;
+    }
+
+    const targetSchool = isPlatformAdmin ? selectedSchoolFilter : schoolId;
+    if (!targetSchool || targetSchool === 'all' || targetSchool === 'none') {
+      toast({ variant: 'destructive', title: 'Error', description: 'Please select a school first' });
+      return;
+    }
+
+    try {
+      setAddingUser(true);
+
+      // Find profile by email
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, email, display_name, username')
+        .eq('email', addUserEmail.trim().toLowerCase())
+        .maybeSingle();
+
+      if (profileError) throw profileError;
+
+      if (!profile) {
+        toast({
+          variant: 'destructive',
+          title: 'User Not Found',
+          description: 'No user found with that email. They need to create an account on EDAS first.',
+        });
+        return;
+      }
+
+      // Check if user already has a role with this school
+      const { data: existingRole } = await supabase
+        .from('user_roles')
+        .select('id, school_id, role')
+        .eq('user_id', profile.id)
+        .maybeSingle();
+
+      if (existingRole?.school_id === targetSchool) {
+        toast({
+          variant: 'destructive',
+          title: 'Already in School',
+          description: 'This user is already assigned to this school',
+        });
+        return;
+      }
+
+      // Update or insert
+      if (existingRole) {
+        const { error } = await supabase
+          .from('user_roles')
+          .update({ school_id: targetSchool, role: addUserRole, updated_at: new Date().toISOString() })
+          .eq('user_id', profile.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('user_roles')
+          .insert({ user_id: profile.id, role: addUserRole, school_id: targetSchool });
+        if (error) throw error;
+      }
+
+      toast({
+        title: 'User Added',
+        description: `${profile.display_name || profile.email} has been added to the school as ${addUserRole}`,
+      });
+
+      setShowAddUserDialog(false);
+      setAddUserEmail('');
+      setAddUserRole('student');
+      fetchUsers();
+    } catch (error: any) {
+      console.error('Error adding user to school:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to add user to school',
+      });
+    } finally {
+      setAddingUser(false);
+    }
+  };
+
+  const handleRemoveFromSchool = async (userId: string) => {
+    try {
+      setUpdating(userId);
+
+      // Remove school assignment
+      const { error } = await supabase
+        .from('user_roles')
+        .update({ school_id: null, updated_at: new Date().toISOString() })
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      // Also drop from any classes in this school
+      const targetSchool = isSchoolAdmin ? schoolId : null;
+      if (targetSchool) {
+        const { data: classIds } = await supabase
+          .from('classes')
+          .select('id')
+          .eq('school_id', targetSchool);
+        
+        if (classIds && classIds.length > 0) {
+          await supabase
+            .from('class_students')
+            .update({ status: 'dropped' })
+            .eq('student_id', userId)
+            .eq('status', 'active')
+            .in('class_id', classIds.map(c => c.id));
+        }
+      }
+
+      setUsers(prev =>
+        prev.map(user =>
+          user.user_id === userId ? { ...user, school_id: null, school_name: null } : user
+        )
+      );
+
+      toast({
+        title: 'User Removed',
+        description: 'User has been removed from the school',
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to remove user from school',
+      });
+    } finally {
+      setUpdating(null);
+    }
+  };
+
   const runPermissionTests = async () => {
     setTesting(true);
     setTestResults([]);
@@ -552,6 +692,79 @@ export function RoleManagementView() {
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setShowAddSchoolDialog(false)}>Cancel</Button>
                     <Button onClick={handleAddSchool}>Create School</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+            {/* Add User to School - for both school admins and platform admins */}
+            {(isSchoolAdmin || isPlatformAdmin) && (
+              <Dialog open={showAddUserDialog} onOpenChange={setShowAddUserDialog}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="gap-2">
+                    <UserPlus className="h-4 w-4" />
+                    Add User
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add User to School</DialogTitle>
+                    <DialogDescription>
+                      Search for an existing EDAS user by email and add them to {isSchoolAdmin ? 'your school' : 'a school'}.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="user-email">User Email *</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="user-email"
+                          type="email"
+                          placeholder="user@example.com"
+                          value={addUserEmail}
+                          onChange={(e) => setAddUserEmail(e.target.value)}
+                          className="pl-9"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Role</Label>
+                      <Select value={addUserRole} onValueChange={(v) => setAddUserRole(v as 'student' | 'teacher')}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="student">
+                            <div className="flex items-center gap-2">
+                              <GraduationCap className="h-4 w-4" />
+                              Student
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="teacher">
+                            <div className="flex items-center gap-2">
+                              <BookOpen className="h-4 w-4" />
+                              Teacher
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {isPlatformAdmin && selectedSchoolFilter !== 'all' && selectedSchoolFilter !== 'none' && (
+                      <p className="text-sm text-muted-foreground">
+                        Adding to: <strong>{schools.find(s => s.id === selectedSchoolFilter)?.name}</strong>
+                      </p>
+                    )}
+                    {isPlatformAdmin && (selectedSchoolFilter === 'all' || selectedSchoolFilter === 'none') && (
+                      <p className="text-sm text-destructive">
+                        Please select a specific school using the filter above first.
+                      </p>
+                    )}
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowAddUserDialog(false)}>Cancel</Button>
+                    <Button onClick={handleAddUserToSchool} disabled={addingUser}>
+                      {addingUser ? 'Adding...' : 'Add User'}
+                    </Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -820,6 +1033,19 @@ export function RoleManagementView() {
                                   )}
                                 </DropdownMenuContent>
                               </DropdownMenu>
+                            )}
+                            {/* Remove from School - School admins can remove users */}
+                            {(isSchoolAdmin || isPlatformAdmin) && user.school_id && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={updating === user.user_id}
+                                className="gap-1 text-destructive hover:text-destructive"
+                                onClick={() => handleRemoveFromSchool(user.user_id)}
+                              >
+                                <UserMinus className="h-3 w-3" />
+                                Remove
+                              </Button>
                             )}
                           </div>
                         </TableCell>

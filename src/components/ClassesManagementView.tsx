@@ -15,7 +15,9 @@ import {
   X,
   Check,
   AlertCircle,
-  School
+  School,
+  Ban,
+  Award
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,6 +31,17 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useRBACContext } from '@/contexts/RBACContext';
@@ -512,6 +525,107 @@ export function ClassesManagementView() {
     }
   };
 
+  const handleDeleteClass = async (classId: string) => {
+    try {
+      // First mark all students as dropped
+      await supabase
+        .from('class_students')
+        .update({ status: 'dropped' })
+        .eq('class_id', classId)
+        .eq('status', 'active');
+
+      // Deactivate the class
+      const { error } = await supabase
+        .from('classes')
+        .update({ is_active: false })
+        .eq('id', classId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Class Deleted',
+        description: 'Class has been deactivated and all students removed',
+      });
+
+      if (selectedClass?.id === classId) {
+        setSelectedClass(null);
+        setClassStudents([]);
+      }
+      fetchClasses();
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to delete class',
+      });
+    }
+  };
+
+  const handleExpelStudent = async (enrollmentId: string, studentId: string) => {
+    try {
+      // Remove from class
+      const { error: classError } = await supabase
+        .from('class_students')
+        .update({ status: 'dropped' })
+        .eq('id', enrollmentId);
+
+      if (classError) throw classError;
+
+      // Remove from school (remove school_id from user_roles)
+      if (effectiveSchoolId) {
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .update({ school_id: null, updated_at: new Date().toISOString() })
+          .eq('user_id', studentId)
+          .eq('school_id', effectiveSchoolId);
+
+        if (roleError) throw roleError;
+      }
+
+      toast({
+        title: 'Student Expelled',
+        description: 'Student has been removed from the class and school',
+      });
+
+      if (selectedClass) {
+        fetchClassStudents(selectedClass.id);
+        fetchAvailableStudents();
+      }
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to expel student',
+      });
+    }
+  };
+
+  const handleGraduateStudent = async (enrollmentId: string) => {
+    try {
+      const { error } = await supabase
+        .from('class_students')
+        .update({ status: 'graduated' })
+        .eq('id', enrollmentId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Student Graduated',
+        description: 'Student has been marked as graduated',
+      });
+
+      if (selectedClass) {
+        fetchClassStudents(selectedClass.id);
+      }
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to graduate student',
+      });
+    }
+  };
+
   const filteredClasses = useMemo(() => {
     return classes.filter(c => 
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -760,7 +874,41 @@ export function ClassesManagementView() {
                               {cls.grade_level}{cls.section ? ` - ${cls.section}` : ''}
                             </p>
                           </div>
-                          <ChevronRight className="h-4 w-4" />
+                          <div className="flex items-center gap-1">
+                            {canManage && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <button
+                                    onClick={(e) => e.stopPropagation()}
+                                    className={cn(
+                                      'p-1 rounded hover:bg-destructive/20',
+                                      selectedClass?.id === cls.id ? 'text-primary-foreground' : 'text-destructive'
+                                    )}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Class</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete {cls.name}? All students will be removed from this class.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleDeleteClass(cls.id)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
+                            <ChevronRight className="h-4 w-4" />
+                          </div>
                         </div>
                       </motion.button>
                     ))}
@@ -1011,14 +1159,55 @@ export function ClassesManagementView() {
                                   </p>
                                 </div>
                                 {canManage && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-destructive hover:text-destructive"
-                                    onClick={() => handleRemoveStudent(student.id)}
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-100"
+                                      title="Graduate student"
+                                      onClick={() => handleGraduateStudent(student.id)}
+                                    >
+                                      <Award className="h-3.5 w-3.5" />
+                                    </Button>
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-7 w-7 text-orange-600 hover:text-orange-700 hover:bg-orange-100"
+                                          title="Expel student from school"
+                                        >
+                                          <Ban className="h-3.5 w-3.5" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Expel Student</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            This will remove the student from this class AND from the school entirely. This action cannot be easily undone.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction
+                                            onClick={() => handleExpelStudent(student.id, student.student_id)}
+                                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                          >
+                                            Expel
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7 text-destructive hover:text-destructive"
+                                      title="Remove from class"
+                                      onClick={() => handleRemoveStudent(student.id)}
+                                    >
+                                      <X className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </div>
                                 )}
                               </motion.div>
                             ))}
