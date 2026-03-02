@@ -21,6 +21,7 @@ import { AttendanceView } from '@/components/AttendanceView';
 import { AnalyticsView } from '@/components/AnalyticsView';
 import { FeatureTogglesView } from '@/components/FeatureTogglesView';
 import { ClassesManagementView } from '@/components/ClassesManagementView';
+import { AboutView } from '@/components/AboutView';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { PageTransition } from '@/components/motion/PageTransition';
 import { ViewType } from '@/types';
@@ -85,6 +86,7 @@ const Index = () => {
             <PageTransition key={currentView}>
               <ErrorBoundary>
                 {currentView === 'dashboard' && <DashboardView onNavigate={handleNavigate} />}
+                {currentView === 'about' && <AboutView onNavigate={handleNavigate} />}
                 {currentView === 'timetable' && <TimetableView />}
                 {currentView === 'calendar' && <CalendarView />}
                 {currentView === 'todo' && <TodoView />}

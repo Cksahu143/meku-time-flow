@@ -40,6 +40,7 @@ export function Sidebar({ currentView, onViewChange, collapsed = false, onToggle
 
   const navItems = [
     { id: 'dashboard' as ViewType, label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'about' as ViewType, label: 'About', icon: AlertCircle },
     { id: 'timetable' as ViewType, label: 'Timetable', icon: Clock },
     { id: 'calendar' as ViewType, label: 'Calendar', icon: Calendar },
     { id: 'todo' as ViewType, label: 'To-Do List', icon: ListTodo },
