@@ -39,9 +39,21 @@ export function useRBAC() {
     setLoading(true);
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      let user;
+      try {
+        const { data } = await supabase.auth.getUser();
+        user = data.user;
+      } catch (authErr: any) {
+        // Suppress lock-steal AbortError from concurrent auth calls
+        if (authErr?.name === 'AbortError' || authErr?.message?.includes('Lock broken')) {
+          console.warn('Auth lock contention, retrying…');
+          await new Promise((r) => setTimeout(r, 200));
+          const { data } = await supabase.auth.getUser();
+          user = data.user;
+        } else {
+          throw authErr;
+        }
+      }
 
       if (!user) {
         setUserRole(null);
