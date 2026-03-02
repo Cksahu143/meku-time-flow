@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Mic, 
@@ -13,7 +13,9 @@ import {
   Link2,
   FileAudio,
   Sparkles,
-  Shield
+  Shield,
+  MicOff,
+  Radio
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,6 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const STORAGE_KEY = 'edas_resources';
 
@@ -58,6 +61,13 @@ const LANGUAGE_OPTIONS = [
   { value: 'or', label: 'Odia' },
 ];
 
+const LIVE_LANGUAGE_OPTIONS = [
+  { value: 'en-US', label: 'English (US)' },
+  { value: 'en-IN', label: 'English (India)' },
+  { value: 'hi-IN', label: 'Hindi' },
+  { value: 'or-IN', label: 'Odia' },
+];
+
 export const TranscribeView: React.FC = () => {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -70,6 +80,119 @@ export const TranscribeView: React.FC = () => {
   const [showUrlDialog, setShowUrlDialog] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState('auto');
+
+  // Live transcription state
+  const [isLiveListening, setIsLiveListening] = useState(false);
+  const [liveTranscript, setLiveTranscript] = useState('');
+  const [interimText, setInterimText] = useState('');
+  const [liveLanguage, setLiveLanguage] = useState('en-US');
+  const recognitionRef = useRef<any>(null);
+  const liveTranscriptRef = useRef('');
+
+  // Cleanup speech recognition on unmount
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+        recognitionRef.current = null;
+      }
+    };
+  }, []);
+
+  const startLiveTranscription = useCallback(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast({
+        variant: 'destructive',
+        title: 'Not Supported',
+        description: 'Live transcription requires Chrome or Edge browser.',
+      });
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = liveLanguage;
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = (event: any) => {
+      let interim = '';
+      let finalChunk = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalChunk += transcript + ' ';
+        } else {
+          interim += transcript;
+        }
+      }
+      if (finalChunk) {
+        liveTranscriptRef.current += finalChunk;
+        setLiveTranscript(liveTranscriptRef.current);
+      }
+      setInterimText(interim);
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error('Speech recognition error:', event.error);
+      if (event.error === 'not-allowed') {
+        toast({
+          variant: 'destructive',
+          title: 'Microphone Access Denied',
+          description: 'Please allow microphone access in your browser settings.',
+        });
+        setIsLiveListening(false);
+      } else if (event.error !== 'aborted') {
+        // Auto-restart on transient errors
+        try { recognition.start(); } catch {}
+      }
+    };
+
+    recognition.onend = () => {
+      // Auto-restart if still supposed to be listening
+      if (recognitionRef.current && isLiveListening) {
+        try { recognition.start(); } catch {}
+      }
+    };
+
+    recognitionRef.current = recognition;
+    liveTranscriptRef.current = liveTranscript; // preserve existing text
+    recognition.start();
+    setIsLiveListening(true);
+
+    toast({
+      title: 'Live Transcription Started',
+      description: 'Speak into your microphone — captions will appear in real time.',
+    });
+  }, [liveLanguage, liveTranscript, toast, isLiveListening]);
+
+  const stopLiveTranscription = useCallback(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.abort();
+      recognitionRef.current = null;
+    }
+    setIsLiveListening(false);
+    setInterimText('');
+  }, []);
+
+  const saveLiveTranscript = useCallback(() => {
+    const text = liveTranscriptRef.current.trim();
+    if (!text) {
+      toast({ variant: 'destructive', title: 'Nothing to save', description: 'Record some speech first.' });
+      return;
+    }
+    stopLiveTranscription();
+    setTranscriptData({ transcript: text, notes: '', summary: '' });
+    setResourceTitle('Live Transcription - ' + new Date().toLocaleDateString());
+    setShowSaveDialog(true);
+  }, [stopLiveTranscription, toast]);
+
+  const clearLiveTranscript = useCallback(() => {
+    liveTranscriptRef.current = '';
+    setLiveTranscript('');
+    setInterimText('');
+  }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -467,8 +590,57 @@ export const TranscribeView: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="grid md:grid-cols-3 gap-6"
+        className="grid md:grid-cols-4 gap-6"
       >
+        {/* Live Mic Card */}
+        <Card className="border-border/50 shadow-md hover:shadow-lg transition-shadow border-primary/30">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Radio className="h-5 w-5 text-primary" />
+              Live Mic
+              <span className="ml-auto px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-semibold">NEW</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Real-time transcription with live captions
+            </p>
+            <div className="space-y-2">
+              <Select value={liveLanguage} onValueChange={setLiveLanguage} disabled={isLiveListening}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {LIVE_LANGUAGE_OPTIONS.map((lang) => (
+                    <SelectItem key={lang.value} value={lang.value}>
+                      {lang.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {!isLiveListening ? (
+                <Button
+                  className="w-full gap-2 btn-glow"
+                  onClick={startLiveTranscription}
+                  disabled={isTranscribing}
+                >
+                  <Mic className="h-4 w-4" />
+                  Start Listening
+                </Button>
+              ) : (
+                <Button
+                  variant="destructive"
+                  className="w-full gap-2"
+                  onClick={stopLiveTranscription}
+                >
+                  <MicOff className="h-4 w-4" />
+                  Stop
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Upload File Card */}
         <Card className="border-border/50 shadow-md hover:shadow-lg transition-shadow">
           <CardHeader className="pb-4">
@@ -550,6 +722,71 @@ export const TranscribeView: React.FC = () => {
         </Card>
       </motion.div>
 
+      {/* Live Transcription Panel */}
+      <AnimatePresence>
+        {(isLiveListening || liveTranscript) && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, height: 0 }}
+            animate={{ opacity: 1, y: 0, height: 'auto' }}
+            exit={{ opacity: 0, y: 20, height: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Card className="border-primary/30 shadow-lg">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    {isLiveListening && (
+                      <motion.div
+                        className="h-3 w-3 rounded-full bg-destructive"
+                        animate={{ opacity: [1, 0.3, 1] }}
+                        transition={{ repeat: Infinity, duration: 1.2 }}
+                      />
+                    )}
+                    <Radio className="h-5 w-5 text-primary" />
+                    Live Captions
+                    {isLiveListening && (
+                      <span className="text-xs font-normal text-muted-foreground ml-2">
+                        Listening...
+                      </span>
+                    )}
+                  </CardTitle>
+                  <div className="flex gap-2">
+                    {liveTranscript && (
+                      <>
+                        <Button variant="outline" size="sm" onClick={clearLiveTranscript}>
+                          <X className="h-3 w-3 mr-1" />
+                          Clear
+                        </Button>
+                        <Button size="sm" onClick={saveLiveTranscript}>
+                          <Save className="h-3 w-3 mr-1" />
+                          Save
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[200px] rounded-lg border border-border/50 bg-muted/30 p-4">
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                    {liveTranscript}
+                    {interimText && (
+                      <span className="text-muted-foreground italic">{interimText}</span>
+                    )}
+                    {!liveTranscript && !interimText && isLiveListening && (
+                      <span className="text-muted-foreground italic">Start speaking...</span>
+                    )}
+                    {!liveTranscript && !interimText && !isLiveListening && (
+                      <span className="text-muted-foreground italic">No transcript yet. Click "Start Listening" to begin.</span>
+                    )}
+                  </p>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Processing Indicator */}
       <AnimatePresence>
         {isTranscribing && (
@@ -577,7 +814,7 @@ export const TranscribeView: React.FC = () => {
       </AnimatePresence>
 
       {/* Info Card */}
-      {!isTranscribing && (
+      {!isTranscribing && !isLiveListening && !liveTranscript && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -594,7 +831,7 @@ export const TranscribeView: React.FC = () => {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <span className="text-primary font-bold">1.</span>
-                  Upload an audio/video file or enter a direct URL
+                  Use <strong>Live Mic</strong> for real-time captions, or upload a file / URL
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary font-bold">2.</span>
