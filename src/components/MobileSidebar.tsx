@@ -30,7 +30,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({ currentView, onVie
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="p-0 w-60">
-        <Sidebar currentView={currentView} onViewChange={handleViewChange} />
+        <Sidebar currentView={currentView} onViewChange={handleViewChange} collapsed={false} />
       </SheetContent>
     </Sheet>
   );
