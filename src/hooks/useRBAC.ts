@@ -156,6 +156,9 @@ export function useRBAC() {
       'feature-toggles': 'can_toggle_features',
     };
 
+    // About page is accessible to all authenticated users
+    if (view === 'about') return true;
+
     const permission = viewPermissionMap[view];
     if (!permission) return false;
     
