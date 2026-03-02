@@ -88,10 +88,12 @@ export const TranscribeView: React.FC = () => {
   const [liveLanguage, setLiveLanguage] = useState('en-US');
   const recognitionRef = useRef<any>(null);
   const liveTranscriptRef = useRef('');
+  const isListeningRef = useRef(false);
 
   // Cleanup speech recognition on unmount
   useEffect(() => {
     return () => {
+      isListeningRef.current = false;
       if (recognitionRef.current) {
         recognitionRef.current.abort();
         recognitionRef.current = null;
@@ -108,6 +110,12 @@ export const TranscribeView: React.FC = () => {
         description: 'Live transcription requires Chrome or Edge browser.',
       });
       return;
+    }
+
+    // Stop any existing instance first
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch {}
+      recognitionRef.current = null;
     }
 
     const recognition = new SpeechRecognition();
@@ -142,38 +150,50 @@ export const TranscribeView: React.FC = () => {
           title: 'Microphone Access Denied',
           description: 'Please allow microphone access in your browser settings.',
         });
+        isListeningRef.current = false;
         setIsLiveListening(false);
+      } else if (event.error === 'no-speech') {
+        // Normal silence timeout — will auto-restart via onend
+        console.log('No speech detected, will restart...');
       } else if (event.error !== 'aborted') {
-        // Auto-restart on transient errors
-        try { recognition.start(); } catch {}
+        // Transient error — attempt restart
+        if (isListeningRef.current) {
+          try { recognition.start(); } catch {}
+        }
       }
     };
 
     recognition.onend = () => {
-      // Auto-restart if still supposed to be listening
-      if (recognitionRef.current && isLiveListening) {
+      // Use ref (not state) to avoid stale closure
+      if (isListeningRef.current) {
         try { recognition.start(); } catch {}
+      } else {
+        setIsLiveListening(false);
       }
     };
 
     recognitionRef.current = recognition;
     liveTranscriptRef.current = liveTranscript; // preserve existing text
-    recognition.start();
+    isListeningRef.current = true;
     setIsLiveListening(true);
+
+    // CRITICAL: start() must be called directly inside a user-gesture handler
+    recognition.start();
 
     toast({
       title: 'Live Transcription Started',
       description: 'Speak into your microphone — captions will appear in real time.',
     });
-  }, [liveLanguage, liveTranscript, toast, isLiveListening]);
+  }, [liveLanguage, liveTranscript, toast]);
 
   const stopLiveTranscription = useCallback(() => {
+    isListeningRef.current = false;
+    setIsLiveListening(false);
+    setInterimText('');
     if (recognitionRef.current) {
       recognitionRef.current.abort();
       recognitionRef.current = null;
     }
-    setIsLiveListening(false);
-    setInterimText('');
   }, []);
 
   const saveLiveTranscript = useCallback(() => {
