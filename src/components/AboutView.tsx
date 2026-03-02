@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
-  AlertTriangle, CheckCircle2, Zap, BookOpen, Users, Clock,
-  MessageSquare, BarChart3, Shield, Mic, Timer, Calendar,
-  ArrowRight, Sparkles, Brain, Target, TrendingDown, TrendingUp
+  AlertTriangle, Zap, BookOpen, Clock,
+  MessageSquare, BarChart3, Shield, Mic, Timer,
+  ArrowRight, Sparkles, Brain, Target, TrendingDown, TrendingUp,
+  Download, FileText
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -88,7 +89,176 @@ const stagger = {
   item: { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number] } } },
 };
 
+const featuresDocContent = `
+=====================================
+  EDAS — Education Assist
+  Complete Features & Capabilities
+=====================================
+
+ABOUT EDAS
+----------
+EDAS (Education Assist) is an all-in-one educational platform that unifies
+scheduling, collaboration, productivity, and administration tools into a
+single intelligent system for students, teachers, and administrators.
+
+
+PROBLEMS EDAS ELIMINATES
+-------------------------
+1. Fragmented Tools — Replaces 5+ disconnected apps (scheduling, notes,
+   chat, tasks, timers) with one unified platform.
+
+2. Declining Student Engagement — Centralized tracking and analytics help
+   teachers identify students who need support before they fall behind.
+
+3. Wasted Administrative Time — Automates attendance, centralizes
+   announcements, and streamlines grade management — saving up to 8 hours
+   per week for educators.
+
+4. Lack of Role-Based Access — Provides 4-tier access control (Student,
+   Teacher, School Admin, Platform Admin) with granular permissions.
+
+
+CORE FEATURES
+--------------
+
+TIMETABLE MANAGEMENT
+  - Create and manage class timetables
+  - Share timetables with classmates via invitations
+  - Color-coded subjects and time slots
+  - Support for breaks (short & long)
+
+CALENDAR & SCHEDULING
+  - Month and week views
+  - Exam tracking with subject tags
+  - Event management and reminders
+  - Integration with timetable data
+
+TO-DO LIST & TASK MANAGEMENT
+  - Create tasks with priority levels (Low, Medium, High)
+  - Link tasks to timetable periods
+  - Track completion progress
+  - Task summary dashboard
+
+POMODORO TIMER
+  - Customizable work/break durations
+  - Session tracking with long break intervals
+  - Focus mode for distraction-free study
+
+STUDY CHAT & COLLABORATION
+  - Group chats with file sharing
+  - Direct messaging between users
+  - Voice messages and voice recording
+  - Message reactions, replies, and forwarding
+  - Pinned messages for important content
+  - Typing indicators and read receipts
+  - Online status tracking
+  - Drag-and-drop file uploads
+  - Link previews with thumbnails
+  - Photo collages for multiple images
+
+RESOURCE LIBRARY
+  - Upload and organize study materials
+  - Support for PDFs, links, videos, and documents
+  - Categories: Notes, Textbooks, Practice Problems, Study Guides,
+    Lectures, Reference, AI Transcription Notes
+  - In-app PDF viewer
+  - Favorites and tag-based filtering
+
+AI-POWERED TRANSCRIPTION
+  - Live lecture transcription using speech recognition
+  - Automatic conversion of spoken words to searchable notes
+  - Save transcriptions directly to the Resource Library
+
+STUDY MUSIC PLAYER
+  - Built-in ambient music for focus
+  - Tracks: Lofi Study, Nature Sounds, Calm Piano
+  - Volume control and track switching
+
+
+ADMINISTRATION FEATURES
+------------------------
+
+ROLE MANAGEMENT (RBAC)
+  - 4 role tiers: Student, Teacher, School Admin, Platform Admin
+  - Granular permission system with 15+ permission flags
+  - Role-based view access control
+  - Visual role badges throughout the interface
+
+SCHOOL MANAGEMENT
+  - Multi-school support
+  - School profiles with logo, contact info, and address
+  - Subscription tiers (Free, Basic, Premium)
+  - Feature toggles per school
+
+ANNOUNCEMENTS
+  - School-wide and targeted announcements
+  - Priority levels (Normal, Important, Urgent)
+  - Pin important announcements
+  - Audience targeting (All, Students, Teachers)
+
+ATTENDANCE TRACKING
+  - Mark attendance by class and period
+  - Status: Present, Absent, Late, Excused
+  - Historical attendance data
+
+ANALYTICS DASHBOARD
+  - Activity overview charts
+  - Student engagement metrics
+  - Attendance trends
+
+CLASS MANAGEMENT
+  - Create and manage classes with grade levels
+  - Subject management with periods-per-week tracking
+  - Student enrollment and roll numbers
+
+FEATURE TOGGLES
+  - Enable/disable features per school
+  - Platform-wide feature management
+
+
+USER EXPERIENCE
+----------------
+
+USER PROFILES
+  - Customizable display name and username
+  - Profile photo and header image
+  - Public/private profile toggle
+  - Activity feed and follow system
+
+NOTIFICATIONS
+  - Real-time notification system
+  - Browser push notifications
+  - Notification preferences
+
+THEMING
+  - Light, Dark, and Pastel themes
+  - Consistent design system
+
+AUTHENTICATION & SECURITY
+  - Email-based signup and login
+  - Password reset flow
+  - Row-Level Security on all database tables
+
+
+=====================================
+  EDAS — Education Assist
+  All rights reserved.
+=====================================
+`.trim();
+
 export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
+  const handleDownloadFeatures = useCallback(() => {
+    const blob = new Blob([featuresDocContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'EDAS-Features-Document.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, []);
+
   return (
     <div className="p-4 md:p-6 lg:p-8 max-w-[1200px] mx-auto space-y-12">
       {/* Hero */}
@@ -134,7 +304,7 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
         </div>
 
         <div className="grid sm:grid-cols-2 gap-4">
-          {problems.map((problem, i) => (
+          {problems.map((problem) => (
             <motion.div key={problem.title} variants={stagger.item}>
               <Card className="border-border/40 hover:border-destructive/30 transition-all group h-full">
                 <CardContent className="p-5">
@@ -196,7 +366,7 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {solutions.map((solution, i) => (
+          {solutions.map((solution) => (
             <motion.div key={solution.title} variants={stagger.item}>
               <Card className="border-border/40 hover:border-primary/30 hover:shadow-sm transition-all group h-full">
                 <CardContent className="p-5">
@@ -210,6 +380,38 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
             </motion.div>
           ))}
         </div>
+      </motion.section>
+
+      {/* Download Features Document */}
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.55 }}
+      >
+        <Card className="border-border/40 border-dashed">
+          <CardContent className="p-6 md:p-8">
+            <div className="flex flex-col sm:flex-row items-center gap-5">
+              <div className="p-4 rounded-2xl bg-primary/10 flex-shrink-0">
+                <FileText className="h-8 w-8 text-primary" />
+              </div>
+              <div className="flex-1 text-center sm:text-left">
+                <h3 className="text-lg font-bold text-foreground mb-1">Features Document</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Download a comprehensive document listing all EDAS features, capabilities, 
+                  administration tools, and technical specifications.
+                </p>
+              </div>
+              <Button
+                size="lg"
+                className="gap-2 flex-shrink-0"
+                onClick={handleDownloadFeatures}
+              >
+                <Download className="h-4 w-4" />
+                Download
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </motion.section>
 
       {/* Impact Banner */}
