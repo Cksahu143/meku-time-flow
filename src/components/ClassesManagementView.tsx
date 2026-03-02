@@ -626,6 +626,44 @@ export function ClassesManagementView() {
     }
   };
 
+  const handleAutoGenerateClasses = async () => {
+    if (!effectiveSchoolId) {
+      toast({ variant: 'destructive', title: 'Error', description: 'No school selected' });
+      return;
+    }
+
+    try {
+      // Check which grades already exist
+      const existingGrades = new Set(classes.map(c => c.grade_level));
+      const missingGrades = GRADE_LEVELS.filter(g => !existingGrades.has(g));
+
+      if (missingGrades.length === 0) {
+        toast({ title: 'All classes exist', description: 'All grades from Nursery to Class 12 already exist.' });
+        return;
+      }
+
+      const newClasses = missingGrades.map(grade => ({
+        school_id: effectiveSchoolId,
+        name: `${grade} - A`,
+        grade_level: grade,
+        section: 'A',
+        academic_year: '2025-2026',
+        max_students: 40,
+      }));
+
+      const { error } = await supabase.from('classes').insert(newClasses);
+      if (error) throw error;
+
+      toast({
+        title: 'Classes Generated',
+        description: `Created ${missingGrades.length} classes (Nursery through Class 12)`,
+      });
+      fetchClasses();
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Error', description: error.message || 'Failed to generate classes' });
+    }
+  };
+
   const filteredClasses = useMemo(() => {
     return classes.filter(c => 
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -713,6 +751,11 @@ export function ClassesManagementView() {
         </div>
 
         {canManage && (
+          <div className="flex gap-2">
+            <Button variant="outline" className="gap-2" onClick={handleAutoGenerateClasses}>
+              <GraduationCap className="h-4 w-4" />
+              Auto-Generate All
+            </Button>
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
               <Button className="gap-2">
@@ -813,6 +856,7 @@ export function ClassesManagementView() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          </div>
         )}
       </motion.div>
 

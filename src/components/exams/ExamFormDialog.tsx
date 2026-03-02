@@ -110,10 +110,9 @@ export function ExamFormDialog({
     if (!exam || !onDelete) return;
     setSaving(true);
     try {
-      const success = await onDelete(exam.id);
-      if (success) {
-        onOpenChange(false);
-      }
+      // Close dialog first to prevent auto-save from firing on deleted exam
+      onOpenChange(false);
+      await onDelete(exam.id);
     } finally {
       setSaving(false);
     }
