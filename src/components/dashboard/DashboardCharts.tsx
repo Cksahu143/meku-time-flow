@@ -1,243 +1,129 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar, PieChart, Pie, Cell, Legend,
 } from 'recharts';
-import { MotionCard } from '@/components/motion/MotionCard';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { MoreHorizontal } from 'lucide-react';
 
-interface ChartData {
-  name: string;
-  tasks: number;
-  completed: number;
-  study: number;
-}
-
-const generateWeekData = (): ChartData[] => [
-  { name: 'Mon', tasks: 4, completed: 3, study: 2.5 },
-  { name: 'Tue', tasks: 3, completed: 2, study: 3 },
-  { name: 'Wed', tasks: 5, completed: 4, study: 2 },
-  { name: 'Thu', tasks: 2, completed: 2, study: 4 },
-  { name: 'Fri', tasks: 6, completed: 5, study: 1.5 },
-  { name: 'Sat', tasks: 1, completed: 1, study: 5 },
-  { name: 'Sun', tasks: 2, completed: 1, study: 3 },
+const weekData = [
+  { name: 'Mon', tasks: 120, completed: 80 },
+  { name: 'Tue', tasks: 180, completed: 140 },
+  { name: 'Wed', tasks: 240, completed: 200 },
+  { name: 'Thu', tasks: 300, completed: 280 },
+  { name: 'Fri', tasks: 350, completed: 310 },
+  { name: 'Sat', tasks: 400, completed: 360 },
+  { name: 'Sun', tasks: 450, completed: 420 },
 ];
 
-const generateMonthData = (): ChartData[] => [
-  { name: 'Week 1', tasks: 15, completed: 12, study: 18 },
-  { name: 'Week 2', tasks: 20, completed: 18, study: 22 },
-  { name: 'Week 3', tasks: 18, completed: 15, study: 20 },
-  { name: 'Week 4', tasks: 22, completed: 19, study: 25 },
+const monthData = [
+  { name: 'Jan', tasks: 80, completed: 50 },
+  { name: 'Feb', tasks: 120, completed: 90 },
+  { name: 'Mar', tasks: 280, completed: 240 },
+  { name: 'Apr', tasks: 350, completed: 300 },
+  { name: 'May', tasks: 420, completed: 380 },
+  { name: 'Jun', tasks: 480, completed: 440 },
 ];
 
-const COLORS = ['hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(var(--destructive))', 'hsl(var(--muted))'];
+const subjectDistribution = [
+  { name: 'Mathematics', value: 30, color: 'hsl(var(--primary))' },
+  { name: 'Science', value: 25, color: 'hsl(var(--chart-2))' },
+  { name: 'English', value: 20, color: 'hsl(var(--success))' },
+  { name: 'Other', value: 25, color: 'hsl(var(--chart-4))' },
+];
 
 type TimeRange = 'week' | 'month';
 
 export const DashboardCharts: React.FC = () => {
-  const [timeRange, setTimeRange] = useState<TimeRange>('week');
-  const data = timeRange === 'week' ? generateWeekData() : generateMonthData();
-
-  const subjectDistribution = [
-    { name: 'Mathematics', value: 30 },
-    { name: 'Physics', value: 25 },
-    { name: 'English', value: 20 },
-    { name: 'Other', value: 25 },
-  ];
+  const [timeRange, setTimeRange] = useState<TimeRange>('month');
+  const data = timeRange === 'week' ? weekData : monthData;
 
   return (
-    <div className="grid md:grid-cols-2 gap-6">
-      {/* Activity Chart */}
-      <MotionCard delay={0.5} className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Activity Overview</h3>
-          <div className="flex gap-1 p-1 bg-muted rounded-lg">
-            {(['week', 'month'] as TimeRange[]).map((range) => (
-              <Button
-                key={range}
-                variant="ghost"
-                size="sm"
-                onClick={() => setTimeRange(range)}
-                className={cn(
-                  'h-7 px-3 text-xs capitalize transition-all',
-                  timeRange === range && 'bg-background shadow-sm'
-                )}
-              >
-                {range}
+    <div className="space-y-6">
+      {/* Activity Overview - Line Chart */}
+      <Card className="border-border/40">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-semibold">Activity Overview</CardTitle>
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1 p-0.5 bg-secondary/60 rounded-lg">
+                {(['week', 'month'] as TimeRange[]).map((range) => (
+                  <Button
+                    key={range}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setTimeRange(range)}
+                    className={cn(
+                      'h-7 px-3 text-xs capitalize rounded-md',
+                      timeRange === range && 'bg-card shadow-sm text-foreground'
+                    )}
+                  >
+                    {range}
+                  </Button>
+                ))}
+              </div>
+              <Button variant="ghost" size="icon" className="h-7 w-7">
+                <MoreHorizontal className="h-4 w-4" />
               </Button>
-            ))}
+            </div>
           </div>
-        </div>
-        
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={timeRange}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-            className="h-[200px]"
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data}>
-                <defs>
-                  <linearGradient id="colorTasks" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="colorCompleted" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--accent))" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="hsl(var(--accent))" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="tasks"
-                  stroke="hsl(var(--primary))"
-                  fillOpacity={1}
-                  fill="url(#colorTasks)"
-                  strokeWidth={2}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="completed"
-                  stroke="hsl(var(--accent))"
-                  fillOpacity={1}
-                  fill="url(#colorCompleted)"
-                  strokeWidth={2}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </motion.div>
-        </AnimatePresence>
-        
-        <div className="flex gap-4 mt-4 justify-center">
-          <div className="flex items-center gap-2 text-xs">
-            <div className="w-3 h-3 rounded-full bg-primary" />
-            <span className="text-muted-foreground">Tasks</span>
+          {/* Legend */}
+          <div className="flex gap-4 mt-1">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <div className="w-2.5 h-2.5 rounded-full bg-primary" />
+              Tasks
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <div className="w-2.5 h-2.5 rounded-full bg-purple-400" />
+              Completed
+            </div>
           </div>
-          <div className="flex items-center gap-2 text-xs">
-            <div className="w-3 h-3 rounded-full bg-accent" />
-            <span className="text-muted-foreground">Completed</span>
-          </div>
-        </div>
-      </MotionCard>
-
-      {/* Study Hours Chart */}
-      <MotionCard delay={0.6} className="p-6">
-        <h3 className="text-lg font-semibold mb-4">Study Hours</h3>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={timeRange}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.3 }}
-            className="h-[200px]"
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                  }}
-                />
-                <Bar
-                  dataKey="study"
-                  fill="hsl(var(--primary))"
-                  radius={[4, 4, 0, 0]}
-                  animationDuration={500}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </motion.div>
-        </AnimatePresence>
-        <p className="text-xs text-muted-foreground text-center mt-4">
-          Hours spent studying per {timeRange === 'week' ? 'day' : 'week'}
-        </p>
-      </MotionCard>
-
-      {/* Subject Distribution */}
-      <MotionCard delay={0.7} className="p-6 md:col-span-2">
-        <h3 className="text-lg font-semibold mb-4">Subject Distribution</h3>
-        <div className="flex flex-col md:flex-row items-center gap-8">
-          <div className="h-[200px] w-full md:w-1/2">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={subjectDistribution}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
-                  dataKey="value"
-                  animationDuration={500}
-                >
-                  {subjectDistribution.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="grid grid-cols-2 gap-4 w-full md:w-1/2">
-            {subjectDistribution.map((subject, index) => (
-              <motion.div
-                key={subject.name}
-                className="flex items-center gap-2"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.8 + index * 0.1 }}
-              >
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                />
-                <span className="text-sm">{subject.name}</span>
-                <span className="text-sm text-muted-foreground ml-auto">{subject.value}%</span>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </MotionCard>
+        </CardHeader>
+        <CardContent>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={timeRange}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.25 }}
+              className="h-[220px]"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={data}>
+                  <defs>
+                    <linearGradient id="colorTasks2" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="colorCompleted2" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(280 60% 60%)" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="hsl(280 60% 60%)" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
+                  <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '10px',
+                      fontSize: '12px',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                    }}
+                  />
+                  <Area type="monotone" dataKey="tasks" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorTasks2)" strokeWidth={2.5} dot={{ r: 3, fill: 'hsl(var(--primary))' }} />
+                  <Area type="monotone" dataKey="completed" stroke="hsl(280 60% 60%)" fillOpacity={1} fill="url(#colorCompleted2)" strokeWidth={2.5} dot={{ r: 3, fill: 'hsl(280 60% 60%)' }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </motion.div>
+          </AnimatePresence>
+        </CardContent>
+      </Card>
     </div>
   );
 };
