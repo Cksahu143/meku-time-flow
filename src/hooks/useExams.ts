@@ -88,13 +88,15 @@ export function useExams() {
         .update(updates)
         .eq('id', id)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      setExams((prev) => 
-        prev.map((e) => (e.id === id ? data : e))
-          .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
-      );
+      if (data) {
+        setExams((prev) => 
+          prev.map((e) => (e.id === id ? data : e))
+            .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
+        );
+      }
       return data;
     } catch (error: any) {
       console.error('Error updating exam:', error);
