@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.transcribe-audio]
 verify_jwt = false
+
+[functions.create-school-user]
+verify_jwt = false

@@ -87,6 +87,11 @@ export function RoleManagementView() {
   const [addUserRole, setAddUserRole] = useState<'student' | 'teacher'>('student');
   const [addingUser, setAddingUser] = useState(false);
   const [showRemoveUserDialog, setShowRemoveUserDialog] = useState<string | null>(null);
+  const [addUserMode, setAddUserMode] = useState<'existing' | 'create'>('create');
+  const [newUserUsername, setNewUserUsername] = useState('');
+  const [newUserDisplayName, setNewUserDisplayName] = useState('');
+  const [newUserPassword, setNewUserPassword] = useState('');
+  const [newUserSchoolId, setNewUserSchoolId] = useState<string>('');
   const { toast } = useToast();
   const { hasPermission, userRole, schoolId, refreshRole } = useRBACContext();
 
@@ -342,13 +347,67 @@ export function RoleManagementView() {
     }
   };
 
-  const handleAddUserToSchool = async () => {
+  const handleCreateNewUser = async () => {
+    if (!addUserEmail.trim() || !newUserPassword.trim()) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Email and password are required' });
+      return;
+    }
+
+    if (newUserPassword.length < 8) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Password must be at least 8 characters' });
+      return;
+    }
+
+    // Determine target school
+    const targetSchool = isPlatformAdmin ? (newUserSchoolId || selectedSchoolFilter) : schoolId;
+    if (!targetSchool || targetSchool === 'all' || targetSchool === 'none') {
+      toast({ variant: 'destructive', title: 'Error', description: 'Please select a school' });
+      return;
+    }
+
+    try {
+      setAddingUser(true);
+
+      const { data, error } = await supabase.functions.invoke('create-school-user', {
+        body: {
+          email: addUserEmail.trim().toLowerCase(),
+          password: newUserPassword,
+          username: newUserUsername.trim() || undefined,
+          display_name: newUserDisplayName.trim() || undefined,
+          role: addUserRole,
+          school_id: targetSchool,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast({
+        title: 'User Created',
+        description: `Account created for ${addUserEmail} as ${addUserRole} in ${data?.user?.school_name || 'school'}`,
+      });
+
+      resetAddUserForm();
+      fetchUsers();
+    } catch (error: any) {
+      console.error('Error creating user:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error creating user',
+        description: error.message || 'Failed to create user account',
+      });
+    } finally {
+      setAddingUser(false);
+    }
+  };
+
+  const handleAddExistingUser = async () => {
     if (!addUserEmail.trim()) {
       toast({ variant: 'destructive', title: 'Error', description: 'Please enter an email address' });
       return;
     }
 
-    const targetSchool = isPlatformAdmin ? selectedSchoolFilter : schoolId;
+    const targetSchool = isPlatformAdmin ? (newUserSchoolId || selectedSchoolFilter) : schoolId;
     if (!targetSchool || targetSchool === 'all' || targetSchool === 'none') {
       toast({ variant: 'destructive', title: 'Error', description: 'Please select a school first' });
       return;
@@ -357,7 +416,6 @@ export function RoleManagementView() {
     try {
       setAddingUser(true);
 
-      // Find profile by email
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('id, email, display_name, username')
@@ -370,12 +428,11 @@ export function RoleManagementView() {
         toast({
           variant: 'destructive',
           title: 'User Not Found',
-          description: 'No user found with that email. They need to create an account on EDAS first.',
+          description: 'No user found with that email. Try "Create New Account" instead.',
         });
         return;
       }
 
-      // Check if user already has a role with this school
       const { data: existingRole } = await supabase
         .from('user_roles')
         .select('id, school_id, role')
@@ -383,15 +440,10 @@ export function RoleManagementView() {
         .maybeSingle();
 
       if (existingRole?.school_id === targetSchool) {
-        toast({
-          variant: 'destructive',
-          title: 'Already in School',
-          description: 'This user is already assigned to this school',
-        });
+        toast({ variant: 'destructive', title: 'Already in School', description: 'This user is already assigned to this school' });
         return;
       }
 
-      // Update or insert
       if (existingRole) {
         const { error } = await supabase
           .from('user_roles')
@@ -410,20 +462,24 @@ export function RoleManagementView() {
         description: `${profile.display_name || profile.email} has been added to the school as ${addUserRole}`,
       });
 
-      setShowAddUserDialog(false);
-      setAddUserEmail('');
-      setAddUserRole('student');
+      resetAddUserForm();
       fetchUsers();
     } catch (error: any) {
-      console.error('Error adding user to school:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: error.message || 'Failed to add user to school',
-      });
+      toast({ variant: 'destructive', title: 'Error', description: error.message || 'Failed to add user' });
     } finally {
       setAddingUser(false);
     }
+  };
+
+  const resetAddUserForm = () => {
+    setShowAddUserDialog(false);
+    setAddUserEmail('');
+    setAddUserRole('student');
+    setNewUserUsername('');
+    setNewUserDisplayName('');
+    setNewUserPassword('');
+    setNewUserSchoolId('');
+    setAddUserMode('create');
   };
 
   const handleRemoveFromSchool = async (userId: string) => {
@@ -707,25 +763,45 @@ export function RoleManagementView() {
                 </DialogContent>
               </Dialog>
             )}
-            {/* Add User to School - for both school admins and platform admins */}
+            {/* Add User - for both school admins and platform admins */}
             {(isSchoolAdmin || isPlatformAdmin) && (
-              <Dialog open={showAddUserDialog} onOpenChange={setShowAddUserDialog}>
+              <Dialog open={showAddUserDialog} onOpenChange={(open) => { if (!open) resetAddUserForm(); else setShowAddUserDialog(true); }}>
                 <DialogTrigger asChild>
                   <Button size="sm" className="gap-2">
                     <UserPlus className="h-4 w-4" />
                     Add User
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="sm:max-w-[500px]">
                   <DialogHeader>
-                    <DialogTitle>Add User to School</DialogTitle>
+                    <DialogTitle>Add User to {isSchoolAdmin ? 'Your School' : 'School'}</DialogTitle>
                     <DialogDescription>
-                      Search for an existing EDAS user by email and add them to {isSchoolAdmin ? 'your school' : 'a school'}.
+                      Create a new account or add an existing user.
                     </DialogDescription>
                   </DialogHeader>
-                  <div className="space-y-4 py-4">
+
+                  {/* Mode tabs */}
+                  <div className="flex gap-2 border-b border-border pb-2">
+                    <Button
+                      variant={addUserMode === 'create' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setAddUserMode('create')}
+                    >
+                      <UserPlus className="h-4 w-4 mr-1" /> Create New Account
+                    </Button>
+                    <Button
+                      variant={addUserMode === 'existing' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setAddUserMode('existing')}
+                    >
+                      <Search className="h-4 w-4 mr-1" /> Add Existing User
+                    </Button>
+                  </div>
+
+                  <div className="space-y-4 py-2">
+                    {/* Email - always shown */}
                     <div className="space-y-2">
-                      <Label htmlFor="user-email">User Email *</Label>
+                      <Label htmlFor="user-email">Email *</Label>
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
@@ -738,6 +814,47 @@ export function RoleManagementView() {
                         />
                       </div>
                     </div>
+
+                    {/* Create mode fields */}
+                    {addUserMode === 'create' && (
+                      <>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-2">
+                            <Label htmlFor="new-username">Username</Label>
+                            <Input
+                              id="new-username"
+                              placeholder="john_doe"
+                              value={newUserUsername}
+                              onChange={(e) => setNewUserUsername(e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="new-display-name">Display Name</Label>
+                            <Input
+                              id="new-display-name"
+                              placeholder="John Doe"
+                              value={newUserDisplayName}
+                              onChange={(e) => setNewUserDisplayName(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="new-password">Password *</Label>
+                          <Input
+                            id="new-password"
+                            type="password"
+                            placeholder="Min 8 characters"
+                            value={newUserPassword}
+                            onChange={(e) => setNewUserPassword(e.target.value)}
+                          />
+                          {newUserPassword && newUserPassword.length < 8 && (
+                            <p className="text-xs text-destructive">Password must be at least 8 characters</p>
+                          )}
+                        </div>
+                      </>
+                    )}
+
+                    {/* Role selector */}
                     <div className="space-y-2">
                       <Label>Role</Label>
                       <Select value={addUserRole} onValueChange={(v) => setAddUserRole(v as 'student' | 'teacher')}>
@@ -747,34 +864,55 @@ export function RoleManagementView() {
                         <SelectContent>
                           <SelectItem value="student">
                             <div className="flex items-center gap-2">
-                              <GraduationCap className="h-4 w-4" />
-                              Student
+                              <GraduationCap className="h-4 w-4" /> Student
                             </div>
                           </SelectItem>
                           <SelectItem value="teacher">
                             <div className="flex items-center gap-2">
-                              <BookOpen className="h-4 w-4" />
-                              Teacher
+                              <BookOpen className="h-4 w-4" /> Teacher
                             </div>
                           </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    {isPlatformAdmin && selectedSchoolFilter !== 'all' && selectedSchoolFilter !== 'none' && (
-                      <p className="text-sm text-muted-foreground">
-                        Adding to: <strong>{schools.find(s => s.id === selectedSchoolFilter)?.name}</strong>
-                      </p>
+
+                    {/* School selector - platform admins can pick any school */}
+                    {isPlatformAdmin && (
+                      <div className="space-y-2">
+                        <Label>School *</Label>
+                        <Select value={newUserSchoolId} onValueChange={setNewUserSchoolId}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a school" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {schools.map(school => (
+                              <SelectItem key={school.id} value={school.id}>
+                                <div className="flex items-center gap-2">
+                                  <Building className="h-4 w-4 text-muted-foreground" /> {school.name}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     )}
-                    {isPlatformAdmin && (selectedSchoolFilter === 'all' || selectedSchoolFilter === 'none') && (
-                      <p className="text-sm text-destructive">
-                        Please select a specific school using the filter above first.
-                      </p>
+
+                    {/* School admin sees their school name */}
+                    {isSchoolAdmin && !isPlatformAdmin && schoolId && (
+                      <div className="p-3 bg-muted rounded-lg text-sm">
+                        <span className="text-muted-foreground">Adding to:</span>{' '}
+                        <strong>{schools.find(s => s.id === schoolId)?.name || 'Your School'}</strong>
+                      </div>
                     )}
                   </div>
+
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setShowAddUserDialog(false)}>Cancel</Button>
-                    <Button onClick={handleAddUserToSchool} disabled={addingUser}>
-                      {addingUser ? 'Adding...' : 'Add User'}
+                    <Button variant="outline" onClick={resetAddUserForm}>Cancel</Button>
+                    <Button
+                      onClick={addUserMode === 'create' ? handleCreateNewUser : handleAddExistingUser}
+                      disabled={addingUser || !addUserEmail.trim() || (addUserMode === 'create' && newUserPassword.length < 8)}
+                    >
+                      {addingUser ? 'Processing...' : addUserMode === 'create' ? 'Create Account' : 'Add User'}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
