@@ -426,6 +426,92 @@ export type Database = {
           },
         ]
       }
+      exam_period_days: {
+        Row: {
+          created_at: string
+          date: string
+          day_type: string
+          end_time: string | null
+          exam_subject: string | null
+          exam_title: string | null
+          id: string
+          notes: string | null
+          period_id: string
+          start_time: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          day_type?: string
+          end_time?: string | null
+          exam_subject?: string | null
+          exam_title?: string | null
+          id?: string
+          notes?: string | null
+          period_id: string
+          start_time?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          day_type?: string
+          end_time?: string | null
+          exam_subject?: string | null
+          exam_title?: string | null
+          id?: string
+          notes?: string | null
+          period_id?: string
+          start_time?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_period_days_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "exam_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exam_periods: {
+        Row: {
+          created_at: string
+          description: string | null
+          end_date: string
+          id: string
+          name: string
+          start_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          end_date: string
+          id?: string
+          name: string
+          start_date: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          end_date?: string
+          id?: string
+          name?: string
+          start_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       exams: {
         Row: {
           created_at: string
