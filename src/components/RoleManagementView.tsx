@@ -163,8 +163,8 @@ export function RoleManagementView() {
       });
 
       // Filter for school admins - only show users in their school
-      if (isSchoolAdmin && schoolId) {
-        setUsers(formattedUsers.filter(u => u.school_id === schoolId || !u.school_id));
+      if (isSchoolAdmin && schoolId && !isPlatformAdmin) {
+        setUsers(formattedUsers.filter(u => u.school_id === schoolId));
       } else {
         setUsers(formattedUsers);
       }
@@ -186,6 +186,17 @@ export function RoleManagementView() {
         variant: 'destructive',
         title: 'Permission Denied',
         description: "You don't have permission to change roles",
+      });
+      return;
+    }
+
+    // CRITICAL: Never allow demoting a platform admin
+    const targetUser = users.find(u => u.user_id === userId);
+    if (targetUser?.role === 'platform_admin' && newRole !== 'platform_admin') {
+      toast({
+        variant: 'destructive',
+        title: 'Action Blocked',
+        description: 'Platform Admins cannot be demoted. This action is not allowed.',
       });
       return;
     }
@@ -942,7 +953,8 @@ export function RoleManagementView() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
-                            {/* Change Role Button */}
+                            {/* Change Role Button - hidden for platform_admin targets unless you're also platform_admin */}
+                            {!(user.role === 'platform_admin') && (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button
@@ -965,7 +977,7 @@ export function RoleManagementView() {
                               <DropdownMenuContent align="end" className="w-48">
                                 <DropdownMenuLabel>Assign Role</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                {assignableRoles.map((role) => (
+                                {assignableRoles.filter(r => r !== 'platform_admin').map((role) => (
                                   <DropdownMenuItem
                                     key={role}
                                     onClick={() => handleRoleChange(user.user_id, role)}
@@ -984,6 +996,12 @@ export function RoleManagementView() {
                                 ))}
                               </DropdownMenuContent>
                             </DropdownMenu>
+                            )}
+                            {user.role === 'platform_admin' && (
+                              <Badge variant="outline" className="text-xs text-muted-foreground">
+                                <Crown className="h-3 w-3 mr-1" /> Protected
+                              </Badge>
+                            )}
 
                             {/* Assign School Button - Platform Admin Only */}
                             {isPlatformAdmin && (
@@ -1034,8 +1052,8 @@ export function RoleManagementView() {
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             )}
-                            {/* Remove from School - School admins can remove users */}
-                            {(isSchoolAdmin || isPlatformAdmin) && user.school_id && (
+                            {/* Remove from School - but never for platform admins */}
+                            {(isSchoolAdmin || isPlatformAdmin) && user.school_id && user.role !== 'platform_admin' && (
                               <Button
                                 variant="outline"
                                 size="sm"
