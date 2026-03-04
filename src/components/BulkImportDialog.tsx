@@ -85,17 +85,65 @@ export function BulkImportDialog({ open, onOpenChange, isPlatformAdmin, schoolId
   };
 
   const normalizeHeader = (header: string): string => {
-    // Strip BOM, invisible chars, trim, lowercase, collapse separators
-    const h = header.replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '').trim().toLowerCase().replace(/[\s\-_.]+/g, '_').replace(/^_|_$/g, '');
+    const h = header
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '')
+      .replace(/[\s\-_.]+/g, '_')
+      .replace(/^_|_$/g, '');
+
     const aliases: Record<string, string> = {
-      'e_mail': 'email', 'email_address': 'email', 'mail': 'email', 'correo': 'email', 'emailaddress': 'email',
-      'user_name': 'username', 'user': 'username', 'nombre_de_usuario': 'username', 'login': 'username',
-      'name': 'display_name', 'full_name': 'display_name', 'display': 'display_name', 'displayname': 'display_name',
-      'display_name': 'display_name', 'nombre': 'display_name', 'fullname': 'display_name',
-      'pass': 'password', 'pwd': 'password', 'passwd': 'password', 'contraseña': 'password', 'contrasena': 'password',
-      'user_role': 'role', 'type': 'role', 'account_type': 'role', 'rol': 'role', 'user_type': 'role',
+      e_mail: 'email',
+      email_address: 'email',
+      emailaddress: 'email',
+      mail: 'email',
+      correo: 'email',
+      user_name: 'username',
+      user: 'username',
+      nombre_de_usuario: 'username',
+      login: 'username',
+      name: 'display_name',
+      full_name: 'display_name',
+      fullname: 'display_name',
+      display: 'display_name',
+      displayname: 'display_name',
+      nombre: 'display_name',
+      pass: 'password',
+      pwd: 'password',
+      passwd: 'password',
+      contrasena: 'password',
+      password_text: 'password',
+      user_role: 'role',
+      account_type: 'role',
+      user_type: 'role',
+      rol: 'role',
+      type: 'role',
     };
+
     return aliases[h] || h;
+  };
+
+  const findColumnIndex = (headers: string[], candidates: string[]): number => {
+    const normalizedHeaders = headers.map(h => normalizeHeader(String(h || '')));
+    const normalizedCandidates = candidates.map(c => normalizeHeader(c));
+
+    for (const candidate of normalizedCandidates) {
+      const exactIndex = normalizedHeaders.indexOf(candidate);
+      if (exactIndex !== -1) return exactIndex;
+    }
+
+    for (const candidate of normalizedCandidates) {
+      const startsWithIndex = normalizedHeaders.findIndex(h => h.startsWith(candidate));
+      if (startsWithIndex !== -1) return startsWithIndex;
+    }
+
+    for (const candidate of normalizedCandidates) {
+      const containsIndex = normalizedHeaders.findIndex(h => h.includes(candidate));
+      if (containsIndex !== -1) return containsIndex;
+    }
+
+    return -1;
   };
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -113,60 +161,106 @@ export function BulkImportDialog({ open, onOpenChange, isPlatformAdmin, schoolId
         const workbook = XLSX.read(data, { type: 'array', raw: true });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
-        const rawData: Record<string, any>[] = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: true });
+        const rows = XLSX.utils.sheet_to_json<(string | number | null)[]>(sheet, { header: 1, raw: true, defval: '' });
 
-        if (rawData.length === 0) {
+        if (!rows.length) {
           setParseError('The file is empty. Please add user data.');
           setShowFormatHelp(true);
           return;
         }
 
-        // Normalize headers
-        const originalHeaders = Object.keys(rawData[0]);
-        const headerMap: Record<string, string> = {};
-        originalHeaders.forEach(h => { headerMap[h] = normalizeHeader(h); });
+        const headerAliases: Record<string, string[]> = {
+          email: ['email', 'email address', 'e-mail', 'mail', 'correo'],
+          password: ['password', 'pass', 'pwd', 'passwd', 'contrasena'],
+          role: ['role', 'user role', 'account type', 'user type', 'rol'],
+          username: ['username', 'user name', 'login'],
+          display_name: ['display_name', 'display name', 'name', 'full name', 'nombre'],
+        };
 
-        const normalizedHeaders = Object.values(headerMap);
-        const missingRequired = REQUIRED_COLUMNS.filter(c => !normalizedHeaders.includes(c));
+        let headerRowIndex = -1;
+        let headerRow: string[] = [];
+        let columnMap: Record<string, number> = {};
 
-        if (missingRequired.length > 0) {
-          setParseError(`Missing required columns: ${missingRequired.join(', ')}. Found columns: ${originalHeaders.join(', ')}`);
+        const scanLimit = Math.min(rows.length, 15);
+        for (let i = 0; i < scanLimit; i++) {
+          const candidate = (rows[i] || []).map(cell => String(cell ?? '').trim());
+          if (!candidate.some(Boolean)) continue;
+
+          const testMap: Record<string, number> = {};
+          for (const key of ALL_COLUMNS) {
+            testMap[key] = findColumnIndex(candidate, headerAliases[key] || [key]);
+          }
+
+          const hasRequired = REQUIRED_COLUMNS.every(col => testMap[col] !== -1);
+          if (hasRequired) {
+            headerRowIndex = i;
+            headerRow = candidate;
+            columnMap = testMap;
+            break;
+          }
+        }
+
+        if (headerRowIndex === -1) {
+          const previewHeaders = (rows[0] || []).map(cell => String(cell ?? '').trim()).filter(Boolean);
+          setParseError(`Couldn't detect required columns (email, password, role). Found: ${previewHeaders.join(', ') || 'none'}. Download the template for the recommended format.`);
           setShowFormatHelp(true);
           return;
         }
 
-        // Parse rows
         const allowedRoles = isPlatformAdmin ? VALID_ROLES : ['student', 'teacher'];
-        const parsed: ParsedUser[] = rawData.map((row, idx) => {
-          const normalized: Record<string, string> = {};
-          for (const [orig, norm] of Object.entries(headerMap)) {
-            normalized[norm] = String(row[orig] || '').trim();
+        const parsed: ParsedUser[] = [];
+
+        for (let i = headerRowIndex + 1; i < rows.length; i++) {
+          const row = rows[i] || [];
+          const values: Record<string, string> = {};
+
+          for (const key of ALL_COLUMNS) {
+            const idx = columnMap[key];
+            values[key] = idx >= 0 ? String(row[idx] ?? '').trim() : '';
           }
 
+          const isEmpty = Object.values(values).every(v => !v);
+          if (isEmpty) continue;
+
           const errors: string[] = [];
-          const email = normalized.email?.toLowerCase();
-          const password = normalized.password;
-          const role = normalized.role?.toLowerCase();
-          const username = normalized.username || undefined;
-          const display_name = normalized.display_name || undefined;
+          const email = values.email?.toLowerCase();
+          const password = values.password;
+          const role = values.role?.toLowerCase();
+          const username = values.username || undefined;
+          const display_name = values.display_name || undefined;
 
           if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push('Invalid email');
           if (!password || password.length < 8) errors.push('Password must be ≥8 chars');
           if (!role || !allowedRoles.includes(role)) errors.push(`Role must be: ${allowedRoles.join(', ')}`);
 
-          return { email, password, role, username, display_name, rowNumber: idx + 2, errors, status: 'pending' as const };
-        });
+          parsed.push({
+            email,
+            password,
+            role,
+            username,
+            display_name,
+            rowNumber: i + 1,
+            errors,
+            status: 'pending',
+          });
+        }
 
-        // Check for duplicate emails in file
+        if (!parsed.length) {
+          setParseError('No user rows found under the header row. Download the template and fill at least one row.');
+          setShowFormatHelp(true);
+          return;
+        }
+
         const emailCounts = new Map<string, number[]>();
         parsed.forEach((u, i) => {
           if (u.email) {
-            const rows = emailCounts.get(u.email) || [];
-            rows.push(i);
-            emailCounts.set(u.email, rows);
+            const indexes = emailCounts.get(u.email) || [];
+            indexes.push(i);
+            emailCounts.set(u.email, indexes);
           }
         });
-        emailCounts.forEach((indices) => {
+
+        emailCounts.forEach(indices => {
           if (indices.length > 1) {
             indices.forEach(i => parsed[i].errors.push('Duplicate email in file'));
           }
@@ -176,9 +270,12 @@ export function BulkImportDialog({ open, onOpenChange, isPlatformAdmin, schoolId
 
         const errorCount = parsed.filter(u => u.errors.length > 0).length;
         if (errorCount > 0 && errorCount === parsed.length) {
-          setParseError('All rows have errors. Please check the format below.');
+          setParseError(`All rows have validation errors. Recommended header format: ${ALL_COLUMNS.join(', ')}`);
           setShowFormatHelp(true);
+          return;
         }
+
+        setShowFormatHelp(false);
       } catch (err: any) {
         setParseError(`Could not parse file: ${err.message}. Make sure it's a valid Excel or CSV file.`);
         setShowFormatHelp(true);
