@@ -84,7 +84,7 @@ export function RoleManagementView() {
   const [newSchool, setNewSchool] = useState({ name: '', code: '', email: '' });
   const [showAddUserDialog, setShowAddUserDialog] = useState(false);
   const [addUserEmail, setAddUserEmail] = useState('');
-  const [addUserRole, setAddUserRole] = useState<'student' | 'teacher'>('student');
+  const [addUserRole, setAddUserRole] = useState<'student' | 'teacher' | 'school_admin'>('student');
   const [addingUser, setAddingUser] = useState(false);
   const [showRemoveUserDialog, setShowRemoveUserDialog] = useState<string | null>(null);
   const [addUserMode, setAddUserMode] = useState<'existing' | 'create'>('create');
@@ -857,7 +857,7 @@ export function RoleManagementView() {
                     {/* Role selector */}
                     <div className="space-y-2">
                       <Label>Role</Label>
-                      <Select value={addUserRole} onValueChange={(v) => setAddUserRole(v as 'student' | 'teacher')}>
+                      <Select value={addUserRole} onValueChange={(v) => setAddUserRole(v as 'student' | 'teacher' | 'school_admin')}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
@@ -872,6 +872,13 @@ export function RoleManagementView() {
                               <BookOpen className="h-4 w-4" /> Teacher
                             </div>
                           </SelectItem>
+                          {isPlatformAdmin && (
+                            <SelectItem value="school_admin">
+                              <div className="flex items-center gap-2">
+                                <Building className="h-4 w-4" /> School Admin
+                              </div>
+                            </SelectItem>
+                          )}
                         </SelectContent>
                       </Select>
                     </div>

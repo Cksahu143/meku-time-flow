@@ -93,10 +93,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Validate role - only student or teacher allowed
-    if (!["student", "teacher"].includes(role)) {
+    // Validate role
+    const allowedRoles = isPlatformAdmin ? ["student", "teacher", "school_admin"] : ["student", "teacher"];
+    if (!allowedRoles.includes(role)) {
+      const msg = isPlatformAdmin
+        ? "Can only create student, teacher, or school_admin accounts"
+        : "School admins can only create student or teacher accounts";
       return new Response(
-        JSON.stringify({ error: "Can only create student or teacher accounts" }),
+        JSON.stringify({ error: msg }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
