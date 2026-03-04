@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Users, GraduationCap, CheckSquare, BarChart3, TrendingUp,
+  Users, GraduationCap, CheckSquare, TrendingUp,
   Clock, Calendar, ListTodo, Timer, BookOpen, MessageSquare, Mic,
-  ChevronRight, ArrowUpRight, Target, Settings, Building2, Shield
+  ChevronRight, ArrowUpRight, Target, Settings, Building2, Shield,
+  Sparkles, Zap
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,14 +20,14 @@ interface StatCardProps {
   title: string;
   value: number;
   icon: React.ElementType;
-  iconBg: string;
+  gradient: string;
   suffix?: string;
   trend?: string;
   trendUp?: boolean;
   delay?: number;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, iconBg, suffix = '', trend, trendUp, delay = 0 }) => {
+const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, gradient, suffix = '', trend, trendUp, delay = 0 }) => {
   const count = useCountUp(value, 1800);
 
   return (
@@ -34,35 +35,39 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, iconBg, s
       initial={{ opacity: 0, y: 20, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ delay, duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
-      whileHover={{ y: -3, transition: { duration: 0.2 } }}
+      whileHover={{ y: -4, transition: { duration: 0.2 } }}
     >
-      <Card className="border-border/40 shadow-sm hover:shadow-md transition-shadow">
-        <CardContent className="p-5">
-          <div className="flex items-start gap-3">
-            <div className={`p-2.5 rounded-xl ${iconBg} flex-shrink-0`}>
-              <Icon className="h-5 w-5 text-primary-foreground" />
-            </div>
+      <Card className="border-border/30 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden group relative">
+        {/* Subtle gradient overlay on hover */}
+        <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-[0.04] transition-opacity duration-500`} />
+        
+        <CardContent className="p-5 relative z-10">
+          <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-muted-foreground font-medium">{title}</p>
-              <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-2xl font-bold text-foreground">
+              <p className="text-sm text-muted-foreground font-medium mb-1">{title}</p>
+              <div className="flex items-baseline gap-1.5">
+                <span className="font-display text-3xl font-bold text-foreground tracking-tight">
                   {count.toLocaleString()}{suffix}
                 </span>
               </div>
               {trend && (
-                <div className={`flex items-center gap-1 mt-1.5 text-xs font-medium ${trendUp ? 'text-green-600' : 'text-destructive'}`}>
+                <div className={`flex items-center gap-1 mt-2 text-xs font-semibold ${trendUp ? 'text-success' : 'text-destructive'}`}>
                   <ArrowUpRight className={`h-3 w-3 ${!trendUp ? 'rotate-90' : ''}`} />
                   {trend}
                 </div>
               )}
             </div>
+            <div className={`p-2.5 rounded-xl bg-gradient-to-br ${gradient} shadow-sm`}>
+              <Icon className="h-5 w-5 text-primary-foreground" />
+            </div>
           </div>
-          {/* Mini sparkline */}
-          <div className="mt-3 h-8">
+          
+          {/* Sparkline */}
+          <div className="mt-4 h-8">
             <svg viewBox="0 0 100 30" className="w-full h-full overflow-visible">
               <defs>
-                <linearGradient id={`grad-${title}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.2" />
+                <linearGradient id={`grad-${title.replace(/\s/g, '')}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.15" />
                   <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
                 </linearGradient>
               </defs>
@@ -70,12 +75,12 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, iconBg, s
                 d={`M 0 25 Q 15 ${20 - Math.random() * 10} 25 ${15 + Math.random() * 5} T 50 ${12 + Math.random() * 5} T 75 ${8 + Math.random() * 5} T 100 ${5 + Math.random() * 3}`}
                 fill="none"
                 stroke="hsl(var(--primary))"
-                strokeWidth="1.5"
+                strokeWidth="2"
                 strokeLinecap="round"
               />
               <path
                 d={`M 0 25 Q 15 ${20 - Math.random() * 10} 25 ${15 + Math.random() * 5} T 50 ${12 + Math.random() * 5} T 75 ${8 + Math.random() * 5} T 100 ${5 + Math.random() * 3} V 30 H 0 Z`}
-                fill={`url(#grad-${title})`}
+                fill={`url(#grad-${title.replace(/\s/g, '')})`}
               />
             </svg>
           </div>
@@ -141,7 +146,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         })));
       } else {
         setRecentActivity([
-          { id: '1', text: 'Welcome to Cohen-EDAS!', time: 'Just now', type: 'welcome' },
+          { id: '1', text: 'Welcome to EDAS!', time: 'Just now', type: 'welcome' },
           { id: '2', text: 'Explore your dashboard', time: 'Just now', type: 'info' },
         ]);
       }
@@ -179,26 +184,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
   ];
 
   const quickActions = [
-    { title: 'Timetable', icon: Clock, view: 'timetable' },
-    { title: 'Calendar', icon: Calendar, view: 'calendar' },
-    { title: 'Tasks', icon: ListTodo, view: 'todo' },
-    { title: 'Pomodoro', icon: Timer, view: 'pomodoro' },
-    { title: 'Chat', icon: MessageSquare, view: 'groups' },
-    { title: 'Resources', icon: BookOpen, view: 'resources' },
-    { title: 'Transcribe', icon: Mic, view: 'transcribe' },
+    { title: 'Timetable', icon: Clock, view: 'timetable', color: 'from-primary to-primary/70' },
+    { title: 'Calendar', icon: Calendar, view: 'calendar', color: 'from-accent to-accent/70' },
+    { title: 'Tasks', icon: ListTodo, view: 'todo', color: 'from-success to-success/70' },
+    { title: 'Pomodoro', icon: Timer, view: 'pomodoro', color: 'from-destructive to-destructive/70' },
+    { title: 'Chat', icon: MessageSquare, view: 'groups', color: 'from-primary-glow to-primary' },
+    { title: 'Resources', icon: BookOpen, view: 'resources', color: 'from-accent to-accent/60' },
+    { title: 'Transcribe', icon: Mic, view: 'transcribe', color: 'from-success to-success/60' },
   ];
 
   const taskSummary = [
-    { label: 'Pending Tasks', count: 18, color: 'bg-purple-500' },
+    { label: 'Pending', count: 18, color: 'bg-accent' },
     { label: 'In Progress', count: 32, color: 'bg-primary' },
-    { label: 'Completed', count: 215, color: 'bg-green-500' },
+    { label: 'Completed', count: 215, color: 'bg-success' },
   ];
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-[1400px] mx-auto">
       {/* Hero Banner */}
       <motion.div
-        className="relative rounded-2xl overflow-hidden h-[180px] md:h-[200px]"
+        className="relative rounded-2xl overflow-hidden h-[200px] md:h-[220px]"
         initial={{ opacity: 0, y: -15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -208,11 +213,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           alt="Campus"
           className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-foreground/60 via-foreground/30 to-transparent" />
-        <div className="absolute inset-0 flex items-center px-8">
+        <div className="absolute inset-0 bg-gradient-to-r from-foreground/70 via-foreground/40 to-foreground/10" />
+        <div className="absolute inset-0 flex items-center px-8 md:px-10">
           <div>
+            <motion.div
+              className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm border border-white/20 mb-3"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-accent" />
+              <span className="text-xs font-medium text-white/90">Your AI Education Assistant</span>
+            </motion.div>
             <motion.h1
-              className="text-2xl md:text-3xl font-bold text-white mb-1"
+              className="font-display text-2xl md:text-4xl font-bold text-white mb-2 tracking-tight"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
@@ -220,12 +234,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
               Welcome back, {userName}!
             </motion.h1>
             <motion.p
-              className="text-white/80 text-sm md:text-base max-w-md"
+              className="text-white/70 text-sm md:text-base max-w-md"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.35 }}
             >
-              Your AI-powered education assistant is ready
+              Let's make today productive
             </motion.p>
             <motion.div
               className="mt-3 flex items-center gap-2"
@@ -241,10 +255,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Students" value={stats.students} icon={Users} iconBg="bg-primary" trend="↑ 12% this week" trendUp delay={0.1} />
-        <StatCard title="Assignments" value={stats.tasks} icon={CheckSquare} iconBg="bg-green-500" trend="↑ 8% this month" trendUp delay={0.15} />
-        <StatCard title="Attendance Rate" value={stats.attendance} icon={GraduationCap} iconBg="bg-amber-500" suffix="%" delay={0.2} />
-        <StatCard title="Active Groups" value={stats.groups} icon={MessageSquare} iconBg="bg-purple-500" delay={0.25} />
+        <StatCard title="Total Students" value={stats.students} icon={Users} gradient="from-primary to-primary-glow" trend="↑ 12% this week" trendUp delay={0.1} />
+        <StatCard title="Assignments" value={stats.tasks} icon={CheckSquare} gradient="from-success to-success/80" trend="↑ 8% this month" trendUp delay={0.15} />
+        <StatCard title="Attendance Rate" value={stats.attendance} icon={GraduationCap} gradient="from-accent to-accent-glow" suffix="%" delay={0.2} />
+        <StatCard title="Active Groups" value={stats.groups} icon={MessageSquare} gradient="from-primary-glow to-primary" delay={0.25} />
       </div>
 
       {/* Admin Actions */}
@@ -256,14 +270,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           transition={{ delay: 0.3 }}
         >
           <span className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-            <Settings className="h-4 w-4" /> Admin:
+            <Shield className="h-4 w-4" /> Admin:
           </span>
           {adminActions.map((action) => (
             <Button
               key={action.view}
               variant="outline"
               size="sm"
-              className="gap-2 text-xs"
+              className="gap-2 text-xs rounded-xl"
               onClick={() => onNavigate(action.view)}
             >
               <action.icon className="h-3.5 w-3.5" />
@@ -284,10 +298,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           transition={{ delay: 0.4 }}
           className="space-y-6"
         >
-          {/* Task Summary */}
-          <Card className="border-border/40">
+          <Card className="border-border/30 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold">Task Summary</CardTitle>
+              <CardTitle className="text-base font-display font-bold flex items-center gap-2">
+                <Zap className="h-4 w-4 text-accent" />
+                Task Summary
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {taskSummary.map((item, i) => (
@@ -299,16 +315,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                   transition={{ delay: 0.5 + i * 0.08 }}
                 >
                   <div className="flex items-center gap-2.5">
-                    <div className={`h-3 w-3 rounded-sm ${item.color}`} />
+                    <div className={`h-3 w-3 rounded-full ${item.color}`} />
                     <span className="text-sm text-muted-foreground">{item.label}</span>
                   </div>
-                  <span className="text-sm font-bold text-foreground">{item.count}</span>
+                  <span className="font-display text-sm font-bold text-foreground">{item.count}</span>
                 </motion.div>
               ))}
               <Button
                 variant="link"
                 size="sm"
-                className="p-0 h-auto text-primary text-xs"
+                className="p-0 h-auto text-primary text-xs font-semibold"
                 onClick={() => onNavigate('todo')}
               >
                 View All <ChevronRight className="h-3 w-3 ml-0.5" />
@@ -316,7 +332,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             </CardContent>
           </Card>
 
-          {/* Permissions */}
           <MyPermissionsPanel />
         </motion.div>
       </div>
@@ -327,7 +342,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.55 }}
       >
-        <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
+        <h2 className="font-display text-base font-bold mb-3 flex items-center gap-2">
           <Target className="h-4 w-4 text-primary" />
           Quick Actions
         </h2>
@@ -335,18 +350,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           {quickActions.map((action, i) => (
             <motion.button
               key={action.view}
-              className="flex flex-col items-center gap-2 p-3 rounded-xl bg-card border border-border/40 hover:border-primary/30 hover:shadow-sm transition-all group"
+              className="flex flex-col items-center gap-2.5 p-4 rounded-2xl bg-card border border-border/30 hover:border-primary/30 hover:shadow-md transition-all group"
               onClick={() => onNavigate(action.view)}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6 + i * 0.04 }}
-              whileHover={{ y: -3, scale: 1.02 }}
+              whileHover={{ y: -4, scale: 1.02 }}
               whileTap={{ scale: 0.96 }}
             >
-              <div className="p-2.5 rounded-xl bg-primary/8 group-hover:bg-primary/15 transition-colors">
-                <action.icon className="h-5 w-5 text-primary" />
+              <div className={`p-2.5 rounded-xl bg-gradient-to-br ${action.color} shadow-sm group-hover:shadow-md transition-shadow`}>
+                <action.icon className="h-5 w-5 text-primary-foreground" />
               </div>
-              <span className="text-xs font-medium text-foreground">{action.title}</span>
+              <span className="text-xs font-semibold text-foreground">{action.title}</span>
             </motion.button>
           ))}
         </div>
@@ -358,23 +373,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.65 }}
       >
-        <Card className="border-border/40">
+        <Card className="border-border/30 shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">Recent Activity</CardTitle>
+            <CardTitle className="font-display text-base font-bold">Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
+            <div className="space-y-1">
               {recentActivity.map((activity, i) => (
                 <motion.div
                   key={activity.id}
-                  className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-secondary/50 transition-colors"
+                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-secondary/50 transition-colors"
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.7 + i * 0.05 }}
                 >
-                  <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-primary flex-shrink-0" />
                   <span className="text-sm text-foreground flex-1">{activity.text}</span>
-                  <span className="text-xs text-muted-foreground">{activity.time}</span>
+                  <span className="text-xs text-muted-foreground font-medium">{activity.time}</span>
                 </motion.div>
               ))}
             </div>
