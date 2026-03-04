@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Users, Shield, Search, ChevronDown, Check, Crown, GraduationCap, BookOpen, Building, Plus, TestTube, RefreshCw, UserPlus, UserMinus, Mail } from 'lucide-react';
+import { Users, Shield, Search, ChevronDown, Check, Crown, GraduationCap, BookOpen, Building, Plus, TestTube, RefreshCw, UserPlus, UserMinus, Mail, FileSpreadsheet } from 'lucide-react';
+import { BulkImportDialog } from '@/components/BulkImportDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useRBACContext } from '@/contexts/RBACContext';
@@ -88,6 +89,7 @@ export function RoleManagementView() {
   const [addingUser, setAddingUser] = useState(false);
   const [showRemoveUserDialog, setShowRemoveUserDialog] = useState<string | null>(null);
   const [addUserMode, setAddUserMode] = useState<'existing' | 'create'>('create');
+  const [showBulkImport, setShowBulkImport] = useState(false);
   const [newUserUsername, setNewUserUsername] = useState('');
   const [newUserDisplayName, setNewUserDisplayName] = useState('');
   const [newUserPassword, setNewUserPassword] = useState('');
@@ -765,6 +767,19 @@ export function RoleManagementView() {
             )}
             {/* Add User - for both school admins and platform admins */}
             {(isSchoolAdmin || isPlatformAdmin) && (
+              <>
+              <Button size="sm" variant="outline" className="gap-2" onClick={() => setShowBulkImport(true)}>
+                <FileSpreadsheet className="h-4 w-4" />
+                Bulk Import
+              </Button>
+              <BulkImportDialog
+                open={showBulkImport}
+                onOpenChange={setShowBulkImport}
+                isPlatformAdmin={isPlatformAdmin}
+                schoolId={schoolId}
+                schools={schools}
+                onImportComplete={fetchUsers}
+              />
               <Dialog open={showAddUserDialog} onOpenChange={(open) => { if (!open) resetAddUserForm(); else setShowAddUserDialog(true); }}>
                 <DialogTrigger asChild>
                   <Button size="sm" className="gap-2">
@@ -924,6 +939,7 @@ export function RoleManagementView() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+              </>
             )}
           </div>
         </div>
