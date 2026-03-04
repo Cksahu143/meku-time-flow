@@ -40,6 +40,26 @@ const ALL_COLUMNS = [...REQUIRED_COLUMNS, ...OPTIONAL_COLUMNS];
 
 const VALID_ROLES = ['student', 'teacher', 'school_admin'];
 
+const normalizeRoleValue = (rawRole: string): string => {
+  const role = String(rawRole || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '')
+    .trim()
+    .replace(/[\s\-]+/g, '_');
+
+  const roleAliases: Record<string, string> = {
+    schooladmin: 'school_admin',
+    school_admin: 'school_admin',
+    admin: 'school_admin',
+    teacher: 'teacher',
+    student: 'student',
+  };
+
+  return roleAliases[role] || role;
+};
+
 export function BulkImportDialog({ open, onOpenChange, isPlatformAdmin, schoolId, schools, onImportComplete }: BulkImportDialogProps) {
   const [parsedUsers, setParsedUsers] = useState<ParsedUser[]>([]);
   const [importing, setImporting] = useState(false);
@@ -159,15 +179,6 @@ export function BulkImportDialog({ open, onOpenChange, isPlatformAdmin, schoolId
       try {
         const data = new Uint8Array(evt.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: 'array', raw: true });
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-        const rows = XLSX.utils.sheet_to_json<(string | number | null)[]>(sheet, { header: 1, raw: true, defval: '' });
-
-        if (!rows.length) {
-          setParseError('The file is empty. Please add user data.');
-          setShowFormatHelp(true);
-          return;
-        }
 
         const headerAliases: Record<string, string[]> = {
           email: ['email', 'email address', 'e-mail', 'mail', 'correo'],
@@ -177,32 +188,69 @@ export function BulkImportDialog({ open, onOpenChange, isPlatformAdmin, schoolId
           display_name: ['display_name', 'display name', 'name', 'full name', 'nombre'],
         };
 
+        let rows: (string | number | null)[][] = [];
         let headerRowIndex = -1;
-        let headerRow: string[] = [];
         let columnMap: Record<string, number> = {};
 
-        const scanLimit = Math.min(rows.length, 15);
-        for (let i = 0; i < scanLimit; i++) {
-          const candidate = (rows[i] || []).map(cell => String(cell ?? '').trim());
-          if (!candidate.some(Boolean)) continue;
+        const parseSingleColumnDelimitedRows = (inputRows: (string | number | null)[][]) => {
+          return inputRows.map((row) => {
+            if (row.length !== 1) return row;
+            const firstCell = String(row[0] ?? '');
+            const delimiterMatch = firstCell.match(/[;,\t|]/);
+            if (!delimiterMatch) return row;
+            const delimiter = delimiterMatch[0];
+            return firstCell.split(delimiter).map((cell) => cell.trim());
+          });
+        };
 
-          const testMap: Record<string, number> = {};
-          for (const key of ALL_COLUMNS) {
-            testMap[key] = findColumnIndex(candidate, headerAliases[key] || [key]);
+        for (const currentSheetName of workbook.SheetNames) {
+          const currentSheet = workbook.Sheets[currentSheetName];
+          if (!currentSheet) continue;
+
+          const rawRows = XLSX.utils.sheet_to_json<(string | number | null)[]>(currentSheet, { header: 1, raw: true, defval: '' });
+          const candidateRows = parseSingleColumnDelimitedRows(rawRows);
+          if (!candidateRows.length) continue;
+
+          const scanLimit = Math.min(candidateRows.length, 15);
+          for (let i = 0; i < scanLimit; i++) {
+            const candidate = (candidateRows[i] || []).map(cell => String(cell ?? '').trim());
+            if (!candidate.some(Boolean)) continue;
+
+            const testMap: Record<string, number> = {};
+            for (const key of ALL_COLUMNS) {
+              testMap[key] = findColumnIndex(candidate, headerAliases[key] || [key]);
+            }
+
+            const hasRequired = REQUIRED_COLUMNS.every(col => testMap[col] !== -1);
+            if (hasRequired) {
+              rows = candidateRows;
+              headerRowIndex = i;
+              columnMap = testMap;
+              break;
+            }
           }
 
-          const hasRequired = REQUIRED_COLUMNS.every(col => testMap[col] !== -1);
-          if (hasRequired) {
-            headerRowIndex = i;
-            headerRow = candidate;
-            columnMap = testMap;
-            break;
-          }
+          if (headerRowIndex !== -1) break;
         }
 
         if (headerRowIndex === -1) {
-          const previewHeaders = (rows[0] || []).map(cell => String(cell ?? '').trim()).filter(Boolean);
-          setParseError(`Couldn't detect required columns (email, password, role). Found: ${previewHeaders.join(', ') || 'none'}. Download the template for the recommended format.`);
+          const previewBySheet = workbook.SheetNames
+            .map((sheetName) => {
+              const sheet = workbook.Sheets[sheetName];
+              if (!sheet) return `${sheetName}: none`;
+              const preview = XLSX.utils
+                .sheet_to_json<(string | number | null)[]>(sheet, { header: 1, raw: true, defval: '' })
+                .slice(0, 3)
+                .flat()
+                .map(cell => String(cell ?? '').trim())
+                .filter(Boolean)
+                .slice(0, 8)
+                .join(', ');
+              return `${sheetName}: ${preview || 'none'}`;
+            })
+            .join(' | ');
+
+          setParseError(`Couldn't detect required columns (email, password, role) in any sheet. Detected headers preview: ${previewBySheet}. Download the template for the recommended format.`);
           setShowFormatHelp(true);
           return;
         }
@@ -225,7 +273,7 @@ export function BulkImportDialog({ open, onOpenChange, isPlatformAdmin, schoolId
           const errors: string[] = [];
           const email = values.email?.toLowerCase();
           const password = values.password;
-          const role = values.role?.toLowerCase();
+          const role = normalizeRoleValue(values.role);
           const username = values.username || undefined;
           const display_name = values.display_name || undefined;
 
@@ -270,7 +318,11 @@ export function BulkImportDialog({ open, onOpenChange, isPlatformAdmin, schoolId
 
         const errorCount = parsed.filter(u => u.errors.length > 0).length;
         if (errorCount > 0 && errorCount === parsed.length) {
-          setParseError(`All rows have validation errors. Recommended header format: ${ALL_COLUMNS.join(', ')}`);
+          const exampleIssues = parsed
+            .slice(0, 3)
+            .map((u) => `Row ${u.rowNumber}: ${u.errors.join(', ')}`)
+            .join(' | ');
+          setParseError(`All rows have validation errors. ${exampleIssues}. Recommended columns: ${ALL_COLUMNS.join(', ')}.`);
           setShowFormatHelp(true);
           return;
         }
