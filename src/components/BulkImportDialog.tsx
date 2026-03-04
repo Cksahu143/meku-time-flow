@@ -85,13 +85,15 @@ export function BulkImportDialog({ open, onOpenChange, isPlatformAdmin, schoolId
   };
 
   const normalizeHeader = (header: string): string => {
-    const h = header.trim().toLowerCase().replace(/[\s\-]+/g, '_');
+    // Strip BOM, invisible chars, trim, lowercase, collapse separators
+    const h = header.replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '').trim().toLowerCase().replace(/[\s\-_.]+/g, '_').replace(/^_|_$/g, '');
     const aliases: Record<string, string> = {
-      'e_mail': 'email', 'email_address': 'email', 'mail': 'email',
-      'user_name': 'username', 'user': 'username', 'name': 'display_name',
-      'full_name': 'display_name', 'display': 'display_name', 'displayname': 'display_name',
-      'pass': 'password', 'pwd': 'password', 'passwd': 'password',
-      'user_role': 'role', 'type': 'role', 'account_type': 'role',
+      'e_mail': 'email', 'email_address': 'email', 'mail': 'email', 'correo': 'email', 'emailaddress': 'email',
+      'user_name': 'username', 'user': 'username', 'nombre_de_usuario': 'username', 'login': 'username',
+      'name': 'display_name', 'full_name': 'display_name', 'display': 'display_name', 'displayname': 'display_name',
+      'display_name': 'display_name', 'nombre': 'display_name', 'fullname': 'display_name',
+      'pass': 'password', 'pwd': 'password', 'passwd': 'password', 'contraseña': 'password', 'contrasena': 'password',
+      'user_role': 'role', 'type': 'role', 'account_type': 'role', 'rol': 'role', 'user_type': 'role',
     };
     return aliases[h] || h;
   };
@@ -108,10 +110,10 @@ export function BulkImportDialog({ open, onOpenChange, isPlatformAdmin, schoolId
     reader.onload = (evt) => {
       try {
         const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array' });
+        const workbook = XLSX.read(data, { type: 'array', raw: true });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
-        const rawData: Record<string, any>[] = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+        const rawData: Record<string, any>[] = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: true });
 
         if (rawData.length === 0) {
           setParseError('The file is empty. Please add user data.');
