@@ -251,7 +251,7 @@ export function BulkImportDialog({ open, onOpenChange, isPlatformAdmin, schoolId
             .join(' | ');
 
           setParseError(`Couldn't detect required columns (email, password, role) in any sheet. Detected headers preview: ${previewBySheet}. Download the template for the recommended format.`);
-          setShowFormatHelp(true);
+          setShowFormatHelp(false);
           return;
         }
 
@@ -295,7 +295,7 @@ export function BulkImportDialog({ open, onOpenChange, isPlatformAdmin, schoolId
 
         if (!parsed.length) {
           setParseError('No user rows found under the header row. Download the template and fill at least one row.');
-          setShowFormatHelp(true);
+          setShowFormatHelp(false);
           return;
         }
 
@@ -323,14 +323,14 @@ export function BulkImportDialog({ open, onOpenChange, isPlatformAdmin, schoolId
             .map((u) => `Row ${u.rowNumber}: ${u.errors.join(', ')}`)
             .join(' | ');
           setParseError(`All rows have validation errors. ${exampleIssues}. Recommended columns: ${ALL_COLUMNS.join(', ')}.`);
-          setShowFormatHelp(true);
+          setShowFormatHelp(false);
           return;
         }
 
         setShowFormatHelp(false);
       } catch (err: any) {
         setParseError(`Could not parse file: ${err.message}. Make sure it's a valid Excel or CSV file.`);
-        setShowFormatHelp(true);
+        setShowFormatHelp(false);
       }
     };
     reader.readAsArrayBuffer(file);
