@@ -170,6 +170,15 @@ export function BulkImportDialog({ open, onOpenChange, isPlatformAdmin, schoolId
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const isExcelLockFile = /^~\$/.test(file.name);
+    if (isExcelLockFile) {
+      setParseError('You selected an Excel temporary lock file (starts with "~$"). Please upload the real spreadsheet file instead.');
+      setParsedUsers([]);
+      setFileName(file.name);
+      setShowFormatHelp(false);
+      return;
+    }
+
     setParseError(null);
     setParsedUsers([]);
     setFileName(file.name);
