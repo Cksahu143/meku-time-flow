@@ -123,7 +123,7 @@ export const GroupsView = () => {
       .from('profiles')
       .select('display_name, username, email, avatar_url')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
 
     if (data) {
       setSelectedConversation({
