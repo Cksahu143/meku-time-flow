@@ -45,11 +45,11 @@ export const useResources = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
 
-    const { data, error } = await supabase
-      .from('resources')
+    const { data, error } = await (supabase
+      .from('resources' as any)
       .select('*')
       .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false }) as any);
 
     if (error) {
       console.error('Error fetching resources:', error);
@@ -104,7 +104,7 @@ export const useResources = () => {
       fileSize = file.size;
     }
 
-    const { error } = await supabase.from('resources').insert({
+    const { error } = await (supabase.from('resources' as any) as any).insert({
       user_id: user.id,
       title: input.title,
       subject: input.subject,
@@ -141,10 +141,10 @@ export const useResources = () => {
       updates.file_size = file.size;
     }
 
-    const { error } = await supabase
-      .from('resources')
+    const { error } = await (supabase
+      .from('resources' as any)
       .update(updates)
-      .eq('id', id);
+      .eq('id', id) as any);
 
     if (error) {
       console.error('Update error:', error);
@@ -157,10 +157,10 @@ export const useResources = () => {
   };
 
   const deleteResource = async (id: string): Promise<boolean> => {
-    const { error } = await supabase
-      .from('resources')
+    const { error } = await (supabase
+      .from('resources' as any)
       .delete()
-      .eq('id', id);
+      .eq('id', id) as any);
 
     if (error) {
       console.error('Delete error:', error);
@@ -176,10 +176,10 @@ export const useResources = () => {
     const resource = resources.find(r => r.id === id);
     if (!resource) return;
 
-    const { error } = await supabase
-      .from('resources')
+    const { error } = await (supabase
+      .from('resources' as any)
       .update({ is_favorite: !resource.is_favorite })
-      .eq('id', id);
+      .eq('id', id) as any);
 
     if (error) {
       console.error('Toggle favorite error:', error);
@@ -195,10 +195,10 @@ export const useResources = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return false;
 
-    const { error } = await supabase
-      .from('resources')
+    const { error } = await (supabase
+      .from('resources' as any)
       .delete()
-      .eq('user_id', user.id);
+      .eq('user_id', user.id) as any);
 
     if (error) {
       console.error('Delete all error:', error);
