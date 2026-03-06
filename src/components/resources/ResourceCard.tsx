@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FileText, Link, Video, File, ExternalLink, Edit, Trash2, Type, Star, Download, Eye, FolderOpen } from 'lucide-react';
+import { FileText, Link, Video, File, Edit, Trash2, Type, Star, Download, Eye, FolderOpen, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Resource } from '@/types';
+import { DbResource } from '@/hooks/useResources';
 import {
   Tooltip,
   TooltipContent,
@@ -30,13 +30,13 @@ import {
 } from '@/components/ui/dialog';
 
 interface ResourceCardProps {
-  resource: Resource;
-  onEdit?: (resource: Resource) => void;
+  resource: DbResource;
+  onEdit?: (resource: DbResource) => void;
   onDelete?: (id: string) => void;
   onToggleFavorite?: (id: string) => void;
 }
 
-const typeIcons = {
+const typeIcons: Record<string, any> = {
   pdf: FileText,
   link: Link,
   video: Video,
@@ -44,7 +44,7 @@ const typeIcons = {
   text: Type,
 };
 
-const typeColors = {
+const typeColors: Record<string, string> = {
   pdf: 'bg-red-500/10 text-red-500 border-red-500/20',
   link: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
   video: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
@@ -58,11 +58,14 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
   onDelete,
   onToggleFavorite 
 }) => {
-  const Icon = typeIcons[resource.type];
+  const Icon = typeIcons[resource.resource_type] || File;
   const [showPreview, setShowPreview] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+
+  const isPDF = resource.resource_type === 'pdf' || resource.file_name?.toLowerCase().endsWith('.pdf');
 
   const handleOpen = () => {
-    if (resource.type === 'text' || isPDF) {
+    if (resource.resource_type === 'text' || isPDF) {
       setShowPreview(true);
       return;
     }
@@ -72,33 +75,33 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
   };
 
   const handleDownload = async () => {
-    if (resource.url) {
-      try {
-        const response = await fetch(resource.url);
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = resource.fileName || resource.title;
-        document.body.appendChild(link);
-        link.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(link);
-      } catch {
-        // Fallback: open in new tab if fetch fails (e.g. CORS)
-        window.open(resource.url, '_blank');
-      }
+    if (!resource.url) return;
+    setDownloading(true);
+    try {
+      const response = await fetch(resource.url);
+      if (!response.ok) throw new Error('Fetch failed');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = resource.file_name || resource.title;
+      document.body.appendChild(link);
+      link.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(link);
+    } catch {
+      window.open(resource.url, '_blank');
+    } finally {
+      setDownloading(false);
     }
   };
 
-  const formatFileSize = (bytes?: number) => {
+  const formatFileSize = (bytes?: number | null) => {
     if (!bytes) return null;
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
-
-  const isPDF = resource.type === 'pdf' || resource.fileName?.toLowerCase().endsWith('.pdf');
 
   return (
     <>
@@ -111,10 +114,8 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
         layout
       >
         <Card className="group relative overflow-hidden bg-card/80 backdrop-blur-sm border-border/50 hover:border-primary/30 hover:shadow-glow transition-all duration-300">
-          {/* Shimmer effect on top edge */}
           <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           
-          {/* Favorite star */}
           {onToggleFavorite && (
             <motion.button
               className="absolute top-3 right-3 z-10"
@@ -124,7 +125,7 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
             >
               <Star 
                 className={`h-5 w-5 transition-colors ${
-                  resource.isFavorite 
+                  resource.is_favorite 
                     ? 'fill-yellow-500 text-yellow-500' 
                     : 'text-muted-foreground hover:text-yellow-500'
                 }`} 
@@ -135,7 +136,7 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
           <CardContent className="p-4 pt-5">
             <div className="flex items-start gap-3">
               <motion.div 
-                className={`p-2.5 rounded-xl ${typeColors[resource.type]} transition-all duration-300`}
+                className={`p-2.5 rounded-xl ${typeColors[resource.resource_type] || 'bg-muted'} transition-all duration-300`}
                 whileHover={{ scale: 1.1, rotate: 5 }}
               >
                 <Icon className="h-5 w-5" />
@@ -145,12 +146,8 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
                   {resource.title}
                 </h3>
                 <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                  <Badge variant="secondary" className="text-xs">
-                    {resource.subject}
-                  </Badge>
-                  <Badge variant="outline" className="text-xs uppercase">
-                    {resource.type}
-                  </Badge>
+                  <Badge variant="secondary" className="text-xs">{resource.subject}</Badge>
+                  <Badge variant="outline" className="text-xs uppercase">{resource.resource_type}</Badge>
                   {resource.category && (
                     <Badge variant="outline" className="text-xs flex items-center gap-1">
                       <FolderOpen className="h-3 w-3" />
@@ -159,69 +156,47 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
                   )}
                 </div>
                 
-                {/* Chapter/Unit info */}
                 {resource.chapter && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Chapter: {resource.chapter}
-                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">Chapter: {resource.chapter}</p>
                 )}
                 
-                {/* File size */}
-                {resource.fileSize && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Size: {formatFileSize(resource.fileSize)}
-                  </p>
+                {resource.file_size && (
+                  <p className="text-xs text-muted-foreground mt-1">Size: {formatFileSize(resource.file_size)}</p>
                 )}
               </div>
             </div>
             
-            <p className="text-sm text-muted-foreground mt-3 line-clamp-2">
-              {resource.description}
-            </p>
+            <p className="text-sm text-muted-foreground mt-3 line-clamp-2">{resource.description}</p>
 
-            {/* Tags */}
             {resource.tags && resource.tags.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">
                 {resource.tags.slice(0, 3).map((tag) => (
-                  <Badge key={tag} variant="secondary" className="text-xs">
-                    #{tag}
-                  </Badge>
+                  <Badge key={tag} variant="secondary" className="text-xs">#{tag}</Badge>
                 ))}
                 {resource.tags.length > 3 && (
-                  <Badge variant="secondary" className="text-xs">
-                    +{resource.tags.length - 3}
-                  </Badge>
+                  <Badge variant="secondary" className="text-xs">+{resource.tags.length - 3}</Badge>
                 )}
               </div>
             )}
             
-            {/* Show content preview for text type */}
-            {resource.type === 'text' && resource.content && (
+            {resource.resource_type === 'text' && resource.content && (
               <motion.div 
                 className="mt-3 p-3 rounded-lg bg-background/50 border border-border/50"
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
               >
-                <p className="text-xs text-muted-foreground line-clamp-3 whitespace-pre-wrap">
-                  {resource.content}
-                </p>
+                <p className="text-xs text-muted-foreground line-clamp-3 whitespace-pre-wrap">{resource.content}</p>
               </motion.div>
             )}
           </CardContent>
           
           <CardFooter className="p-4 pt-0 flex gap-2">
-            {/* Action buttons */}
             <div className="flex gap-1 mr-auto">
               <TooltipProvider>
                 {onEdit && (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => onEdit(resource)}
-                      >
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(resource)}>
                         <Edit className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
@@ -234,11 +209,7 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                          >
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </AlertDialogTrigger>
@@ -265,17 +236,11 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
                   </AlertDialog>
                 )}
 
-                {/* Download button for files */}
-                {(resource.type === 'pdf' || resource.type === 'document') && resource.url && (
+                {(resource.resource_type === 'pdf' || resource.resource_type === 'document') && resource.url && (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={handleDownload}
-                      >
-                        <Download className="h-4 w-4" />
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleDownload} disabled={downloading}>
+                        {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Download</TooltipContent>
@@ -284,34 +249,18 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
               </TooltipProvider>
             </div>
 
-            {/* Main action button */}
-            {resource.type !== 'text' && resource.url ? (
-              <Button 
-                onClick={handleOpen} 
-                className="gap-2 group/btn flex-1"
-                variant="outline"
-                size="sm"
-              >
+            {resource.resource_type !== 'text' && resource.url ? (
+              <Button onClick={handleOpen} className="gap-2 group/btn flex-1" variant="outline" size="sm">
                 <Eye className="h-4 w-4 group-hover/btn:scale-110 transition-transform" />
                 {isPDF ? 'Preview PDF' : 'Open'}
               </Button>
-            ) : resource.type === 'text' ? (
-              <Button 
-                onClick={() => setShowPreview(true)} 
-                className="gap-2 flex-1"
-                variant="outline"
-                size="sm"
-              >
+            ) : resource.resource_type === 'text' ? (
+              <Button onClick={() => setShowPreview(true)} className="gap-2 flex-1" variant="outline" size="sm">
                 <Eye className="h-4 w-4" />
                 View Content
               </Button>
             ) : (
-              <Button 
-                disabled
-                className="gap-2 opacity-50 flex-1"
-                variant="outline"
-                size="sm"
-              >
+              <Button disabled className="gap-2 opacity-50 flex-1" variant="outline" size="sm">
                 No URL Available
               </Button>
             )}
@@ -319,7 +268,6 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
         </Card>
       </motion.div>
 
-      {/* Content Preview Dialog */}
       <Dialog open={showPreview} onOpenChange={setShowPreview}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
@@ -329,11 +277,9 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
             </DialogTitle>
           </DialogHeader>
           <div className="mt-4">
-            {resource.type === 'text' && resource.content ? (
+            {resource.resource_type === 'text' && resource.content ? (
               <div className="prose prose-sm dark:prose-invert max-w-none">
-                <pre className="whitespace-pre-wrap text-sm bg-muted/50 p-4 rounded-lg">
-                  {resource.content}
-                </pre>
+                <pre className="whitespace-pre-wrap text-sm bg-muted/50 p-4 rounded-lg">{resource.content}</pre>
               </div>
             ) : isPDF && resource.url ? (
               <div className="aspect-[8.5/11] w-full">

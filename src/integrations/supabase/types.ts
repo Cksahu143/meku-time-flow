@@ -1012,6 +1012,63 @@ export type Database = {
         }
         Relationships: []
       }
+      resources: {
+        Row: {
+          category: string | null
+          chapter: string | null
+          content: string | null
+          created_at: string
+          description: string
+          file_name: string | null
+          file_size: number | null
+          id: string
+          is_favorite: boolean
+          resource_type: string
+          subject: string
+          tags: string[] | null
+          title: string
+          updated_at: string
+          url: string | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          chapter?: string | null
+          content?: string | null
+          created_at?: string
+          description?: string
+          file_name?: string | null
+          file_size?: number | null
+          id?: string
+          is_favorite?: boolean
+          resource_type?: string
+          subject: string
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          url?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          chapter?: string | null
+          content?: string | null
+          created_at?: string
+          description?: string
+          file_name?: string | null
+          file_size?: number | null
+          id?: string
+          is_favorite?: boolean
+          resource_type?: string
+          subject?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          url?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       role_permissions: {
         Row: {
           created_at: string

@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BookOpen, Trash2, AlertTriangle, Star, Tag, Filter } from 'lucide-react';
+import { BookOpen, Trash2, AlertTriangle, Star, Tag, Filter, Loader2 } from 'lucide-react';
 import { ResourceCard } from '@/components/resources/ResourceCard';
 import { FiltersBar } from '@/components/resources/FiltersBar';
 import { AddResourceModal } from '@/components/resources/AddResourceModal';
 import { EditResourceModal } from '@/components/resources/EditResourceModal';
-import { Resource, RESOURCE_CATEGORIES } from '@/types';
-import { PageTransition, StaggerContainer, StaggerItem } from '@/components/motion/PageTransition';
+import { RESOURCE_CATEGORIES } from '@/types';
+import { PageTransition } from '@/components/motion/PageTransition';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,112 +22,28 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useResources, DbResource, ResourceInput } from '@/hooks/useResources';
 
 const SUBJECTS = ['Mathematics', 'Physics', 'English', 'History', 'Chemistry', 'Biology'];
-const STORAGE_KEY = 'edas_resources';
-
-const DEFAULT_RESOURCES: Resource[] = [
-  {
-    id: '1',
-    title: 'Algebra Formulas Cheat Sheet',
-    subject: 'Mathematics',
-    type: 'pdf',
-    description: 'Complete collection of algebra formulas including quadratic equations.',
-    url: 'https://example.com/algebra.pdf',
-    category: 'Study Guides',
-    tags: ['formulas', 'algebra', 'cheat-sheet'],
-    isFavorite: true,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    title: 'Physics Notes - Mechanics',
-    subject: 'Physics',
-    type: 'link',
-    description: 'Comprehensive notes covering Newton\'s laws, motion, and forces.',
-    url: 'https://example.com/physics-notes',
-    category: 'Notes',
-    tags: ['mechanics', 'newton', 'forces'],
-    isFavorite: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: '3',
-    title: 'English Literature Summary',
-    subject: 'English',
-    type: 'pdf',
-    description: 'Summary of major literary works including Shakespeare and Dickens.',
-    url: 'https://example.com/literature.pdf',
-    category: 'Notes',
-    tags: ['literature', 'shakespeare'],
-    isFavorite: true,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: '4',
-    title: 'History Chapter 3 - World War II',
-    subject: 'History',
-    type: 'video',
-    description: 'Video lecture covering the causes and events of World War II.',
-    url: 'https://example.com/history-ww2',
-    category: 'Lectures',
-    tags: ['ww2', 'history', 'video'],
-    isFavorite: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: '5',
-    title: 'Chemistry Lab Manual',
-    subject: 'Chemistry',
-    type: 'document',
-    description: 'Step-by-step guide for common chemistry experiments.',
-    url: 'https://example.com/chem-lab.docx',
-    category: 'Reference',
-    tags: ['lab', 'experiments', 'safety'],
-    isFavorite: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: '6',
-    title: 'Biology Cell Structure Guide',
-    subject: 'Biology',
-    type: 'pdf',
-    description: 'Detailed diagrams and explanations of cell organelles.',
-    url: 'https://example.com/biology-cells.pdf',
-    category: 'Study Guides',
-    tags: ['cells', 'biology', 'organelles'],
-    isFavorite: true,
-    createdAt: new Date().toISOString(),
-  },
-];
 
 export const ResourcesView: React.FC = () => {
-  const [resources, setResources] = useState<Resource[]>([]);
+  const {
+    resources,
+    loading,
+    addResource,
+    updateResource,
+    deleteResource,
+    toggleFavorite,
+    deleteAllResources,
+  } = useResources();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [activeTab, setActiveTab] = useState('all');
-  const [editingResource, setEditingResource] = useState<Resource | null>(null);
+  const [editingResource, setEditingResource] = useState<DbResource | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const { toast } = useToast();
-
-  // Load resources from localStorage on mount
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      setResources(JSON.parse(stored));
-    } else {
-      setResources(DEFAULT_RESOURCES);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_RESOURCES));
-    }
-  }, []);
-
-  // Save to localStorage whenever resources change
-  useEffect(() => {
-    if (resources.length > 0 || localStorage.getItem(STORAGE_KEY)) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(resources));
-    }
-  }, [resources]);
 
   const filteredResources = resources.filter((resource) => {
     const matchesSearch = resource.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -135,63 +51,58 @@ export const ResourcesView: React.FC = () => {
       resource.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesSubject = selectedSubject === 'all' || resource.subject === selectedSubject;
     const matchesCategory = selectedCategory === 'all' || resource.category === selectedCategory;
-    const matchesTab = activeTab === 'all' || (activeTab === 'favorites' && resource.isFavorite);
+    const matchesTab = activeTab === 'all' || (activeTab === 'favorites' && resource.is_favorite);
     return matchesSearch && matchesSubject && matchesCategory && matchesTab;
   });
 
-  const favoriteCount = resources.filter(r => r.isFavorite).length;
+  const favoriteCount = resources.filter(r => r.is_favorite).length;
 
-  const handleAddResource = (newResource: Omit<Resource, 'id'>) => {
-    const resource: Resource = {
-      ...newResource,
-      id: Date.now().toString(),
-    };
-    setResources((prev) => [resource, ...prev]);
-    toast({
-      title: 'Resource added',
-      description: 'Your resource has been saved.',
-    });
+  const handleAddResource = async (input: ResourceInput, file?: File | null) => {
+    const success = await addResource(input, file);
+    if (success) {
+      toast({ title: 'Resource added', description: 'Your resource has been saved.' });
+    }
   };
 
-  const handleEditResource = (resource: Resource) => {
+  const handleEditResource = (resource: DbResource) => {
     setEditingResource(resource);
     setEditModalOpen(true);
   };
 
-  const handleSaveResource = (updatedResource: Resource) => {
-    setResources((prev) =>
-      prev.map((r) => (r.id === updatedResource.id ? updatedResource : r))
-    );
-    toast({
-      title: 'Resource updated',
-      description: 'Your changes have been saved.',
-    });
+  const handleSaveResource = async (id: string, input: Partial<ResourceInput>, file?: File | null) => {
+    const success = await updateResource(id, input, file);
+    if (success) {
+      toast({ title: 'Resource updated', description: 'Your changes have been saved.' });
+    }
   };
 
-  const handleDeleteResource = (id: string) => {
-    setResources((prev) => prev.filter((r) => r.id !== id));
-    toast({
-      title: 'Resource deleted',
-      description: 'The resource has been removed.',
-    });
+  const handleDeleteResource = async (id: string) => {
+    const success = await deleteResource(id);
+    if (success) {
+      toast({ title: 'Resource deleted', description: 'The resource has been removed.' });
+    }
   };
 
   const handleToggleFavorite = (id: string) => {
-    setResources((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, isFavorite: !r.isFavorite } : r))
-    );
+    toggleFavorite(id);
   };
 
-  const handleDeleteAllResources = () => {
-    setResources([]);
-    localStorage.removeItem(STORAGE_KEY);
-    toast({
-      title: 'All resources deleted',
-      description: 'All resources have been removed.',
-    });
+  const handleDeleteAllResources = async () => {
+    const success = await deleteAllResources();
+    if (success) {
+      toast({ title: 'All resources deleted', description: 'All resources have been removed.' });
+    }
   };
 
   const allTags = [...new Set(resources.flatMap(r => r.tags || []))];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <PageTransition className="p-4 md:p-6 max-w-7xl mx-auto">
@@ -253,7 +164,7 @@ export const ResourcesView: React.FC = () => {
         </div>
       </motion.div>
 
-      {/* Tabs for All / Favorites */}
+      {/* Tabs */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -275,12 +186,7 @@ export const ResourcesView: React.FC = () => {
       </motion.div>
 
       {/* Filters */}
-      <motion.div 
-        className="mb-4"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-      >
+      <motion.div className="mb-4" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
         <FiltersBar
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
@@ -291,12 +197,7 @@ export const ResourcesView: React.FC = () => {
       </motion.div>
 
       {/* Category Filter */}
-      <motion.div 
-        className="flex flex-wrap gap-2 mb-6"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15 }}
-      >
+      <motion.div className="flex flex-wrap gap-2 mb-6" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
         <Badge
           variant={selectedCategory === 'all' ? 'default' : 'outline'}
           className="cursor-pointer transition-all hover:scale-105"
@@ -319,12 +220,7 @@ export const ResourcesView: React.FC = () => {
 
       {/* Tags */}
       {allTags.length > 0 && (
-        <motion.div 
-          className="flex flex-wrap gap-1 mb-6"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
+        <motion.div className="flex flex-wrap gap-1 mb-6" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <span className="text-xs text-muted-foreground flex items-center gap-1 mr-2">
             <Tag className="h-3 w-3" />
             Tags:
@@ -340,9 +236,7 @@ export const ResourcesView: React.FC = () => {
             </Badge>
           ))}
           {allTags.length > 10 && (
-            <Badge variant="secondary" className="text-xs">
-              +{allTags.length - 10} more
-            </Badge>
+            <Badge variant="secondary" className="text-xs">+{allTags.length - 10} more</Badge>
           )}
         </motion.div>
       )}
@@ -350,16 +244,8 @@ export const ResourcesView: React.FC = () => {
       {/* Resources Grid */}
       <AnimatePresence mode="popLayout">
         {filteredResources.length === 0 ? (
-          <motion.div 
-            className="text-center py-16"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-          >
-            <motion.div
-              animate={{ y: [0, -10, 0] }}
-              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-            >
+          <motion.div className="text-center py-16" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}>
+            <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}>
               {activeTab === 'favorites' ? (
                 <Star className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
               ) : (
@@ -395,14 +281,8 @@ export const ResourcesView: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Resource count */}
       {filteredResources.length > 0 && (
-        <motion.p 
-          className="text-sm text-muted-foreground text-center mt-6"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-        >
+        <motion.p className="text-sm text-muted-foreground text-center mt-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
           Showing {filteredResources.length} of {resources.length} resources
         </motion.p>
       )}
