@@ -62,7 +62,7 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
   const [showPreview, setShowPreview] = useState(false);
 
   const handleOpen = () => {
-    if (resource.type === 'text') {
+    if (resource.type === 'text' || isPDF) {
       setShowPreview(true);
       return;
     }
@@ -71,14 +71,23 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
     }
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (resource.url) {
-      const link = document.createElement('a');
-      link.href = resource.url;
-      link.download = resource.fileName || resource.title;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      try {
+        const response = await fetch(resource.url);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = resource.fileName || resource.title;
+        document.body.appendChild(link);
+        link.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(link);
+      } catch {
+        // Fallback: open in new tab if fetch fails (e.g. CORS)
+        window.open(resource.url, '_blank');
+      }
     }
   };
 
