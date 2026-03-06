@@ -73,7 +73,7 @@ export const PrivacySettings: React.FC = () => {
         .from('profiles')
         .select('email_visible, is_public')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') throw error;
 
