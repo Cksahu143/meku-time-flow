@@ -116,7 +116,7 @@ export function FeatureTogglesView() {
         .from('schools')
         .select('features_enabled')
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
 

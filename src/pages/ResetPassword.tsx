@@ -36,7 +36,7 @@ const ResetPassword = () => {
         .from('profiles')
         .select('display_name, username')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
       
       if (profile) {
         setDisplayName(profile.display_name || profile.username || email);

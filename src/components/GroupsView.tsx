@@ -60,7 +60,7 @@ export const GroupsView = () => {
         .from('profiles')
         .select('is_public')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       setIsPublicProfile(data?.is_public ?? false);
     };
