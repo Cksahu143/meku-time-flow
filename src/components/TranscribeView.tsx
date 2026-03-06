@@ -41,7 +41,7 @@ import {
 } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-const STORAGE_KEY = 'edas_resources';
+// Resources now saved to DB via supabase
 
 interface TranscriptData {
   transcript?: string;
@@ -385,35 +385,36 @@ export const TranscribeView: React.FC = () => {
     setIsSaving(true);
     
     try {
-      const existingResources = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
       const languageInfo = transcriptData.wasTranslated 
         ? `Detected: ${transcriptData.languageName || transcriptData.detectedLanguage} → Translated to English`
         : transcriptData.detectedLanguage 
           ? `Language: ${transcriptData.languageName || transcriptData.detectedLanguage}`
           : '';
 
-      const newResource = {
-        id: crypto.randomUUID(),
+      const contentText = [
+        languageInfo && `> ${languageInfo}\n`,
+        transcriptData.transcript && `## Transcript (English)\n\n${transcriptData.transcript}`,
+        transcriptData.wasTranslated && transcriptData.originalText && `## Original Text (${transcriptData.languageName || transcriptData.detectedLanguage})\n\n${transcriptData.originalText}`,
+        transcriptData.notes && `## Notes\n\n${transcriptData.notes}`,
+        transcriptData.summary && `## Summary\n\n${transcriptData.summary}`,
+      ].filter(Boolean).join('\n\n---\n\n');
+
+      const { error } = await (supabase.from('resources' as any) as any).insert({
+        user_id: user.id,
         title: resourceTitle || 'AI Transcription',
         subject: 'AI Transcription Notes',
-        type: 'text' as const,
+        resource_type: 'text',
         description: transcriptData.summary || `AI-generated transcription${languageInfo ? ` (${languageInfo})` : ''}`,
-        content: [
-          languageInfo && `> ${languageInfo}\n`,
-          transcriptData.transcript && `## Transcript (English)\n\n${transcriptData.transcript}`,
-          transcriptData.wasTranslated && transcriptData.originalText && `## Original Text (${transcriptData.languageName || transcriptData.detectedLanguage})\n\n${transcriptData.originalText}`,
-          transcriptData.notes && `## Notes\n\n${transcriptData.notes}`,
-          transcriptData.summary && `## Summary\n\n${transcriptData.summary}`,
-        ].filter(Boolean).join('\n\n---\n\n'),
+        content: contentText,
         category: 'AI Transcription Notes',
         tags: ['AI Transcription', 'Auto-generated', ...(transcriptData.wasTranslated ? ['Translated'] : []), ...(transcriptData.languageName ? [transcriptData.languageName] : [])],
-        isFavorite: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      
-      localStorage.setItem(STORAGE_KEY, JSON.stringify([newResource, ...existingResources]));
+        is_favorite: false,
+      });
+
+      if (error) throw error;
       
       toast({
         title: 'Saved Successfully',
