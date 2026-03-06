@@ -54,7 +54,7 @@ export const GroupInfoDialog = ({
       .from('profiles')
       .select('display_name, username, avatar_url')
       .eq('id', group.created_by)
-      .single();
+      .maybeSingle();
     
     if (data) setHostProfile(data);
   };

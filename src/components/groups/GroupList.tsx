@@ -38,7 +38,7 @@ export const GroupList = ({ groups, loading, selectedGroup, onSelectGroup, isDis
             .eq('group_id', group.id)
             .order('created_at', { ascending: false })
             .limit(1)
-            .single();
+            .maybeSingle();
 
           return {
             ...group,

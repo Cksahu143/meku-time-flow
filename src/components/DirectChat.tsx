@@ -108,7 +108,7 @@ export const DirectChat = ({
       .from('profiles')
       .select('last_seen')
       .eq('id', otherUserId)
-      .single();
+      .maybeSingle();
     
     if (data) setOtherUserLastSeen(data.last_seen);
   };

@@ -46,7 +46,7 @@ export const StartChatDialog = ({ open, onOpenChange, onChatCreated }: StartChat
         .from('profiles')
         .select('id, display_name, username, email, avatar_url')
         .eq('email', email.trim().toLowerCase())
-        .single();
+        .maybeSingle();
 
       if (error || !profile) {
         toast({

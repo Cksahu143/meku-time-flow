@@ -62,7 +62,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, gradient,
             </div>
           </div>
           
-          {/* Sparkline */}
+          {/* Sparkline - stable paths */}
           <div className="mt-4 h-8">
             <svg viewBox="0 0 100 30" className="w-full h-full overflow-visible">
               <defs>
@@ -72,14 +72,14 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, gradient,
                 </linearGradient>
               </defs>
               <path
-                d={`M 0 25 Q 15 ${20 - Math.random() * 10} 25 ${15 + Math.random() * 5} T 50 ${12 + Math.random() * 5} T 75 ${8 + Math.random() * 5} T 100 ${5 + Math.random() * 3}`}
+                d="M 0 25 Q 15 18 25 16 T 50 13 T 75 9 T 100 6"
                 fill="none"
                 stroke="hsl(var(--primary))"
                 strokeWidth="2"
                 strokeLinecap="round"
               />
               <path
-                d={`M 0 25 Q 15 ${20 - Math.random() * 10} 25 ${15 + Math.random() * 5} T 50 ${12 + Math.random() * 5} T 75 ${8 + Math.random() * 5} T 100 ${5 + Math.random() * 3} V 30 H 0 Z`}
+                d="M 0 25 Q 15 18 25 16 T 50 13 T 75 9 T 100 6 V 30 H 0 Z"
                 fill={`url(#grad-${title.replace(/\s/g, '')})`}
               />
             </svg>
@@ -114,7 +114,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         .from('profiles')
         .select('display_name, username')
         .eq('id', session.user.id)
-        .single();
+        .maybeSingle();
 
       if (profile) setUserName(profile.display_name || profile.username || 'Student');
 

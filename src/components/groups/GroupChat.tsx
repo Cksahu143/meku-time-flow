@@ -117,7 +117,7 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup }:
       .select('role')
       .eq('group_id', group.id)
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
     setIsAdmin(data?.role === 'admin');
   };

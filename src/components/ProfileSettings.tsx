@@ -42,7 +42,7 @@ export const ProfileSettings: React.FC = () => {
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') throw error;
 

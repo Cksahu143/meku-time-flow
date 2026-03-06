@@ -37,7 +37,7 @@ export const TopHeader: React.FC = () => {
         .from('profiles')
         .select('avatar_url, display_name, username')
         .eq('id', session.user.id)
-        .single();
+        .maybeSingle();
       if (data) setProfile(data);
     } catch (error) {
       console.error('Error loading profile:', error);

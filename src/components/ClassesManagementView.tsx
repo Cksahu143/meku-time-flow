@@ -365,7 +365,7 @@ export function ClassesManagementView() {
         .select('id, class_id')
         .eq('student_id', studentId)
         .eq('status', 'active')
-        .single();
+        .maybeSingle();
 
       if (existing) {
         const existingClass = classes.find(c => c.id === existing.class_id);

@@ -27,7 +27,7 @@ export const TypingIndicator = ({ groupId }: TypingIndicatorProps) => {
                 .from('profiles')
                 .select('username, display_name')
                 .eq('id', data.user_id)
-                .single();
+                .maybeSingle();
 
               if (profile) {
                 setTypingUsers(prev => [
@@ -40,7 +40,7 @@ export const TypingIndicator = ({ groupId }: TypingIndicatorProps) => {
                 .from('profiles')
                 .select('username, display_name')
                 .eq('id', data.user_id)
-                .single();
+                .maybeSingle();
 
               if (profile) {
                 setTypingUsers(prev =>
