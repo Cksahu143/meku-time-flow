@@ -65,7 +65,7 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
   const isPDF = resource.resource_type === 'pdf' || resource.file_name?.toLowerCase().endsWith('.pdf');
 
   const handleOpen = () => {
-    if (resource.resource_type === 'text' || isPDF) {
+    if (resource.resource_type === 'text') {
       setShowPreview(true);
       return;
     }
@@ -252,7 +252,7 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
             {resource.resource_type !== 'text' && resource.url ? (
               <Button onClick={handleOpen} className="gap-2 group/btn flex-1" variant="outline" size="sm">
                 <Eye className="h-4 w-4 group-hover/btn:scale-110 transition-transform" />
-                {isPDF ? 'Preview PDF' : 'Open'}
+                Open
               </Button>
             ) : resource.resource_type === 'text' ? (
               <Button onClick={() => setShowPreview(true)} className="gap-2 flex-1" variant="outline" size="sm">
@@ -280,14 +280,6 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
             {resource.resource_type === 'text' && resource.content ? (
               <div className="prose prose-sm dark:prose-invert max-w-none">
                 <pre className="whitespace-pre-wrap text-sm bg-muted/50 p-4 rounded-lg">{resource.content}</pre>
-              </div>
-            ) : isPDF && resource.url ? (
-              <div className="aspect-[8.5/11] w-full">
-                <iframe
-                  src={`${resource.url}#view=FitH`}
-                  className="w-full h-full rounded-lg border"
-                  title={resource.title}
-                />
               </div>
             ) : (
               <p className="text-muted-foreground">No preview available</p>
