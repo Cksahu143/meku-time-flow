@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AnimatePresence } from 'framer-motion';
@@ -24,13 +24,16 @@ import { ClassesManagementView } from '@/components/ClassesManagementView';
 import { AboutView } from '@/components/AboutView';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { PageTransition } from '@/components/motion/PageTransition';
+import { FeatureDetailView } from '@/components/search/FeatureDetailView';
 import { ViewType } from '@/types';
 import { useRBACContext } from '@/contexts/RBACContext';
+import type { FeatureItem } from '@/data/featureRegistry';
 
 const Index = () => {
   const [currentView, setCurrentView] = useState<ViewType>('dashboard');
   const [loading, setLoading] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [featureDetail, setFeatureDetail] = useState<FeatureItem | null>(null);
   const navigate = useNavigate();
   const { canAccessView, loading: rbacLoading } = useRBACContext();
 
@@ -51,11 +54,34 @@ const Index = () => {
 
   const handleNavigate = (view: string) => {
     const viewType = view as ViewType;
-    if (canAccessView(viewType)) setCurrentView(viewType);
+    if (canAccessView(viewType)) {
+      setFeatureDetail(null);
+      setCurrentView(viewType);
+    }
   };
 
   const handleViewChange = (view: ViewType) => {
-    if (canAccessView(view)) setCurrentView(view);
+    if (canAccessView(view)) {
+      setFeatureDetail(null);
+      setCurrentView(view);
+    }
+  };
+
+  const handleSelectFeature = (feature: FeatureItem) => {
+    if (feature.route) {
+      navigate(feature.route);
+    } else {
+      // Show the feature detail page
+      setFeatureDetail(feature);
+    }
+  };
+
+  const handleGoToFeature = () => {
+    if (featureDetail?.viewTarget) {
+      handleViewChange(featureDetail.viewTarget);
+    } else if (featureDetail?.route) {
+      navigate(featureDetail.route);
+    }
   };
 
   return (
@@ -77,32 +103,44 @@ const Index = () => {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Header */}
         <div className="hidden md:block">
-          <TopHeader />
+          <TopHeader onSelectFeature={handleSelectFeature} />
         </div>
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden pt-14 md:pt-0 bg-background">
           <AnimatePresence mode="wait">
-            <PageTransition key={currentView}>
-              <ErrorBoundary>
-                {currentView === 'dashboard' && <DashboardView onNavigate={handleNavigate} />}
-                {currentView === 'about' && <AboutView onNavigate={handleNavigate} />}
-                {currentView === 'timetable' && <TimetableView />}
-                {currentView === 'calendar' && <CalendarView />}
-                {currentView === 'todo' && <TodoView />}
-                {currentView === 'pomodoro' && <PomodoroView />}
-                {currentView === 'groups' && <GroupsView />}
-                {currentView === 'resources' && <ResourcesView />}
-                {currentView === 'transcribe' && <TranscribeView />}
-                {currentView === 'announcements' && <AnnouncementsView />}
-                {currentView === 'attendance' && <AttendanceView />}
-                {currentView === 'analytics' && <AnalyticsView />}
-                {currentView === 'classes-management' && <ClassesManagementView />}
-                {currentView === 'role-management' && <RoleManagementView />}
-                {currentView === 'schools-management' && <SchoolsManagementView />}
-                {currentView === 'feature-toggles' && <FeatureTogglesView />}
-              </ErrorBoundary>
-            </PageTransition>
+            {featureDetail ? (
+              <PageTransition key="feature-detail">
+                <ErrorBoundary>
+                  <FeatureDetailView
+                    feature={featureDetail}
+                    onBack={() => setFeatureDetail(null)}
+                    onGoToFeature={handleGoToFeature}
+                  />
+                </ErrorBoundary>
+              </PageTransition>
+            ) : (
+              <PageTransition key={currentView}>
+                <ErrorBoundary>
+                  {currentView === 'dashboard' && <DashboardView onNavigate={handleNavigate} />}
+                  {currentView === 'about' && <AboutView onNavigate={handleNavigate} />}
+                  {currentView === 'timetable' && <TimetableView />}
+                  {currentView === 'calendar' && <CalendarView />}
+                  {currentView === 'todo' && <TodoView />}
+                  {currentView === 'pomodoro' && <PomodoroView />}
+                  {currentView === 'groups' && <GroupsView />}
+                  {currentView === 'resources' && <ResourcesView />}
+                  {currentView === 'transcribe' && <TranscribeView />}
+                  {currentView === 'announcements' && <AnnouncementsView />}
+                  {currentView === 'attendance' && <AttendanceView />}
+                  {currentView === 'analytics' && <AnalyticsView />}
+                  {currentView === 'classes-management' && <ClassesManagementView />}
+                  {currentView === 'role-management' && <RoleManagementView />}
+                  {currentView === 'schools-management' && <SchoolsManagementView />}
+                  {currentView === 'feature-toggles' && <FeatureTogglesView />}
+                </ErrorBoundary>
+              </PageTransition>
+            )}
           </AnimatePresence>
         </main>
       </div>
