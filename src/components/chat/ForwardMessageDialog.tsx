@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Search, Send, Check, Loader2 } from 'lucide-react';
+import { Search, Send, Check, Loader2, Image, FileText, Mic } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Message } from '@/types';
 import { cn } from '@/lib/utils';
@@ -25,10 +25,7 @@ interface ForwardMessageDialogProps {
 }
 
 export const ForwardMessageDialog: React.FC<ForwardMessageDialogProps> = ({
-  open,
-  onOpenChange,
-  message,
-  currentUserId
+  open, onOpenChange, message, currentUserId
 }) => {
   const [targets, setTargets] = useState<ForwardTarget[]>([]);
   const [selectedTargets, setSelectedTargets] = useState<Set<string>>(new Set());
@@ -38,16 +35,13 @@ export const ForwardMessageDialog: React.FC<ForwardMessageDialogProps> = ({
   const { toast } = useToast();
 
   useEffect(() => {
-    if (open) {
-      fetchTargets();
-    }
+    if (open) fetchTargets();
   }, [open]);
 
   const fetchTargets = async () => {
     setLoading(true);
     const allTargets: ForwardTarget[] = [];
 
-    // Fetch groups
     const { data: memberships } = await supabase
       .from('group_members')
       .select('group_id')
@@ -55,24 +49,19 @@ export const ForwardMessageDialog: React.FC<ForwardMessageDialogProps> = ({
 
     if (memberships) {
       const groupIds = memberships.map(m => m.group_id);
-      const { data: groups } = await supabase
-        .from('groups')
-        .select('id, name, avatar_url')
-        .in('id', groupIds);
-
-      if (groups) {
-        groups.forEach(g => {
-          allTargets.push({
-            id: g.id,
-            name: g.name,
-            avatar: g.avatar_url || undefined,
-            type: 'group'
+      if (groupIds.length > 0) {
+        const { data: groups } = await supabase
+          .from('groups')
+          .select('id, name, avatar_url')
+          .in('id', groupIds);
+        if (groups) {
+          groups.forEach(g => {
+            allTargets.push({ id: g.id, name: g.name, avatar: g.avatar_url || undefined, type: 'group' });
           });
-        });
+        }
       }
     }
 
-    // Fetch conversations
     const { data: conversations } = await supabase
       .from('conversations')
       .select('*')
@@ -86,7 +75,6 @@ export const ForwardMessageDialog: React.FC<ForwardMessageDialogProps> = ({
           .select('display_name, username, avatar_url')
           .eq('id', otherUserId)
           .maybeSingle();
-
         if (profile) {
           allTargets.push({
             id: conv.id,
@@ -105,45 +93,86 @@ export const ForwardMessageDialog: React.FC<ForwardMessageDialogProps> = ({
   const toggleTarget = (targetId: string) => {
     setSelectedTargets(prev => {
       const next = new Set(prev);
-      if (next.has(targetId)) {
-        next.delete(targetId);
-      } else {
-        next.add(targetId);
-      }
+      if (next.has(targetId)) next.delete(targetId);
+      else next.add(targetId);
       return next;
     });
   };
 
+  const getMessagePreview = () => {
+    if (!message) return '';
+    if (message.voice_url) return '🎤 Voice message';
+    if (message.file_url && message.file_type?.startsWith('image/')) return '📷 Photo';
+    if (message.file_url) return `📎 ${message.file_name || 'File'}`;
+    return message.content.length > 60 ? message.content.slice(0, 60) + '…' : message.content;
+  };
+
+  const getMessagePreviewIcon = () => {
+    if (!message) return null;
+    if (message.voice_url) return <Mic className="h-4 w-4 text-primary" />;
+    if (message.file_url && message.file_type?.startsWith('image/')) return <Image className="h-4 w-4 text-primary" />;
+    if (message.file_url) return <FileText className="h-4 w-4 text-primary" />;
+    return null;
+  };
+
   const handleForward = async () => {
     if (!message || selectedTargets.size === 0) return;
-
     setForwarding(true);
 
-    for (const targetId of selectedTargets) {
-      const target = targets.find(t => t.id === targetId);
-      if (!target) continue;
+    try {
+      for (const targetId of selectedTargets) {
+        const target = targets.find(t => t.id === targetId);
+        if (!target) continue;
 
-      const forwardedContent = `📨 Forwarded: ${message.content}`;
+        // Build the forwarded message data preserving all media fields
+        const baseContent = message.voice_url ? '🎤 Voice message' :
+          message.file_url ? (message.file_name || 'File') :
+          message.content;
+        const forwardedContent = `📨 Forwarded: ${baseContent}`;
 
-      if (target.type === 'group') {
-        await supabase.from('messages').insert({
-          group_id: targetId,
-          user_id: currentUserId,
-          content: forwardedContent
-        });
-      } else {
-        await supabase.from('direct_messages').insert({
-          conversation_id: targetId,
-          sender_id: currentUserId,
-          content: forwardedContent
-        });
+        if (target.type === 'group') {
+          await supabase.from('messages').insert([{
+            group_id: targetId,
+            user_id: currentUserId,
+            content: forwardedContent,
+            file_url: message.file_url ?? null,
+            file_name: message.file_name ?? null,
+            file_type: message.file_type ?? null,
+            file_size: message.file_size ?? null,
+            voice_url: message.voice_url ?? null,
+            voice_duration: message.voice_duration ?? null,
+            link_url: message.link_url ?? null,
+            link_title: message.link_title ?? null,
+            link_description: message.link_description ?? null,
+            link_image: message.link_image ?? null,
+          }]);
+        } else {
+          await supabase.from('direct_messages').insert([{
+            conversation_id: targetId,
+            sender_id: currentUserId,
+            content: forwardedContent,
+            file_url: message.file_url ?? null,
+            file_name: message.file_name ?? null,
+            file_type: message.file_type ?? null,
+            file_size: message.file_size ?? null,
+            voice_url: message.voice_url ?? null,
+            voice_duration: message.voice_duration ?? null,
+            link_url: message.link_url ?? null,
+            link_title: message.link_title ?? null,
+            link_description: message.link_description ?? null,
+            link_image: message.link_image ?? null,
+          }]);
+        }
       }
-    }
 
-    toast({ title: 'Success', description: `Message forwarded to ${selectedTargets.size} chat(s)` });
-    setSelectedTargets(new Set());
-    setForwarding(false);
-    onOpenChange(false);
+      toast({ title: 'Forwarded', description: `Message forwarded to ${selectedTargets.size} chat(s)` });
+      setSelectedTargets(new Set());
+      onOpenChange(false);
+    } catch (error: any) {
+      toast({ title: 'Error', description: 'Failed to forward message', variant: 'destructive' });
+    } finally {
+      setForwarding(false);
+    }
   };
 
   const filteredTargets = targets.filter(t =>
@@ -152,7 +181,7 @@ export const ForwardMessageDialog: React.FC<ForwardMessageDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md animate-scale-in">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Forward Message</DialogTitle>
         </DialogHeader>
@@ -164,14 +193,22 @@ export const ForwardMessageDialog: React.FC<ForwardMessageDialogProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search chats..."
-              className="pl-9"
+              className="pl-9 bg-muted/50 border-0 rounded-xl"
             />
           </div>
 
-          {/* Message Preview */}
+          {/* Message Preview - now shows media type */}
           {message && (
-            <div className="p-3 bg-muted rounded-lg">
-              <p className="text-sm line-clamp-2">{message.content}</p>
+            <div className="p-3 bg-muted/50 rounded-xl border border-border/50 flex items-center gap-3">
+              {message.file_url && message.file_type?.startsWith('image/') && (
+                <img src={message.file_url} alt="" className="h-12 w-12 rounded-lg object-cover flex-shrink-0" />
+              )}
+              {getMessagePreviewIcon() && !message.file_type?.startsWith('image/') && (
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  {getMessagePreviewIcon()}
+                </div>
+              )}
+              <p className="text-sm text-foreground line-clamp-2 flex-1">{getMessagePreview()}</p>
             </div>
           )}
 
@@ -183,31 +220,32 @@ export const ForwardMessageDialog: React.FC<ForwardMessageDialogProps> = ({
             ) : filteredTargets.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">No chats found</p>
             ) : (
-              <div className="space-y-1">
-                {filteredTargets.map((target, index) => (
+              <div className="space-y-0.5 px-1">
+                {filteredTargets.map((target) => (
                   <button
                     key={target.id}
                     onClick={() => toggleTarget(target.id)}
                     className={cn(
-                      'w-full flex items-center gap-3 p-2 rounded-lg transition-colors animate-fade-in',
+                      'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all',
                       selectedTargets.has(target.id)
-                        ? 'bg-primary/10 border border-primary/30'
-                        : 'hover:bg-muted'
+                        ? 'bg-primary/10'
+                        : 'hover:bg-muted/50'
                     )}
-                    style={{ animationDelay: `${index * 0.02}s` }}
                   >
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={target.avatar} />
-                      <AvatarFallback className="bg-primary text-primary-foreground">
+                      <AvatarFallback className="bg-primary/10 text-primary font-semibold">
                         {target.name.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 text-left">
-                      <p className="font-medium">{target.name}</p>
-                      <p className="text-xs text-muted-foreground capitalize">{target.type}</p>
+                      <p className="font-medium text-sm">{target.name}</p>
+                      <p className="text-[11px] text-muted-foreground capitalize">{target.type}</p>
                     </div>
                     {selectedTargets.has(target.id) && (
-                      <Check className="h-5 w-5 text-primary animate-scale-in" />
+                      <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                        <Check className="h-3.5 w-3.5 text-primary-foreground" />
+                      </div>
                     )}
                   </button>
                 ))}
@@ -216,20 +254,20 @@ export const ForwardMessageDialog: React.FC<ForwardMessageDialogProps> = ({
           </ScrollArea>
 
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl">
               Cancel
             </Button>
             <Button
               onClick={handleForward}
               disabled={selectedTargets.size === 0 || forwarding}
-              className="hover-scale"
+              className="rounded-xl"
             >
               {forwarding ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : (
                 <Send className="h-4 w-4 mr-2" />
               )}
-              Forward ({selectedTargets.size})
+              Forward {selectedTargets.size > 0 && `(${selectedTargets.size})`}
             </Button>
           </div>
         </div>
