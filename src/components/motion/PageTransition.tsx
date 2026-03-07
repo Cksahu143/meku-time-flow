@@ -9,18 +9,21 @@ interface PageTransitionProps {
 const pageVariants = {
   initial: {
     opacity: 0,
-    x: 20,
+    y: 12,
     scale: 0.98,
+    filter: 'blur(4px)',
   },
   animate: {
     opacity: 1,
-    x: 0,
+    y: 0,
     scale: 1,
+    filter: 'blur(0px)',
   },
   exit: {
     opacity: 0,
-    x: -20,
-    scale: 0.98,
+    y: -8,
+    scale: 0.99,
+    filter: 'blur(2px)',
   },
 };
 
@@ -34,8 +37,10 @@ export const PageTransition: React.FC<PageTransitionProps> = ({ children, classN
       exit="exit"
       transition={{
         type: 'spring',
-        stiffness: 260,
-        damping: 25,
+        stiffness: 280,
+        damping: 26,
+        mass: 0.8,
+        filter: { duration: 0.25 },
       }}
     >
       {children}
@@ -44,9 +49,10 @@ export const PageTransition: React.FC<PageTransitionProps> = ({ children, classN
 };
 
 // Staggered container for list items
-export const StaggerContainer: React.FC<{ children: React.ReactNode; className?: string }> = ({
+export const StaggerContainer: React.FC<{ children: React.ReactNode; className?: string; staggerDelay?: number }> = ({
   children,
   className,
+  staggerDelay = 0.06,
 }) => {
   return (
     <motion.div
@@ -56,7 +62,8 @@ export const StaggerContainer: React.FC<{ children: React.ReactNode; className?:
       variants={{
         visible: {
           transition: {
-            staggerChildren: 0.08,
+            staggerChildren: staggerDelay,
+            delayChildren: 0.1,
           },
         },
       }}
@@ -75,20 +82,63 @@ export const StaggerItem: React.FC<{ children: React.ReactNode; className?: stri
     <motion.div
       className={className}
       variants={{
-        hidden: { opacity: 0, y: 20, scale: 0.95 },
+        hidden: { opacity: 0, y: 16, scale: 0.96, filter: 'blur(3px)' },
         visible: {
           opacity: 1,
           y: 0,
           scale: 1,
+          filter: 'blur(0px)',
           transition: {
             type: 'spring',
-            stiffness: 300,
-            damping: 24,
+            stiffness: 320,
+            damping: 22,
+            filter: { duration: 0.2 },
           },
         },
       }}
     >
       {children}
     </motion.div>
+  );
+};
+
+// Fade-in section for lazy reveal on scroll
+export const FadeInSection: React.FC<{ children: React.ReactNode; className?: string; delay?: number }> = ({
+  children,
+  className,
+  delay = 0,
+}) => {
+  return (
+    <motion.div
+      className={className}
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-50px' }}
+      transition={{
+        delay,
+        duration: 0.5,
+        ease: [0.25, 0.46, 0.45, 0.94],
+      }}
+    >
+      {children}
+    </motion.div>
+  );
+};
+
+// Animated counter text
+export const AnimatedText: React.FC<{ children: React.ReactNode; className?: string; delay?: number }> = ({
+  children,
+  className,
+  delay = 0,
+}) => {
+  return (
+    <motion.span
+      className={className}
+      initial={{ opacity: 0, y: 8, filter: 'blur(4px)' }}
+      animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+      transition={{ delay, duration: 0.4, ease: 'easeOut' }}
+    >
+      {children}
+    </motion.span>
   );
 };
