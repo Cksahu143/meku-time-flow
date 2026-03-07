@@ -293,6 +293,15 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
           </div>
         </DialogContent>
       </Dialog>
+
+      {isPDF && resource.url && (
+        <PDFViewerDialog
+          open={showPdfViewer}
+          onOpenChange={setShowPdfViewer}
+          url={resource.url}
+          title={resource.title}
+        />
+      )}
     </>
   );
 };
