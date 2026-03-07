@@ -131,53 +131,37 @@ export const ForwardMessageDialog: React.FC<ForwardMessageDialogProps> = ({
         const forwardedContent = `📨 Forwarded: ${baseContent}`;
 
         if (target.type === 'group') {
-          const insertData: Record<string, any> = {
+          await supabase.from('messages').insert([{
             group_id: targetId,
             user_id: currentUserId,
             content: forwardedContent,
-          };
-          // Preserve media fields
-          if (message.file_url) {
-            insertData.file_url = message.file_url;
-            insertData.file_name = message.file_name;
-            insertData.file_type = message.file_type;
-            insertData.file_size = message.file_size;
-          }
-          if (message.voice_url) {
-            insertData.voice_url = message.voice_url;
-            insertData.voice_duration = message.voice_duration;
-          }
-          if (message.link_url) {
-            insertData.link_url = message.link_url;
-            insertData.link_title = message.link_title;
-            insertData.link_description = message.link_description;
-            insertData.link_image = message.link_image;
-          }
-          await supabase.from('messages').insert([insertData]);
+            file_url: message.file_url ?? null,
+            file_name: message.file_name ?? null,
+            file_type: message.file_type ?? null,
+            file_size: message.file_size ?? null,
+            voice_url: message.voice_url ?? null,
+            voice_duration: message.voice_duration ?? null,
+            link_url: message.link_url ?? null,
+            link_title: message.link_title ?? null,
+            link_description: message.link_description ?? null,
+            link_image: message.link_image ?? null,
+          }]);
         } else {
-          const insertData: Record<string, any> = {
+          await supabase.from('direct_messages').insert([{
             conversation_id: targetId,
             sender_id: currentUserId,
             content: forwardedContent,
-          };
-          // Preserve media fields
-          if (message.file_url) {
-            insertData.file_url = message.file_url;
-            insertData.file_name = message.file_name;
-            insertData.file_type = message.file_type;
-            insertData.file_size = message.file_size;
-          }
-          if (message.voice_url) {
-            insertData.voice_url = message.voice_url;
-            insertData.voice_duration = message.voice_duration;
-          }
-          if (message.link_url) {
-            insertData.link_url = message.link_url;
-            insertData.link_title = message.link_title;
-            insertData.link_description = message.link_description;
-            insertData.link_image = message.link_image;
-          }
-          await supabase.from('direct_messages').insert([insertData]);
+            file_url: message.file_url ?? null,
+            file_name: message.file_name ?? null,
+            file_type: message.file_type ?? null,
+            file_size: message.file_size ?? null,
+            voice_url: message.voice_url ?? null,
+            voice_duration: message.voice_duration ?? null,
+            link_url: message.link_url ?? null,
+            link_title: message.link_title ?? null,
+            link_description: message.link_description ?? null,
+            link_image: message.link_image ?? null,
+          }]);
         }
       }
 
