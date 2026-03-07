@@ -58,22 +58,25 @@ export const TopHeader: React.FC = () => {
   return (
     <>
       <motion.header
-        className="h-16 border-b border-border/40 bg-card/60 backdrop-blur-xl flex items-center justify-between px-6 gap-4 sticky top-0 z-30"
+        className="h-16 border-b border-border/30 bg-card/50 backdrop-blur-2xl flex items-center justify-between px-6 gap-4 sticky top-0 z-30"
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
       >
+        {/* Subtle top highlight */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/10 to-transparent" />
+
         {/* Search */}
         <div className="flex-1 max-w-md">
           <div className="relative group">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
             <Input
               placeholder="Search anything..."
-              className="pl-10 pr-20 h-10 bg-secondary/40 border-border/30 rounded-xl focus:bg-card focus:shadow-md focus:border-primary/30 transition-all"
+              className="pl-10 pr-20 h-10 bg-secondary/30 border-border/20 rounded-xl focus:bg-card focus:shadow-dreamy focus:border-primary/20 transition-all placeholder:text-muted-foreground/50"
             />
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden md:flex items-center gap-1 text-muted-foreground/50">
-              <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-muted rounded border border-border/50">⌘</kbd>
-              <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-muted rounded border border-border/50">K</kbd>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden md:flex items-center gap-1 text-muted-foreground/40">
+              <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-muted/50 rounded border border-border/30">⌘</kbd>
+              <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-muted/50 rounded border border-border/30">K</kbd>
             </div>
           </div>
         </div>
@@ -86,7 +89,7 @@ export const TopHeader: React.FC = () => {
           ].map(({ icon: Icon, onClick, label }) => (
             <Tooltip key={label}>
               <motion.div whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}>
-                <Button variant="ghost" size="icon" onClick={onClick} className="h-9 w-9 rounded-xl hover:bg-secondary">
+                <Button variant="ghost" size="icon" onClick={onClick} className="h-9 w-9 rounded-xl hover:bg-secondary/60 hover:shadow-sm">
                   <Icon className="h-[18px] w-[18px] text-muted-foreground" />
                 </Button>
               </motion.div>
@@ -101,40 +104,44 @@ export const TopHeader: React.FC = () => {
             <ProfileSettings />
           </motion.div>
 
-          <div className="w-px h-6 bg-border/50 mx-1.5" />
+          <div className="w-px h-6 bg-gradient-to-b from-transparent via-border/50 to-transparent mx-1.5" />
 
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <motion.button
-                className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-xl hover:bg-secondary/80 transition-colors"
+                className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-xl hover:bg-secondary/50 transition-all group"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <Avatar className="h-8 w-8 ring-2 ring-primary/20 ring-offset-2 ring-offset-card">
-                  <AvatarImage src={profile?.avatar_url || undefined} />
-                  <AvatarFallback className="bg-gradient-primary text-primary-foreground font-bold text-xs">
-                    {displayName.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="relative">
+                  <Avatar className="h-8 w-8 ring-2 ring-primary/15 ring-offset-2 ring-offset-card">
+                    <AvatarImage src={profile?.avatar_url || undefined} />
+                    <AvatarFallback className="bg-gradient-primary text-primary-foreground font-bold text-xs">
+                      {displayName.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  {/* Online indicator */}
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-success border-2 border-card" />
+                </div>
                 <div className="hidden md:block text-left">
                   <span className="text-sm font-semibold text-foreground block leading-tight">{displayName}</span>
                 </div>
-                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground hidden md:block" />
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground hidden md:block group-hover:text-foreground transition-colors" />
               </motion.button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-lg border-border/40">
-              <DropdownMenuItem onClick={() => navigate('/profile')} className="rounded-lg">
+            <DropdownMenuContent align="end" className="w-52 rounded-xl shadow-xl border-border/30 p-1.5 bg-card/95 backdrop-blur-xl">
+              <DropdownMenuItem onClick={() => navigate('/profile')} className="rounded-lg px-3 py-2.5 text-sm font-medium">
                 My Profile
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/profile/edit')} className="rounded-lg">
+              <DropdownMenuItem onClick={() => navigate('/profile/edit')} className="rounded-lg px-3 py-2.5 text-sm font-medium">
                 Edit Profile
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/notifhub')} className="rounded-lg">
+              <DropdownMenuItem onClick={() => navigate('/notifhub')} className="rounded-lg px-3 py-2.5 text-sm font-medium">
                 Notifications
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut} className="text-destructive rounded-lg">
+              <DropdownMenuSeparator className="my-1 bg-border/30" />
+              <DropdownMenuItem onClick={handleSignOut} className="text-destructive rounded-lg px-3 py-2.5 text-sm font-medium">
                 Sign Out
               </DropdownMenuItem>
             </DropdownMenuContent>
