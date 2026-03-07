@@ -4,7 +4,7 @@ import {
   Users, GraduationCap, CheckSquare, TrendingUp,
   Clock, Calendar, ListTodo, Timer, BookOpen, MessageSquare, Mic,
   ChevronRight, ArrowUpRight, Target, Settings, Building2, Shield,
-  Sparkles, Zap
+  Sparkles, Zap, Activity
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,32 +37,41 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, gradient,
       transition={{ delay, duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
     >
-      <Card className="border-border/30 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden group relative">
+      <Card className="card-premium overflow-hidden group">
         {/* Subtle gradient overlay on hover */}
-        <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-[0.04] transition-opacity duration-500`} />
+        <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-[0.04] transition-opacity duration-700`} />
         
         <CardContent className="p-5 relative z-10">
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-muted-foreground font-medium mb-1">{title}</p>
+              <p className="text-sm text-muted-foreground font-medium mb-1.5">{title}</p>
               <div className="flex items-baseline gap-1.5">
-                <span className="font-display text-3xl font-bold text-foreground tracking-tight">
+                <span className="font-display text-3xl font-extrabold text-foreground tracking-tight">
                   {count.toLocaleString()}{suffix}
                 </span>
               </div>
               {trend && (
-                <div className={`flex items-center gap-1 mt-2 text-xs font-semibold ${trendUp ? 'text-success' : 'text-destructive'}`}>
+                <motion.div 
+                  className={`flex items-center gap-1 mt-2.5 text-xs font-semibold ${trendUp ? 'text-success' : 'text-destructive'}`}
+                  initial={{ opacity: 0, x: -5 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: (delay || 0) + 0.5 }}
+                >
                   <ArrowUpRight className={`h-3 w-3 ${!trendUp ? 'rotate-90' : ''}`} />
                   {trend}
-                </div>
+                </motion.div>
               )}
             </div>
-            <div className={`p-2.5 rounded-xl bg-gradient-to-br ${gradient} shadow-sm`}>
+            <motion.div 
+              className={`p-2.5 rounded-xl bg-gradient-to-br ${gradient} shadow-md`}
+              whileHover={{ scale: 1.1, rotate: 5 }}
+              transition={{ type: 'spring', stiffness: 300 }}
+            >
               <Icon className="h-5 w-5 text-primary-foreground" />
-            </div>
+            </motion.div>
           </div>
           
-          {/* Sparkline - stable paths */}
+          {/* Sparkline */}
           <div className="mt-4 h-8">
             <svg viewBox="0 0 100 30" className="w-full h-full overflow-visible">
               <defs>
@@ -71,12 +80,15 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, gradient,
                   <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
                 </linearGradient>
               </defs>
-              <path
+              <motion.path
                 d="M 0 25 Q 15 18 25 16 T 50 13 T 75 9 T 100 6"
                 fill="none"
                 stroke="hsl(var(--primary))"
                 strokeWidth="2"
                 strokeLinecap="round"
+                initial={{ pathLength: 0, opacity: 0 }}
+                animate={{ pathLength: 1, opacity: 1 }}
+                transition={{ delay: (delay || 0) + 0.3, duration: 1, ease: 'easeOut' }}
               />
               <path
                 d="M 0 25 Q 15 18 25 16 T 50 13 T 75 9 T 100 6 V 30 H 0 Z"
@@ -203,7 +215,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-[1400px] mx-auto">
       {/* Hero Banner */}
       <motion.div
-        className="relative rounded-2xl overflow-hidden h-[200px] md:h-[220px]"
+        className="relative rounded-2xl overflow-hidden h-[200px] md:h-[240px]"
         initial={{ opacity: 0, y: -15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -213,20 +225,27 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           alt="Campus"
           className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-foreground/70 via-foreground/40 to-foreground/10" />
+        <div className="absolute inset-0 bg-gradient-to-r from-foreground/75 via-foreground/45 to-foreground/5" />
+        <div className="absolute inset-0 bg-gradient-to-t from-foreground/20 via-transparent to-transparent" />
+        
         <div className="absolute inset-0 flex items-center px-8 md:px-10">
           <div>
             <motion.div
-              className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm border border-white/20 mb-3"
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/12 backdrop-blur-md border border-white/15 mb-4"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
             >
-              <Sparkles className="w-3.5 h-3.5 text-accent" />
-              <span className="text-xs font-medium text-white/90">Your AI Education Assistant</span>
+              <motion.div
+                animate={{ rotate: [0, 15, -15, 0] }}
+                transition={{ duration: 2, repeat: Infinity, repeatDelay: 4 }}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-accent" />
+              </motion.div>
+              <span className="text-xs font-medium text-white/90 tracking-wide">Your AI Education Assistant</span>
             </motion.div>
             <motion.h1
-              className="font-display text-2xl md:text-4xl font-bold text-white mb-2 tracking-tight"
+              className="font-display text-3xl md:text-4xl lg:text-5xl font-extrabold text-white mb-2 tracking-tight"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
@@ -234,15 +253,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
               Welcome back, {userName}!
             </motion.h1>
             <motion.p
-              className="text-white/70 text-sm md:text-base max-w-md"
+              className="text-white/65 text-sm md:text-base max-w-md font-medium"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.35 }}
             >
-              Let's make today productive
+              Let's make today productive ✨
             </motion.p>
             <motion.div
-              className="mt-3 flex items-center gap-2"
+              className="mt-4 flex items-center gap-3"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.45 }}
@@ -273,16 +292,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             <Shield className="h-4 w-4" /> Admin:
           </span>
           {adminActions.map((action) => (
-            <Button
-              key={action.view}
-              variant="outline"
-              size="sm"
-              className="gap-2 text-xs rounded-xl"
-              onClick={() => onNavigate(action.view)}
-            >
-              <action.icon className="h-3.5 w-3.5" />
-              {action.title}
-            </Button>
+            <motion.div key={action.view} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 text-xs rounded-xl border-border/30 hover:border-primary/20 hover:shadow-sm"
+                onClick={() => onNavigate(action.view)}
+              >
+                <action.icon className="h-3.5 w-3.5" />
+                {action.title}
+              </Button>
+            </motion.div>
           ))}
         </motion.div>
       )}
@@ -298,10 +318,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           transition={{ delay: 0.4 }}
           className="space-y-6"
         >
-          <Card className="border-border/30 shadow-sm">
+          <Card className="card-premium">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-display font-bold flex items-center gap-2">
-                <Zap className="h-4 w-4 text-accent" />
+                <div className="p-1.5 rounded-lg bg-accent/10">
+                  <Zap className="h-3.5 w-3.5 text-accent" />
+                </div>
                 Task Summary
               </CardTitle>
             </CardHeader>
@@ -309,26 +331,31 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
               {taskSummary.map((item, i) => (
                 <motion.div
                   key={item.label}
-                  className="flex items-center justify-between"
+                  className="flex items-center justify-between group/item"
                   initial={{ opacity: 0, x: 10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.5 + i * 0.08 }}
                 >
                   <div className="flex items-center gap-2.5">
-                    <div className={`h-3 w-3 rounded-full ${item.color}`} />
-                    <span className="text-sm text-muted-foreground">{item.label}</span>
+                    <motion.div 
+                      className={`h-3 w-3 rounded-full ${item.color} shadow-sm`}
+                      whileHover={{ scale: 1.3 }}
+                    />
+                    <span className="text-sm text-muted-foreground group-hover/item:text-foreground transition-colors">{item.label}</span>
                   </div>
                   <span className="font-display text-sm font-bold text-foreground">{item.count}</span>
                 </motion.div>
               ))}
-              <Button
-                variant="link"
-                size="sm"
-                className="p-0 h-auto text-primary text-xs font-semibold"
-                onClick={() => onNavigate('todo')}
-              >
-                View All <ChevronRight className="h-3 w-3 ml-0.5" />
-              </Button>
+              <div className="pt-1">
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="p-0 h-auto text-primary text-xs font-semibold hover:text-primary/80"
+                  onClick={() => onNavigate('todo')}
+                >
+                  View All <ChevronRight className="h-3 w-3 ml-0.5" />
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
@@ -342,25 +369,30 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.55 }}
       >
-        <h2 className="font-display text-base font-bold mb-3 flex items-center gap-2">
-          <Target className="h-4 w-4 text-primary" />
+        <h2 className="font-display text-base font-bold mb-4 flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-primary/10">
+            <Target className="h-3.5 w-3.5 text-primary" />
+          </div>
           Quick Actions
         </h2>
         <div className="grid grid-cols-4 sm:grid-cols-7 gap-3">
           {quickActions.map((action, i) => (
             <motion.button
               key={action.view}
-              className="flex flex-col items-center gap-2.5 p-4 rounded-2xl bg-card border border-border/30 hover:border-primary/30 hover:shadow-md transition-all group"
+              className="flex flex-col items-center gap-2.5 p-4 rounded-2xl bg-card border border-border/20 hover:border-primary/20 transition-all group card-premium"
               onClick={() => onNavigate(action.view)}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6 + i * 0.04 }}
-              whileHover={{ y: -4, scale: 1.02 }}
+              whileHover={{ y: -6, scale: 1.02 }}
               whileTap={{ scale: 0.96 }}
             >
-              <div className={`p-2.5 rounded-xl bg-gradient-to-br ${action.color} shadow-sm group-hover:shadow-md transition-shadow`}>
+              <motion.div 
+                className={`p-2.5 rounded-xl bg-gradient-to-br ${action.color} shadow-md group-hover:shadow-lg transition-shadow`}
+                whileHover={{ rotate: 5 }}
+              >
                 <action.icon className="h-5 w-5 text-primary-foreground" />
-              </div>
+              </motion.div>
               <span className="text-xs font-semibold text-foreground">{action.title}</span>
             </motion.button>
           ))}
@@ -373,22 +405,30 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.65 }}
       >
-        <Card className="border-border/30 shadow-sm">
+        <Card className="card-premium">
           <CardHeader className="pb-3">
-            <CardTitle className="font-display text-base font-bold">Recent Activity</CardTitle>
+            <CardTitle className="font-display text-base font-bold flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-success/10">
+                <Activity className="h-3.5 w-3.5 text-success" />
+              </div>
+              Recent Activity
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-1">
               {recentActivity.map((activity, i) => (
                 <motion.div
                   key={activity.id}
-                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-secondary/50 transition-colors"
+                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-secondary/30 transition-colors group/activity"
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.7 + i * 0.05 }}
                 >
-                  <div className="h-2.5 w-2.5 rounded-full bg-primary flex-shrink-0" />
-                  <span className="text-sm text-foreground flex-1">{activity.text}</span>
+                  <motion.div 
+                    className="h-2.5 w-2.5 rounded-full bg-primary flex-shrink-0 shadow-sm"
+                    whileHover={{ scale: 1.5 }}
+                  />
+                  <span className="text-sm text-foreground flex-1 group-hover/activity:text-primary transition-colors">{activity.text}</span>
                   <span className="text-xs text-muted-foreground font-medium">{activity.time}</span>
                 </motion.div>
               ))}
