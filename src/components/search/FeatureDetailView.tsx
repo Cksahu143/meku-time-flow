@@ -29,7 +29,7 @@ const containerVariants = {
 
 const itemVariants = {
   hidden: { opacity: 0, y: 12 },
-  visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 28 } },
+  visible: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 28 } },
 };
 
 const categoryLabels: Record<string, string> = {
