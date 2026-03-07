@@ -115,14 +115,14 @@ export const ResourcesView: React.FC = () => {
       >
         <div className="flex items-center gap-3">
           <motion.div 
-            className="p-3 bg-primary/10 rounded-xl"
+            className="p-2.5 rounded-xl bg-primary/10"
             whileHover={{ rotate: 10, scale: 1.1 }}
             transition={{ type: 'spring', stiffness: 300 }}
           >
             <BookOpen className="h-6 w-6 text-primary" />
           </motion.div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Resources & Materials</h1>
+            <h1 className="text-2xl font-bold text-foreground font-display">Resources & Materials</h1>
             <p className="text-sm text-muted-foreground">Browse and manage your study materials</p>
           </div>
         </div>
@@ -132,7 +132,7 @@ export const ResourcesView: React.FC = () => {
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button variant="outline" className="gap-2 text-destructive hover:text-destructive">
+                  <Button variant="outline" className="gap-2 text-destructive hover:text-destructive rounded-xl border-border/30">
                     <Trash2 className="h-4 w-4" />
                     Delete All
                   </Button>
@@ -267,7 +267,7 @@ export const ResourcesView: React.FC = () => {
             )}
           </motion.div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {filteredResources.map((resource) => (
               <ResourceCard 
                 key={resource.id} 

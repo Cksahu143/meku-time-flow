@@ -223,15 +223,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         <img
           src="/images/hero-banner.jpg"
           alt="Campus"
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover brightness-[0.85] dark:brightness-[0.5]"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-foreground/75 via-foreground/45 to-foreground/5" />
-        <div className="absolute inset-0 bg-gradient-to-t from-foreground/20 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/60 to-transparent dark:from-background/95 dark:via-background/70" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background/30 via-transparent to-transparent" />
         
         <div className="absolute inset-0 flex items-center px-8 md:px-10">
           <div>
             <motion.div
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/12 backdrop-blur-md border border-white/15 mb-4"
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/12 backdrop-blur-md border border-primary/15 mb-4"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
@@ -242,10 +242,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
               >
                 <Sparkles className="w-3.5 h-3.5 text-accent" />
               </motion.div>
-              <span className="text-xs font-medium text-white/90 tracking-wide">Your AI Education Assistant</span>
+              <span className="text-xs font-medium text-foreground/90 tracking-wide">Your AI Education Assistant</span>
             </motion.div>
             <motion.h1
-              className="font-display text-3xl md:text-4xl lg:text-5xl font-extrabold text-white mb-2 tracking-tight"
+              className="font-display text-3xl md:text-4xl lg:text-5xl font-extrabold text-foreground mb-2 tracking-tight"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
@@ -253,7 +253,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
               Welcome back, {userName}!
             </motion.h1>
             <motion.p
-              className="text-white/65 text-sm md:text-base max-w-md font-medium"
+              className="text-muted-foreground text-sm md:text-base max-w-md font-medium"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.35 }}
