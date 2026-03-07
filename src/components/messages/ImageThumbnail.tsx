@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertCircle, ImageOff } from 'lucide-react';
@@ -109,7 +109,8 @@ export const ImageThumbnail: React.FC<ImageThumbnailProps> = ({ imageUrl, alt })
       </div>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-7xl p-0 overflow-hidden animate-zoom-in">
+        <DialogContent className="max-w-7xl p-0 overflow-hidden animate-zoom-in" aria-describedby={undefined}>
+          <DialogTitle className="sr-only">{alt || 'Image preview'}</DialogTitle>
           {displayUrl && (
             <img
               src={displayUrl}
