@@ -4,7 +4,7 @@ import {
   Calendar, Clock, ListTodo, Timer, Moon, Sun, Palette, LogOut,
   MessageSquare, BookOpen, LayoutDashboard, Mic, Lock, Shield,
   Building, Megaphone, UserCheck, BarChart3, Settings2, GraduationCap,
-  BookOpenCheck, ChevronLeft, AlertCircle
+  BookOpenCheck, ChevronLeft, AlertCircle, Smartphone
 } from 'lucide-react';
 import { ViewType } from '@/types';
 import { cn } from '@/lib/utils';
@@ -215,17 +215,18 @@ export function Sidebar({ currentView, onViewChange, collapsed = false, onToggle
         
         {/* Theme toggles */}
         {!collapsed && (
-          <div className="flex gap-0.5 p-1 bg-sidebar-accent/40 rounded-xl mb-3 backdrop-blur-sm">
+        <div className="grid grid-cols-4 gap-0.5 p-1 bg-sidebar-accent/40 rounded-xl mb-3 backdrop-blur-sm">
             {[
               { theme: 'light' as const, icon: Sun, label: 'Light' },
               { theme: 'dark' as const, icon: Moon, label: 'Dark' },
+              { theme: 'amoled' as const, icon: Smartphone, label: 'OLED' },
               { theme: 'pastel' as const, icon: Palette, label: 'Pastel' },
             ].map(({ theme: t, icon: ThemeIcon, label }) => (
               <motion.button
                 key={t}
                 onClick={() => setTheme(t)}
                 className={cn(
-                  'flex-1 flex items-center justify-center gap-1.5 h-7 rounded-lg text-xs font-medium transition-all relative',
+                  'flex items-center justify-center gap-1 h-7 rounded-lg text-[10px] font-medium transition-all relative',
                   theme === t 
                     ? 'text-sidebar-primary-foreground' 
                     : 'text-sidebar-muted hover:text-sidebar-foreground'
@@ -239,7 +240,7 @@ export function Sidebar({ currentView, onViewChange, collapsed = false, onToggle
                     transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                   />
                 )}
-                <span className="relative z-10 flex items-center gap-1.5">
+                <span className="relative z-10 flex items-center gap-1">
                   <ThemeIcon className="w-3 h-3" />
                   {label}
                 </span>

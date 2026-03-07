@@ -179,6 +179,80 @@
     --shadow-2xl: 0 32px 64px -16px hsl(0 0% 0% / 0.5);
   }
 
+  /* AMOLED — True Black for OLED displays */
+  .amoled {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 95%;
+    --card: 0 0% 4%;
+    --card-foreground: 0 0% 95%;
+    --popover: 0 0% 3%;
+    --popover-foreground: 0 0% 95%;
+    
+    --primary: 225 85% 62%;
+    --primary-glow: 225 90% 75%;
+    --primary-foreground: 0 0% 0%;
+    
+    --secondary: 225 15% 8%;
+    --secondary-foreground: 225 20% 72%;
+    
+    --muted: 225 10% 7%;
+    --muted-foreground: 225 8% 50%;
+    
+    --accent: 38 90% 58%;
+    --accent-glow: 38 85% 72%;
+    --accent-foreground: 0 0% 0%;
+    
+    --success: 152 60% 48%;
+    --success-foreground: 0 0% 0%;
+    
+    --destructive: 0 70% 58%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 225 10% 10%;
+    --input: 225 10% 10%;
+    --ring: 225 85% 62%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(225 85% 55%), hsl(250 75% 50%));
+    --gradient-accent: linear-gradient(135deg, hsl(38 90% 55%), hsl(25 85% 50%));
+    --gradient-success: linear-gradient(135deg, hsl(152 60% 48%), hsl(170 50% 42%));
+    --gradient-hero: linear-gradient(180deg, hsl(0 0% 2%) 0%, hsl(0 0% 0%) 100%);
+    --gradient-mesh: radial-gradient(at 20% 80%, hsl(225 85% 52% / 0.08) 0%, transparent 50%),
+                     radial-gradient(at 80% 20%, hsl(38 90% 55% / 0.05) 0%, transparent 50%),
+                     radial-gradient(at 50% 50%, hsl(250 75% 50% / 0.04) 0%, transparent 70%);
+    --gradient-glass: linear-gradient(135deg, hsl(0 0% 5% / 0.95), hsl(0 0% 3% / 0.85));
+    --gradient-aurora: linear-gradient(135deg, hsl(225 85% 52% / 0.06) 0%, hsl(250 75% 50% / 0.04) 30%, hsl(38 90% 55% / 0.02) 60%, hsl(152 60% 48% / 0.04) 100%);
+
+    --shadow-sm: 0 1px 3px 0 hsl(0 0% 0% / 0.5);
+    --shadow-md: 0 4px 8px -1px hsl(0 0% 0% / 0.6);
+    --shadow-lg: 0 12px 24px -4px hsl(0 0% 0% / 0.6);
+    --shadow-xl: 0 24px 48px -8px hsl(0 0% 0% / 0.7);
+    --shadow-primary: 0 4px 20px 0 hsl(225 85% 62% / 0.35);
+    --shadow-accent: 0 4px 20px 0 hsl(38 90% 58% / 0.3);
+    --shadow-glow: 0 0 60px hsl(225 85% 62% / 0.25);
+    --shadow-dreamy: 0 8px 32px -8px hsl(225 85% 62% / 0.35), 0 0 0 1px hsl(225 85% 62% / 0.1);
+    
+    --chart-1: 225 85% 65%;
+    --chart-2: 38 90% 60%;
+    --chart-3: 152 60% 50%;
+    --chart-4: 250 65% 65%;
+    --chart-5: 340 70% 60%;
+    
+    --sidebar: 0 0% 2%;
+    --sidebar-foreground: 0 0% 88%;
+    --sidebar-primary: 225 85% 62%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 225 15% 8%;
+    --sidebar-accent-foreground: 0 0% 80%;
+    --sidebar-border: 225 10% 8%;
+    --sidebar-ring: 225 85% 62%;
+    --sidebar-muted: 0 0% 40%;
+    
+    --shadow-2xs: 0 1px 2px 0 hsl(0 0% 0% / 0.3);
+    --shadow-xs: 0 1px 3px 0 hsl(0 0% 0% / 0.4);
+    --shadow: var(--shadow-md);
+    --shadow-2xl: 0 32px 64px -16px hsl(0 0% 0% / 0.8);
+  }
+
   .pastel {
     --background: 220 40% 97%;
     --foreground: 220 30% 18%;

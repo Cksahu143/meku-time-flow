@@ -134,13 +134,18 @@ export function TodoView() {
     <div className="min-h-full h-full p-4 md:p-6 lg:p-8 animate-slide-in-right">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <ListTodo className="w-8 h-8 text-primary" />
-          <h2 className="text-3xl font-bold text-foreground">To-Do List</h2>
+          <div className="p-2.5 rounded-xl bg-primary/10">
+            <ListTodo className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-foreground font-display">To-Do List</h2>
+            <p className="text-sm text-muted-foreground">Stay organized and productive</p>
+          </div>
         </div>
 
         <button
           onClick={() => setIsAdding(!isAdding)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-primary text-primary-foreground shadow-md hover:scale-105 transition-transform"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground shadow-md hover:scale-105 transition-transform btn-premium"
         >
           <Plus className="w-5 h-5" />
           Add Task
@@ -148,26 +153,28 @@ export function TodoView() {
       </div>
 
       {/* Progress Header */}
-      <div className="bg-gradient-primary text-primary-foreground rounded-lg p-6 mb-6 shadow-lg">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-xl font-semibold">Today's Progress</h3>
-          <div className="text-2xl font-bold">
-            {completedToday}/{todayTasks.length}
+      <div className="card-premium rounded-2xl overflow-hidden mb-6">
+        <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground p-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xl font-semibold font-display">Today's Progress</h3>
+            <div className="text-2xl font-bold font-display">
+              {completedToday}/{todayTasks.length}
+            </div>
           </div>
-        </div>
-        <div className="w-full bg-primary-foreground/20 rounded-full h-3 overflow-hidden">
-          <div
-            className="bg-primary-foreground h-full transition-all duration-500 rounded-full"
-            style={{
-              width: `${todayTasks.length > 0 ? (completedToday / todayTasks.length) * 100 : 0}%`,
-            }}
-          />
+          <div className="w-full bg-primary-foreground/20 rounded-full h-3 overflow-hidden">
+            <div
+              className="bg-primary-foreground h-full transition-all duration-500 rounded-full"
+              style={{
+                width: `${todayTasks.length > 0 ? (completedToday / todayTasks.length) * 100 : 0}%`,
+              }}
+            />
+          </div>
         </div>
       </div>
 
       {/* Add/Edit Task Form */}
       {(isAdding || editingTask) && (
-        <div className="bg-card border border-border rounded-lg p-4 mb-6 shadow-md animate-scale-in">
+        <div className="card-premium rounded-2xl p-4 mb-6 animate-scale-in">
           <input
             type="text"
             value={newTask.title || ''}
@@ -250,7 +257,7 @@ export function TodoView() {
             <div
               key={task.id}
               className={cn(
-                'bg-card border border-border rounded-lg p-4 transition-all hover:shadow-md',
+                'card-premium rounded-2xl p-4',
                 task.completed && 'opacity-60'
               )}
             >

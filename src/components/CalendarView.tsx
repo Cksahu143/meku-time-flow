@@ -151,16 +151,21 @@ export function CalendarView() {
     <div className="min-h-full h-full p-4 md:p-6 lg:p-8 animate-slide-in-right">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <CalendarIcon className="w-8 h-8 text-primary" />
-          <h2 className="text-3xl font-bold text-foreground">Calendar</h2>
+          <div className="p-2.5 rounded-xl bg-primary/10">
+            <CalendarIcon className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-foreground font-display">Calendar</h2>
+            <p className="text-sm text-muted-foreground">Track exams and schedules</p>
+          </div>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <Button onClick={handleAddExam} variant="outline" className="gap-2">
+          <Button onClick={handleAddExam} variant="outline" className="gap-2 rounded-xl border-border/30 hover:border-primary/20 hover:shadow-sm">
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">Quick Exam</span>
           </Button>
-          <Button onClick={() => setPeriodDialogOpen(true)} className="gap-2">
+          <Button onClick={() => setPeriodDialogOpen(true)} className="gap-2 rounded-xl btn-premium">
             <GraduationCap className="w-4 h-4" />
             <span className="hidden sm:inline">Exam Period</span>
           </Button>
@@ -197,7 +202,7 @@ export function CalendarView() {
           </div>
 
           {viewType === 'month' ? (
-            <div className="bg-card rounded-lg border border-border shadow-lg p-4">
+            <div className="card-premium rounded-2xl p-4">
               <div className="grid grid-cols-7 gap-2 mb-2">
                 {weekDays.map((day) => (
                   <div key={day} className="text-center font-semibold text-sm text-muted-foreground py-2">{day}</div>
@@ -253,7 +258,7 @@ export function CalendarView() {
                 const today = isToday(date);
 
                 return (
-                  <div key={date.toISOString()} className={cn('bg-card rounded-lg border p-4 transition-all', today && 'border-primary shadow-md')}>
+                  <div key={date.toISOString()} className={cn('card-premium rounded-2xl p-4 transition-all', today && 'border-primary shadow-md ring-1 ring-primary/20')}>
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <div className={cn('w-12 h-12 rounded-lg flex items-center justify-center font-bold text-lg', today ? 'bg-gradient-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground')}>
@@ -331,7 +336,7 @@ export function CalendarView() {
         <TabsContent value="periods">
           <div className="space-y-4">
             {periods.length === 0 ? (
-              <div className="text-center py-12 bg-card rounded-xl border border-border">
+              <div className="text-center py-12 card-premium rounded-2xl">
                 <GraduationCap className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
                 <h3 className="text-lg font-semibold mb-1">No Exam Periods</h3>
                 <p className="text-muted-foreground mb-4">Create an exam period to schedule different exams, prep leaves, and holidays across multiple days.</p>
