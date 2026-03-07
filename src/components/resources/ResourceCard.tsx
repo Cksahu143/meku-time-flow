@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { PDFViewerDialog } from './PDFViewerDialog';
 import { motion } from 'framer-motion';
 import { FileText, Link, Video, File, Edit, Trash2, Type, Star, Download, Eye, FolderOpen, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
@@ -60,6 +61,7 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
 }) => {
   const Icon = typeIcons[resource.resource_type] || File;
   const [showPreview, setShowPreview] = useState(false);
+  const [showPdfViewer, setShowPdfViewer] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
   const isPDF = resource.resource_type === 'pdf' || resource.file_name?.toLowerCase().endsWith('.pdf');
@@ -67,6 +69,10 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
   const handleOpen = () => {
     if (resource.resource_type === 'text') {
       setShowPreview(true);
+      return;
+    }
+    if (isPDF && resource.url) {
+      setShowPdfViewer(true);
       return;
     }
     if (resource.url) {
