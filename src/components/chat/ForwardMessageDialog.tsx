@@ -153,7 +153,7 @@ export const ForwardMessageDialog: React.FC<ForwardMessageDialogProps> = ({
             insertData.link_description = message.link_description;
             insertData.link_image = message.link_image;
           }
-          await supabase.from('messages').insert(insertData);
+          await supabase.from('messages').insert([insertData]);
         } else {
           const insertData: Record<string, any> = {
             conversation_id: targetId,
@@ -177,7 +177,7 @@ export const ForwardMessageDialog: React.FC<ForwardMessageDialogProps> = ({
             insertData.link_description = message.link_description;
             insertData.link_image = message.link_image;
           }
-          await supabase.from('direct_messages').insert(insertData);
+          await supabase.from('direct_messages').insert([insertData]);
         }
       }
 
