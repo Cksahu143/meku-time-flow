@@ -178,21 +178,26 @@ export function PomodoroView() {
     <div className="min-h-full h-full p-4 md:p-6 lg:p-8 animate-slide-in-right">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <Timer className="w-8 h-8 text-primary" />
-          <h2 className="text-3xl font-bold text-foreground">Pomodoro Timer</h2>
+          <div className="p-2.5 rounded-xl bg-primary/10">
+            <Timer className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-foreground font-display">Pomodoro Timer</h2>
+            <p className="text-sm text-muted-foreground">Stay focused and productive</p>
+          </div>
         </div>
 
         <button
           onClick={() => setShowSettings(!showSettings)}
-          className="p-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-all hover:scale-110"
+          className="p-2.5 rounded-xl bg-secondary hover:bg-secondary/80 transition-all hover:scale-110 hover:rotate-45"
         >
-          <Settings className="w-6 h-6" />
+          <Settings className="w-5 h-5" />
         </button>
       </div>
 
       {showSettings ? (
-        <div className="bg-card border border-border rounded-lg p-6 shadow-lg animate-scale-in max-w-md mx-auto">
-          <h3 className="text-xl font-semibold mb-4">Timer Settings</h3>
+        <div className="card-premium rounded-2xl p-6 animate-scale-in max-w-md mx-auto">
+          <h3 className="text-xl font-semibold mb-4 font-display">Timer Settings</h3>
 
           <div className="space-y-4">
             <div>
@@ -288,7 +293,7 @@ export function PomodoroView() {
       ) : (
         <div className="max-w-2xl mx-auto">
           {/* Session Type Selector */}
-          <div className="flex gap-3 mb-8 justify-center">
+          <div className="flex gap-3 mb-8 justify-center flex-wrap">
             <button
               onClick={() => changeSessionType('work')}
               className={cn(
@@ -405,7 +410,7 @@ export function PomodoroView() {
           </div>
 
           {/* Session Counter */}
-          <div className="bg-card border border-border rounded-lg p-6 shadow-md">
+          <div className="card-premium rounded-2xl p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Award className="w-6 h-6 text-primary" />

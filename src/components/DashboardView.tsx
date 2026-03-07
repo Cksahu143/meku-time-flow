@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Users, GraduationCap, CheckSquare, TrendingUp,
+  Users, GraduationCap, CheckSquare,
   Clock, Calendar, ListTodo, Timer, BookOpen, MessageSquare, Mic,
-  ChevronRight, ArrowUpRight, Target, Settings, Building2, Shield,
+  ChevronRight, ArrowUpRight, Target, Building2, Shield,
   Sparkles, Zap, Activity
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { DashboardCharts } from '@/components/dashboard/DashboardCharts';
 import { useCountUp } from '@/hooks/useMotion';
 import { supabase } from '@/integrations/supabase/client';
@@ -38,7 +37,6 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, gradient,
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
     >
       <Card className="card-premium overflow-hidden group">
-        {/* Subtle gradient overlay on hover */}
         <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-[0.04] transition-opacity duration-700`} />
         
         <CardContent className="p-5 relative z-10">
@@ -46,25 +44,32 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, gradient,
             <div className="flex-1 min-w-0">
               <p className="text-sm text-muted-foreground font-medium mb-1.5">{title}</p>
               <div className="flex items-baseline gap-1.5">
-                <span className="font-display text-3xl font-extrabold text-foreground tracking-tight">
+                <motion.span 
+                  className="font-display text-3xl font-extrabold text-foreground tracking-tight"
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: (delay || 0) + 0.2, type: 'spring', stiffness: 200 }}
+                >
                   {count.toLocaleString()}{suffix}
-                </span>
+                </motion.span>
               </div>
               {trend && (
                 <motion.div 
                   className={`flex items-center gap-1 mt-2.5 text-xs font-semibold ${trendUp ? 'text-success' : 'text-destructive'}`}
-                  initial={{ opacity: 0, x: -5 }}
+                  initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: (delay || 0) + 0.5 }}
+                  transition={{ delay: (delay || 0) + 0.5, type: 'spring' }}
                 >
-                  <ArrowUpRight className={`h-3 w-3 ${!trendUp ? 'rotate-90' : ''}`} />
+                  <motion.div animate={{ y: trendUp ? [0, -2, 0] : [0, 2, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>
+                    <ArrowUpRight className={`h-3 w-3 ${!trendUp ? 'rotate-90' : ''}`} />
+                  </motion.div>
                   {trend}
                 </motion.div>
               )}
             </div>
             <motion.div 
               className={`p-2.5 rounded-xl bg-gradient-to-br ${gradient} shadow-md`}
-              whileHover={{ scale: 1.1, rotate: 5 }}
+              whileHover={{ scale: 1.15, rotate: 8 }}
               transition={{ type: 'spring', stiffness: 300 }}
             >
               <Icon className="h-5 w-5 text-primary-foreground" />
@@ -88,11 +93,14 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, gradient,
                 strokeLinecap="round"
                 initial={{ pathLength: 0, opacity: 0 }}
                 animate={{ pathLength: 1, opacity: 1 }}
-                transition={{ delay: (delay || 0) + 0.3, duration: 1, ease: 'easeOut' }}
+                transition={{ delay: (delay || 0) + 0.3, duration: 1.2, ease: 'easeOut' }}
               />
-              <path
+              <motion.path
                 d="M 0 25 Q 15 18 25 16 T 50 13 T 75 9 T 100 6 V 30 H 0 Z"
                 fill={`url(#grad-${title.replace(/\s/g, '')})`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: (delay || 0) + 0.8, duration: 0.6 }}
               />
             </svg>
           </div>
@@ -216,14 +224,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       {/* Hero Banner */}
       <motion.div
         className="relative rounded-2xl overflow-hidden h-[200px] md:h-[240px]"
-        initial={{ opacity: 0, y: -15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        initial={{ opacity: 0, y: -15, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
       >
-        <img
+        <motion.img
           src="/images/hero-banner.jpg"
           alt="Campus"
           className="w-full h-full object-cover brightness-[0.85] dark:brightness-[0.5]"
+          initial={{ scale: 1.1 }}
+          animate={{ scale: 1 }}
+          transition={{ duration: 1.2, ease: 'easeOut' }}
         />
         <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/60 to-transparent dark:from-background/95 dark:via-background/70" />
         <div className="absolute inset-0 bg-gradient-to-t from-background/30 via-transparent to-transparent" />
@@ -232,9 +243,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           <div>
             <motion.div
               className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/12 backdrop-blur-md border border-primary/15 mb-4"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 }}
+              initial={{ opacity: 0, y: 10, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: 0.15, type: 'spring', stiffness: 200 }}
             >
               <motion.div
                 animate={{ rotate: [0, 15, -15, 0] }}
@@ -246,25 +257,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             </motion.div>
             <motion.h1
               className="font-display text-3xl md:text-4xl lg:text-5xl font-extrabold text-foreground mb-2 tracking-tight"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
+              initial={{ opacity: 0, y: 15, filter: 'blur(8px)' }}
+              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+              transition={{ delay: 0.2, duration: 0.5 }}
             >
               Welcome back, {userName}!
             </motion.h1>
             <motion.p
               className="text-muted-foreground text-sm md:text-base max-w-md font-medium"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.35 }}
             >
               Let's make today productive ✨
             </motion.p>
             <motion.div
               className="mt-4 flex items-center gap-3"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.45 }}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.45, type: 'spring' }}
             >
               <RoleBadge size="sm" showIcon animated />
             </motion.div>
@@ -291,8 +302,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           <span className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
             <Shield className="h-4 w-4" /> Admin:
           </span>
-          {adminActions.map((action) => (
-            <motion.div key={action.view} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+          {adminActions.map((action, i) => (
+            <motion.div 
+              key={action.view} 
+              whileHover={{ scale: 1.03 }} 
+              whileTap={{ scale: 0.97 }}
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.35 + i * 0.05 }}
+            >
               <Button
                 variant="outline"
                 size="sm"
@@ -309,21 +327,29 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
       {/* Charts + Task Summary */}
       <div className="grid lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <DashboardCharts />
-        </div>
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
+        <motion.div 
+          className="lg:col-span-2"
+          initial={{ opacity: 0, x: -15 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.4 }}
-          className="space-y-6"
+          transition={{ delay: 0.35, duration: 0.5 }}
+        >
+          <DashboardCharts />
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, x: 15 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.4, duration: 0.5 }}
         >
           <Card className="card-premium">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-display font-bold flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-accent/10">
+                <motion.div 
+                  className="p-1.5 rounded-lg bg-accent/10"
+                  animate={{ rotate: [0, 5, -5, 0] }}
+                  transition={{ duration: 3, repeat: Infinity, repeatDelay: 5 }}
+                >
                   <Zap className="h-3.5 w-3.5 text-accent" />
-                </div>
+                </motion.div>
                 Task Summary
               </CardTitle>
             </CardHeader>
@@ -334,32 +360,46 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                   className="flex items-center justify-between group/item"
                   initial={{ opacity: 0, x: 10 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.5 + i * 0.08 }}
+                  transition={{ delay: 0.5 + i * 0.08, type: 'spring' }}
                 >
                   <div className="flex items-center gap-2.5">
                     <motion.div 
                       className={`h-3 w-3 rounded-full ${item.color} shadow-sm`}
-                      whileHover={{ scale: 1.3 }}
+                      whileHover={{ scale: 1.4 }}
+                      animate={{ scale: [1, 1.15, 1] }}
+                      transition={{ duration: 2, repeat: Infinity, delay: i * 0.3 }}
                     />
                     <span className="text-sm text-muted-foreground group-hover/item:text-foreground transition-colors">{item.label}</span>
                   </div>
-                  <span className="font-display text-sm font-bold text-foreground">{item.count}</span>
+                  <motion.span 
+                    className="font-display text-sm font-bold text-foreground"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.6 + i * 0.1 }}
+                  >
+                    {item.count}
+                  </motion.span>
                 </motion.div>
               ))}
               <div className="pt-1">
                 <Button
                   variant="link"
                   size="sm"
-                  className="p-0 h-auto text-primary text-xs font-semibold hover:text-primary/80"
+                  className="p-0 h-auto text-primary text-xs font-semibold hover:text-primary/80 group/link"
                   onClick={() => onNavigate('todo')}
                 >
-                  View All <ChevronRight className="h-3 w-3 ml-0.5" />
+                  View All 
+                  <motion.span 
+                    className="inline-block ml-0.5"
+                    animate={{ x: [0, 3, 0] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  >
+                    <ChevronRight className="h-3 w-3" />
+                  </motion.span>
                 </Button>
               </div>
             </CardContent>
           </Card>
-
-          <MyPermissionsPanel />
         </motion.div>
       </div>
 
@@ -370,9 +410,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         transition={{ delay: 0.55 }}
       >
         <h2 className="font-display text-base font-bold mb-4 flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-primary/10">
+          <motion.div 
+            className="p-1.5 rounded-lg bg-primary/10"
+            whileHover={{ scale: 1.1, rotate: 10 }}
+          >
             <Target className="h-3.5 w-3.5 text-primary" />
-          </div>
+          </motion.div>
           Quick Actions
         </h2>
         <div className="grid grid-cols-4 sm:grid-cols-7 gap-3">
@@ -381,15 +424,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
               key={action.view}
               className="flex flex-col items-center gap-2.5 p-4 rounded-2xl bg-card border border-border/20 hover:border-primary/20 transition-all group card-premium"
               onClick={() => onNavigate(action.view)}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 + i * 0.04 }}
-              whileHover={{ y: -6, scale: 1.02 }}
-              whileTap={{ scale: 0.96 }}
+              initial={{ opacity: 0, y: 12, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: 0.6 + i * 0.05, type: 'spring', stiffness: 200 }}
+              whileHover={{ y: -6, scale: 1.04 }}
+              whileTap={{ scale: 0.94 }}
             >
               <motion.div 
                 className={`p-2.5 rounded-xl bg-gradient-to-br ${action.color} shadow-md group-hover:shadow-lg transition-shadow`}
-                whileHover={{ rotate: 5 }}
+                whileHover={{ rotate: 8, scale: 1.05 }}
+                transition={{ type: 'spring', stiffness: 400 }}
               >
                 <action.icon className="h-5 w-5 text-primary-foreground" />
               </motion.div>
@@ -408,9 +452,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
         <Card className="card-premium">
           <CardHeader className="pb-3">
             <CardTitle className="font-display text-base font-bold flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-success/10">
+              <motion.div 
+                className="p-1.5 rounded-lg bg-success/10"
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+              >
                 <Activity className="h-3.5 w-3.5 text-success" />
-              </div>
+              </motion.div>
               Recent Activity
             </CardTitle>
           </CardHeader>
@@ -422,11 +470,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                   className="flex items-center gap-3 p-3 rounded-xl hover:bg-secondary/30 transition-colors group/activity"
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.7 + i * 0.05 }}
+                  transition={{ delay: 0.7 + i * 0.05, type: 'spring' }}
+                  whileHover={{ x: 4 }}
                 >
                   <motion.div 
                     className="h-2.5 w-2.5 rounded-full bg-primary flex-shrink-0 shadow-sm"
                     whileHover={{ scale: 1.5 }}
+                    animate={{ opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 2, repeat: Infinity, delay: i * 0.2 }}
                   />
                   <span className="text-sm text-foreground flex-1 group-hover/activity:text-primary transition-colors">{activity.text}</span>
                   <span className="text-xs text-muted-foreground font-medium">{activity.time}</span>
@@ -435,6 +486,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             </div>
           </CardContent>
         </Card>
+      </motion.div>
+
+      {/* My Permissions Panel — Full width, below activity */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.75, duration: 0.5 }}
+      >
+        <MyPermissionsPanel />
       </motion.div>
     </div>
   );
