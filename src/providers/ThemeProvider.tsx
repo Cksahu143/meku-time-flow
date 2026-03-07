@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-type Theme = 'dark' | 'light' | 'pastel' | 'system';
+type Theme = 'dark' | 'light' | 'pastel' | 'amoled' | 'system';
 
 type ThemeProviderProps = {
   children: React.ReactNode;
@@ -33,7 +33,7 @@ export function ThemeProvider({
   useEffect(() => {
     const root = window.document.documentElement;
 
-    root.classList.remove('light', 'dark', 'pastel');
+    root.classList.remove('light', 'dark', 'pastel', 'amoled');
 
     if (theme === 'system') {
       const systemTheme = window.matchMedia('(prefers-color-scheme: dark)')
@@ -42,6 +42,12 @@ export function ThemeProvider({
         : 'light';
 
       root.classList.add(systemTheme);
+      return;
+    }
+
+    // AMOLED uses dark class + amoled class for CSS specificity
+    if (theme === 'amoled') {
+      root.classList.add('dark', 'amoled');
       return;
     }
 
