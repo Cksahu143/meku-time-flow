@@ -89,6 +89,7 @@ export const QuizDialog = ({ open, onOpenChange, resource, content, gradeLevel, 
           subject: resource.subject,
           resourceUrl: resource.url,
           resourceType: resource.resource_type,
+          fileName: fileName || resource.file_name,
           gradeLevel,
         },
       });

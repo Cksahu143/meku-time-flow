@@ -88,6 +88,7 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
           title: resource.title,
           resourceUrl: resource.url,
           resourceType: resource.resource_type,
+          fileName: fileName || resource.file_name,
           gradeLevel: gradeLevel || 'Grade 8',
           language: VOICE_LANGUAGES.find(v => v.code === lang)?.label || 'English',
         }),
