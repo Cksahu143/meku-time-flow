@@ -124,6 +124,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onSelectFeature }) => {
             </SimpleTooltip>
           ))}
 
+          <MusicPlayer />
+
           <motion.div whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}>
             <InvitationNotifications />
           </motion.div>
