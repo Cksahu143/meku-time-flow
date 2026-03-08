@@ -87,6 +87,7 @@ export const GlobalSearchDialog: React.FC<GlobalSearchDialogProps> = ({
       <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden rounded-2xl border-border/40 shadow-2xl bg-card/98 backdrop-blur-2xl" aria-describedby={undefined}>
         <VisuallyHidden><DialogTitle>Search Features</DialogTitle></VisuallyHidden>
         {/* Search Input */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-border/30">
           <Search className="h-5 w-5 text-muted-foreground shrink-0" />
           <input
             autoFocus
