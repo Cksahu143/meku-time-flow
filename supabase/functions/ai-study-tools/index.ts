@@ -480,7 +480,7 @@ Resource:\n${resourceContext}`,
       },
     };
 
-    const config = toolConfigs[type];
+    const config = toolConfigs[effectiveType];
     if (!config) {
       return new Response(JSON.stringify({ error: `Invalid type: ${type}` }), {
         status: 400,
