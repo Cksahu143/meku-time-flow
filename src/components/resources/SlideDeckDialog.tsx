@@ -55,7 +55,7 @@ export const SlideDeckDialog = ({ open, onOpenChange, resource, content }: Slide
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) { setSlides([]); setCurrent(0); } onOpenChange(v); }}>
-      <DialogContent className="max-w-4xl max-h-[90vh]">
+      <DialogContent className="max-w-4xl max-h-[90vh]" onInteractOutside={e => e.preventDefault()} onPointerDownOutside={e => e.preventDefault()} onEscapeKeyDown={e => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <BrainCircuit className="h-5 w-5 text-primary" />

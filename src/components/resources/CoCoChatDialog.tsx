@@ -133,7 +133,7 @@ export const CoCoChatDialog = ({ open, onOpenChange, resource, content }: CoCoCh
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl h-[80vh] flex flex-col p-0">
+      <DialogContent className="max-w-2xl h-[80vh] flex flex-col p-0" onInteractOutside={e => e.preventDefault()} onPointerDownOutside={e => e.preventDefault()} onEscapeKeyDown={e => e.preventDefault()}>
         <DialogHeader className="px-6 pt-6 pb-3 border-b border-border/40">
           <DialogTitle className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
