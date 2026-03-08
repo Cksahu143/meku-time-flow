@@ -162,8 +162,64 @@ serve(async (req) => {
       ? "Board exam level difficulty. Include conceptual, application, and analytical questions. Use proper technical terminology. Test common misconceptions."
       : "Advanced board exam / competitive exam level. Include HOTS (Higher Order Thinking Skills) questions, multi-step problems, inter-topic connections, derivations, and case-study style questions. This is Class 11-12 material - be rigorous.";
 
+    // Audio overview mode: streaming summary for TTS
+    if (effectiveType === "audio_overview") {
+      const audioLang = language || "English";
+      const audioMessages = [
+        {
+          role: "system",
+          content: `You are a brilliant study narrator creating an audio overview for a ${gradeLevelStr} student.
+
+${MULTI_LANGUAGE_INSTRUCTION}
+
+OUTPUT LANGUAGE: Generate the summary in ${audioLang}. If the language is Hindi, write in Hindi. If Odia, write in Odia. Etc.
+
+RULES:
+- Create a clear, engaging spoken summary of the resource that sounds natural when read aloud by text-to-speech
+- Keep it concise but comprehensive — cover all key points, formulas, and concepts
+- Use simple sentence structures that flow well when spoken
+- Avoid markdown, bullet points, or special characters — write in natural paragraphs
+- Adjust complexity for ${gradeLevelStr}: ${difficultyGuide}
+- Include exam-relevant highlights like "Remember this for your exam..." or "A common question is..."
+- Duration target: ${gradeNumber <= 5 ? '1-2 minutes' : gradeNumber <= 8 ? '2-3 minutes' : '3-5 minutes'} of spoken content
+- Make it feel like a friendly teacher explaining the topic verbally
+
+Resource:\n${resourceContext}`,
+        },
+        {
+          role: "user",
+          content: `Create a spoken audio overview of this resource in ${audioLang}. Make it sound natural for text-to-speech.`,
+        },
+      ];
+
+      const response = await fetch(GATEWAY_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: audioMessages,
+          stream: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const status = response.status;
+        if (status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        const t = await response.text();
+        console.error("AI gateway error:", status, t);
+        return new Response(JSON.stringify({ error: "AI service error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      return new Response(response.body, {
+        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+      });
+    }
+
     // Chat mode: streaming
-    if (type === "chat") {
+    if (effectiveType === "chat") {
       const chatMessages = [
         {
           role: "system",
