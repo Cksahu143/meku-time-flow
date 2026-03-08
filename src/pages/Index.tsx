@@ -100,6 +100,7 @@ const Index = () => {
 
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden">
+      <NotificationListener />
       {/* Desktop Sidebar */}
       <div className="hidden md:block flex-shrink-0">
         <Sidebar
