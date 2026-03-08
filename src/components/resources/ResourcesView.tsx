@@ -24,7 +24,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useResources, DbResource, ResourceInput } from '@/hooks/useResources';
 
-const SUBJECTS = ['Mathematics', 'Physics', 'English', 'History', 'Chemistry', 'Biology'];
+const DEFAULT_SUBJECTS = ['Mathematics', 'Physics', 'English', 'History', 'Chemistry', 'Biology'];
 
 export const ResourcesView: React.FC = () => {
   const {
@@ -44,6 +44,9 @@ export const ResourcesView: React.FC = () => {
   const [editingResource, setEditingResource] = useState<DbResource | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const { toast } = useToast();
+
+  // Merge default subjects with any custom subjects from existing resources
+  const SUBJECTS = [...new Set([...DEFAULT_SUBJECTS, ...resources.map(r => r.subject)])].sort();
 
   const filteredResources = resources.filter((resource) => {
     const matchesSearch = resource.title.toLowerCase().includes(searchQuery.toLowerCase()) ||

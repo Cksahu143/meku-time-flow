@@ -23,6 +23,7 @@ import { RESOURCE_CATEGORIES } from '@/types';
 import { ResourceInput } from '@/hooks/useResources';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
+import { SubjectCombobox } from './SubjectCombobox';
 
 interface AddResourceModalProps {
   onAddResource: (input: ResourceInput, file?: File | null) => Promise<void>;
@@ -165,12 +166,7 @@ export const AddResourceModal: React.FC<AddResourceModalProps> = ({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>Subject *</Label>
-                <Select value={subject} onValueChange={setSubject}>
-                  <SelectTrigger className="bg-background/50"><SelectValue placeholder="Select subject" /></SelectTrigger>
-                  <SelectContent>
-                    {subjects.map((s) => (<SelectItem key={s} value={s}>{s}</SelectItem>))}
-                  </SelectContent>
-                </Select>
+                <SubjectCombobox value={subject} onChange={setSubject} subjects={subjects} className="bg-background/50" />
               </div>
               <div className="space-y-2">
                 <Label>Category</Label>

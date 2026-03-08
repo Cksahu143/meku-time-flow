@@ -6,9 +6,9 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ShareTimetableDialog } from '@/components/ShareTimetableDialog';
-import { ThemeCustomization } from '@/components/ThemeCustomization';
-import { TodayScheduleWidget } from '@/components/TodayScheduleWidget';
+import { ShareTimetableDialog } from '@/components/timetable/ShareTimetableDialog';
+import { ThemeCustomization } from '@/components/settings/ThemeCustomization';
+import { TodayScheduleWidget } from '@/components/timetable/TodayScheduleWidget';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const DEFAULT_PERIODS: Period[] = [];

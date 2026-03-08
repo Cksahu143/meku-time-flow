@@ -15,8 +15,8 @@ import { Settings, Upload, Bell, Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { NotificationPreferences } from '@/components/NotificationPreferences';
-import { PrivacySettings } from '@/components/PrivacySettings';
+import { NotificationPreferences } from '@/components/settings/NotificationPreferences';
+import { PrivacySettings } from '@/components/settings/PrivacySettings';
 
 export const ProfileSettings: React.FC = () => {
   const [open, setOpen] = useState(false);
