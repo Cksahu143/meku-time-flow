@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Conversation } from '@/types';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { ScrollArea } from './ui/scroll-area';
-import { Input } from './ui/input';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
 import { MessageSquare, Search, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { OnlineStatus } from './chat/OnlineStatus';
+import { OnlineStatus } from '@/components/chat/OnlineStatus';
 
 interface ConversationsListProps {
   conversations: Conversation[];
