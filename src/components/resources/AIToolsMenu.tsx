@@ -85,7 +85,7 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
     fetchGrade();
   }, []);
 
-  const openTool = (tool: 'coco' | 'flashcards' | 'slides' | 'quiz') => {
+  const openTool = (tool: 'coco' | 'flashcards' | 'slides' | 'quiz' | 'audio') => {
     if (!gradeLoaded) return;
     if (!gradeLevel) {
       // Ask student to pick their grade
