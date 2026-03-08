@@ -199,6 +199,13 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
         content={resourceContent}
         gradeLevel={gradeLevel || undefined}
       />
+      <AudioOverviewDialog
+        open={showAudio}
+        onOpenChange={setShowAudio}
+        resource={resource}
+        content={resourceContent}
+        gradeLevel={gradeLevel || undefined}
+      />
     </>
   );
 };
