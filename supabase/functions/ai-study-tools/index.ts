@@ -498,7 +498,7 @@ Resource:\n${resourceContext}`,
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: config.systemPrompt },
-          { role: "user", content: `Generate ${type === "viva" ? "mock viva questions" : type} from this resource. Go deep into the actual content and topic. This is for ${gradeLevelStr} board exam preparation - make it rigorous and comprehensive. Generate exactly ${questionCount.min}-${questionCount.max} items.` },
+          { role: "user", content: `Generate ${effectiveType === "viva" ? "mock viva questions" : effectiveType} from this resource. Go deep into the actual content and topic. This is for ${gradeLevelStr} board exam preparation - make it rigorous and comprehensive. Generate exactly ${questionCount.min}-${questionCount.max} items.` },
         ],
         tools: [config.tool],
         tool_choice: { type: "function", function: { name: config.tool.function.name } },
