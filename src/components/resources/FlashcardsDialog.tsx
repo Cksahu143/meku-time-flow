@@ -16,6 +16,7 @@ interface FlashcardsDialogProps {
   resource: DbResource;
   content: string;
   gradeLevel?: string;
+  fileName?: string;
 }
 
 export const FlashcardsDialog = ({ open, onOpenChange, resource, content, gradeLevel }: FlashcardsDialogProps) => {
