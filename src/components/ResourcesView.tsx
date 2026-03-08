@@ -45,6 +45,9 @@ export const ResourcesView: React.FC = () => {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const { toast } = useToast();
 
+  // Merge default subjects with any custom subjects from existing resources
+  const SUBJECTS = [...new Set([...DEFAULT_SUBJECTS, ...resources.map(r => r.subject)])].sort();
+
   const filteredResources = resources.filter((resource) => {
     const matchesSearch = resource.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       resource.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
