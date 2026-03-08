@@ -134,34 +134,73 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background bg-mesh p-4 relative overflow-hidden">
-      {/* Decorative orbs */}
-      <div className="absolute top-20 left-[10%] w-80 h-80 rounded-full blur-3xl opacity-20" style={{ background: 'hsl(var(--primary) / 0.15)' }} />
-      <div className="absolute bottom-20 right-[10%] w-64 h-64 rounded-full blur-3xl opacity-15" style={{ background: 'hsl(var(--accent) / 0.2)' }} />
+      {/* Animated morphing orbs */}
+      <motion.div
+        className="absolute top-20 left-[10%] w-80 h-80 rounded-full blur-3xl opacity-20 animate-morph"
+        style={{ background: 'hsl(var(--primary) / 0.15)' }}
+        animate={{ x: [0, 30, 0], y: [0, -20, 0] }}
+        transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
+      />
+      <motion.div
+        className="absolute bottom-20 right-[10%] w-64 h-64 rounded-full blur-3xl opacity-15 animate-morph"
+        style={{ background: 'hsl(var(--accent) / 0.2)', animationDelay: '-4s' }}
+        animate={{ x: [0, -20, 0], y: [0, 30, 0] }}
+        transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
+      />
+      <motion.div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full blur-[150px] opacity-10"
+        style={{ background: 'hsl(var(--success) / 0.15)' }}
+        animate={{ scale: [1, 1.2, 1] }}
+        transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+      />
 
       <motion.div 
         className="flex flex-col md:flex-row gap-6 w-full max-w-5xl relative z-10"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        initial={{ opacity: 0, y: 30, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.6, type: 'spring', stiffness: 150, damping: 20 }}
       >
-        <Card className="w-full md:w-2/3 shadow-lg border-border/30">
+        <Card className="w-full md:w-2/3 shadow-lg border-border/30 card-premium">
           <CardHeader className="space-y-3 pb-4">
             <motion.div 
               className="flex items-center justify-center gap-3"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1 }}
+              initial={{ opacity: 0, scale: 0, rotate: -180 }}
+              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+              transition={{ delay: 0.2, type: 'spring', stiffness: 200, damping: 15 }}
             >
-              <div className="p-2.5 rounded-xl bg-gradient-primary shadow-primary">
-                <BookOpenCheck className="w-6 h-6 text-primary-foreground" />
-              </div>
+              <motion.div
+                className="p-2.5 rounded-xl bg-gradient-primary shadow-primary relative overflow-hidden"
+                whileHover={{ scale: 1.1, rotate: 5 }}
+                animate={{ rotate: [0, 2, -2, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                <BookOpenCheck className="w-6 h-6 text-primary-foreground relative z-10" />
+                <motion.div
+                  className="absolute inset-0"
+                  style={{ background: 'linear-gradient(135deg, transparent 40%, hsl(0 0% 100% / 0.2) 50%, transparent 60%)' }}
+                  animate={{ x: ['-100%', '200%'] }}
+                  transition={{ duration: 3, repeat: Infinity, repeatDelay: 4 }}
+                />
+              </motion.div>
             </motion.div>
-            <CardTitle className="font-display text-3xl font-bold text-center text-gradient-blue">
-              Education Assist
-            </CardTitle>
-            <CardDescription className="text-center text-muted-foreground">
-              Sign in to your EDAS account
-            </CardDescription>
+            <motion.div
+              initial={{ opacity: 0, y: 10, filter: 'blur(6px)' }}
+              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+              transition={{ delay: 0.3, duration: 0.5 }}
+            >
+              <CardTitle className="font-display text-3xl font-bold text-center text-gradient-blue">
+                Education Assist
+              </CardTitle>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+            >
+              <CardDescription className="text-center text-muted-foreground">
+                Sign in to your EDAS account
+              </CardDescription>
+            </motion.div>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="signin" className="w-full">
