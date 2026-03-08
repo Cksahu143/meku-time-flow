@@ -15,6 +15,7 @@ interface SlideDeckDialogProps {
   onOpenChange: (open: boolean) => void;
   resource: DbResource;
   content: string;
+  gradeLevel?: string;
 }
 
 export const SlideDeckDialog = ({ open, onOpenChange, resource, content }: SlideDeckDialogProps) => {
