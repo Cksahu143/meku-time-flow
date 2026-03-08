@@ -164,15 +164,11 @@ export const useDirectMessages = (conversationId: string | null) => {
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('chat-files')
-        .getPublicUrl(uploadData.path);
-
       const { error } = await supabase.from('direct_messages').insert({
         conversation_id: conversationId,
         sender_id: user.id,
         content: file.type.startsWith('image/') ? '[Image]' : `[${file.name}]`,
-        file_url: publicUrl,
+        file_url: uploadData.path,
         file_name: file.name,
         file_size: file.size,
         file_type: file.type,
