@@ -81,11 +81,16 @@ export const useResources = () => {
       return null;
     }
 
-    const { data: { publicUrl } } = supabase.storage
+    const { data, error: signError } = await supabase.storage
       .from('resources')
-      .getPublicUrl(filePath);
+      .createSignedUrl(filePath, 3600); // 1 hour expiry
 
-    return publicUrl;
+    if (signError || !data?.signedUrl) {
+      console.error('Signed URL error:', signError);
+      return null;
+    }
+
+    return data.signedUrl;
   };
 
   const addResource = async (input: ResourceInput, file?: File | null): Promise<boolean> => {

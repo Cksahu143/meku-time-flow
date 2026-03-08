@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-sso-secret',
 };
 
 // Hash function matching the one in generate-sso-token
@@ -14,6 +14,22 @@ async function hashToken(token: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// Simple in-memory rate limiter
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT = 10; // max attempts per window
+const RATE_WINDOW_MS = 60_000; // 1 minute
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    return false;
+  }
+  entry.count++;
+  return entry.count > RATE_LIMIT;
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -21,6 +37,28 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Rate limiting by IP
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    if (isRateLimited(clientIp)) {
+      console.warn(`Rate limited SSO verify attempt from ${clientIp}`);
+      return new Response(
+        JSON.stringify({ error: 'Too many requests', valid: false }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate shared secret
+    const ssoSecret = Deno.env.get('SSO_SHARED_SECRET');
+    if (ssoSecret) {
+      const providedSecret = req.headers.get('x-sso-secret');
+      if (providedSecret !== ssoSecret) {
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized', valid: false }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
@@ -50,11 +88,11 @@ Deno.serve(async (req) => {
       .single();
 
     if (lookupError || !ssoToken) {
+      console.warn(`Failed SSO verify attempt from ${clientIp}`);
       return new Response(
         JSON.stringify({ 
           error: 'Invalid or expired token',
-          valid: false,
-          reason: !ssoToken ? 'Token not found or already used' : 'Token expired'
+          valid: false
         }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
