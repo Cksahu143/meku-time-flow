@@ -127,7 +127,7 @@ serve(async (req) => {
 
     const gradeNumber = getGradeNumber(gradeLevel);
     const gradeLevelStr = gradeLevel || `Grade ${gradeNumber}`;
-    const questionCount = getQuestionCount(gradeNumber, type);
+    const questionCount = getQuestionCount(gradeNumber, effectiveType);
 
     // Build rich content from all sources
     let enrichedContent = content || "";
