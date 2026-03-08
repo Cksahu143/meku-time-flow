@@ -17,6 +17,7 @@ interface CoCoChatDialogProps {
   onOpenChange: (open: boolean) => void;
   resource: DbResource;
   content: string;
+  gradeLevel?: string;
 }
 
 export const CoCoChatDialog = ({ open, onOpenChange, resource, content }: CoCoChatDialogProps) => {
