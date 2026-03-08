@@ -34,6 +34,7 @@ interface QuizDialogProps {
   onOpenChange: (open: boolean) => void;
   resource: DbResource;
   content: string;
+  gradeLevel?: string;
 }
 
 export const QuizDialog = ({ open, onOpenChange, resource, content }: QuizDialogProps) => {
