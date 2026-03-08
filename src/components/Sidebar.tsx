@@ -100,14 +100,27 @@ export function Sidebar({ currentView, onViewChange, collapsed = false, onToggle
           />
         )}
         <div className="relative z-10 flex items-center gap-3 w-full">
-          <div className="relative flex-shrink-0">
+          <motion.div
+            className="relative flex-shrink-0"
+            whileHover={hasAccess ? { rotate: [0, -10, 10, -5, 0], scale: 1.15 } : undefined}
+            transition={{ duration: 0.4 }}
+          >
             <Icon className="w-[18px] h-[18px]" />
             {!hasAccess && <Lock className="absolute -top-1 -right-1 h-2.5 w-2.5" />}
-          </div>
+          </motion.div>
           {!collapsed && (
             <span className="text-sm font-medium truncate">{item.label}</span>
           )}
         </div>
+        {/* Active glow dot */}
+        {isActive && !collapsed && (
+          <motion.div
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-sidebar-primary-foreground/80"
+            layoutId="activeDot"
+            animate={{ scale: [1, 1.3, 1], opacity: [0.6, 1, 0.6] }}
+            transition={{ scale: { duration: 2, repeat: Infinity }, opacity: { duration: 2, repeat: Infinity } }}
+          />
+        )}
       </motion.button>
     );
 
