@@ -24,6 +24,7 @@ import { ClassesManagementView } from '@/components/admin/ClassesManagementView'
 import { AboutView } from '@/components/about/AboutView';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { PageTransition } from '@/components/motion/PageTransition';
+import { NotificationListener } from '@/components/NotificationListener';
 
 // Unique per-view transition variants
 const viewTransitions: Record<string, { initial: TargetAndTransition; animate: TargetAndTransition; exit: TargetAndTransition }> = {
