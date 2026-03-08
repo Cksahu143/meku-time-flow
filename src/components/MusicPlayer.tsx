@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Music, X } from 'lucide-react';
+import { Music } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
@@ -7,23 +7,25 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 
-const playlists = [
+const tracks = [
   {
     name: 'Lofi Hip Hop',
-    embedUrl: 'https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/playlists/1235628588&color=%23ff5500&auto_play=false&hide_related=true&show_comments=false&show_user=false&show_reposts=false&show_teaser=false',
+    embedUrl: 'https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/1234567890&color=%23ff5500&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false',
+    // Using SoundCloud's genre-based search embed which is more reliable
+    searchEmbed: 'https://w.soundcloud.com/player/?url=https%3A//soundcloud.com/search/sounds%3Fq%3Dlofi%2520hip%2520hop%2520beats&color=%23ff5500&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false&visual=true',
   },
   {
     name: 'Study Beats',
-    embedUrl: 'https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/playlists/1012810706&color=%23ff5500&auto_play=false&hide_related=true&show_comments=false&show_user=false&show_reposts=false&show_teaser=false',
+    searchEmbed: 'https://w.soundcloud.com/player/?url=https%3A//soundcloud.com/search/sounds%3Fq%3Dstudy%2520beats%2520chill&color=%23ff5500&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false&visual=true',
   },
   {
     name: 'Chill Piano',
-    embedUrl: 'https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/playlists/272991585&color=%23ff5500&auto_play=false&hide_related=true&show_comments=false&show_user=false&show_reposts=false&show_teaser=false',
+    searchEmbed: 'https://w.soundcloud.com/player/?url=https%3A//soundcloud.com/search/sounds%3Fq%3Dchill%2520piano%2520relaxing&color=%23ff5500&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false&visual=true',
   },
 ];
 
 export function MusicPlayer() {
-  const [activePlaylist, setActivePlaylist] = useState(0);
+  const [activeTrack, setActiveTrack] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
 
   return (
@@ -43,27 +45,22 @@ export function MusicPlayer() {
             <span className="text-[10px] text-muted-foreground">via SoundCloud</span>
           </div>
 
-          {/* Playlist selector */}
           <div className="flex gap-1.5">
-            {playlists.map((pl, i) => (
+            {tracks.map((t, i) => (
               <button
                 key={i}
-                onClick={() => {
-                  setActivePlaylist(i);
-                  setIsPlaying(true);
-                }}
+                onClick={() => { setActiveTrack(i); setIsPlaying(true); }}
                 className={`flex-1 text-xs px-2 py-1.5 rounded-lg transition-colors ${
-                  activePlaylist === i
+                  activeTrack === i
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-secondary hover:bg-secondary/80'
                 }`}
               >
-                {pl.name}
+                {t.name}
               </button>
             ))}
           </div>
 
-          {/* SoundCloud iframe */}
           <div className="rounded-lg overflow-hidden border border-border/30">
             <iframe
               width="100%"
@@ -71,7 +68,7 @@ export function MusicPlayer() {
               scrolling="no"
               frameBorder="no"
               allow="autoplay"
-              src={playlists[activePlaylist].embedUrl}
+              src={tracks[activeTrack].searchEmbed}
               onLoad={() => setIsPlaying(true)}
               title="SoundCloud Player"
             />

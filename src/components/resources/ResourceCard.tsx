@@ -200,6 +200,12 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
           <CardFooter className="p-4 pt-0 flex gap-2">
             <div className="flex gap-1 mr-auto">
               <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div><AIToolsMenu resource={resource} /></div>
+                  </TooltipTrigger>
+                  <TooltipContent>AI Study Tools</TooltipContent>
+                </Tooltip>
                 {onEdit && (
                   <Tooltip>
                     <TooltipTrigger asChild>
