@@ -8,7 +8,72 @@ const corsHeaders = {
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
+function extractYouTubeVideoId(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes("youtube.com")) {
+      return u.searchParams.get("v");
+    }
+    if (u.hostname === "youtu.be") {
+      return u.pathname.slice(1);
+    }
+  } catch {}
+  return null;
+}
+
+function isYouTubeUrl(url: string): boolean {
+  return extractYouTubeVideoId(url) !== null;
+}
+
+async function fetchYouTubeInfo(url: string): Promise<string> {
+  try {
+    // Fetch the YouTube page to get the title and description from meta tags
+    const resp = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" },
+      redirect: "follow",
+    });
+    if (!resp.ok) return "";
+    const html = await resp.text();
+
+    // Extract title
+    const titleMatch = html.match(/<meta\s+name="title"\s+content="([^"]*)"/) ||
+                        html.match(/<title>([^<]*)<\/title>/);
+    const title = titleMatch?.[1] || "";
+
+    // Extract description (YouTube puts full description in meta)
+    const descMatch = html.match(/<meta\s+name="description"\s+content="([^"]*)"/) ||
+                      html.match(/<meta\s+property="og:description"\s+content="([^"]*)"/);
+    const description = descMatch?.[1] || "";
+
+    // Extract keywords
+    const kwMatch = html.match(/<meta\s+name="keywords"\s+content="([^"]*)"/);
+    const keywords = kwMatch?.[1] || "";
+
+    // Try to get chapter/timestamp info from the page
+    const chapterRegex = /(\d{1,2}:\d{2}(?::\d{2})?)\s*[-–]?\s*(.+?)(?=\d{1,2}:\d{2}|$)/g;
+    const chapters: string[] = [];
+    let cm;
+    while ((cm = chapterRegex.exec(html)) !== null && chapters.length < 30) {
+      chapters.push(`${cm[1]} - ${cm[2].trim()}`);
+    }
+
+    let info = `[YouTube Video]\nVideo Title: ${title}\nDescription: ${description}`;
+    if (keywords) info += `\nKeywords: ${keywords}`;
+    if (chapters.length > 0) info += `\nChapters:\n${chapters.join("\n")}`;
+
+    return info;
+  } catch (e) {
+    console.error("YouTube fetch failed:", e);
+    return "";
+  }
+}
+
 async function fetchUrlContent(url: string): Promise<string> {
+  // Special handling for YouTube
+  if (isYouTubeUrl(url)) {
+    return fetchYouTubeInfo(url);
+  }
+
   try {
     const resp = await fetch(url, {
       headers: { "User-Agent": "Mozilla/5.0 (compatible; StudyBot/1.0)" },
@@ -79,7 +144,7 @@ async function searchWebForSubject(subject: string, title: string, apiKey: strin
 }
 
 function getGradeNumber(gradeLevel?: string): number {
-  if (!gradeLevel) return 10; // default assumption
+  if (!gradeLevel) return 10;
   const match = gradeLevel.match(/(\d+)/);
   if (match) return parseInt(match[1]);
   const lower = gradeLevel.toLowerCase();
@@ -132,19 +197,21 @@ serve(async (req) => {
     // Build rich content from all sources
     let enrichedContent = content || "";
 
-    if (resourceUrl && (!enrichedContent || enrichedContent.length < 100)) {
+    // ALWAYS try to fetch URL content for link-type resources
+    if (resourceUrl) {
       console.log("Fetching content from URL:", resourceUrl);
       const urlContent = await fetchUrlContent(resourceUrl);
       if (urlContent) {
-        enrichedContent = enrichedContent
-          ? `${enrichedContent}\n\n--- Content from URL ---\n${urlContent}`
-          : urlContent;
+        enrichedContent = urlContent + (enrichedContent ? `\n\n--- User Notes ---\n${enrichedContent}` : "");
       }
     }
 
+    // If content is still thin, use AI to generate comprehensive notes
     if (!enrichedContent || enrichedContent.length < 200) {
       console.log("Content thin, searching for subject knowledge...");
-      const webContent = await searchWebForSubject(subject || "General", title || "Study Material", LOVABLE_API_KEY);
+      // Use the title AND subject to generate relevant content
+      const searchTitle = title && title.length > 3 ? title : `${subject || "General"} study material`;
+      const webContent = await searchWebForSubject(subject || "General", searchTitle, LOVABLE_API_KEY);
       if (webContent) {
         enrichedContent = enrichedContent
           ? `${enrichedContent}\n\n--- Subject Knowledge ---\n${webContent}`
@@ -152,7 +219,12 @@ serve(async (req) => {
       }
     }
 
-    const resourceContext = `Resource Title: ${title || "Untitled"}\nSubject: ${subject || "General"}\nResource Type: ${resourceType || "unknown"}\nStudent Grade Level: ${gradeLevelStr}\n\nContent:\n${enrichedContent || "No content available - use your deep knowledge of this subject to help the student."}`;
+    // CRITICAL: If the title is very short (like "h"), tell the AI to focus on the actual content, not the title
+    const titleNote = title && title.length <= 3
+      ? `\n\nIMPORTANT: The resource title "${title}" is very short and may not describe the topic. Focus on the ACTUAL CONTENT below, not the title. Derive the real topic from the content, URL, and subject.`
+      : "";
+
+    const resourceContext = `Resource Title: ${title || "Untitled"}\nSubject: ${subject || "General"}\nResource Type: ${resourceType || "unknown"}\nStudent Grade Level: ${gradeLevelStr}${titleNote}\n\nContent:\n${enrichedContent || "No content available - use your deep knowledge of this subject to help the student."}`;
 
     const difficultyGuide = gradeNumber <= 5
       ? "Keep language simple and age-appropriate. Use fun examples and relatable scenarios. Focus on basic concepts and recall."
@@ -168,27 +240,39 @@ serve(async (req) => {
       const audioMessages = [
         {
           role: "system",
-          content: `You are a brilliant study narrator creating an audio overview for a ${gradeLevelStr} student.
+          content: `You are a brilliant, engaging podcast-style study narrator — think of yourself as the best educational YouTuber combined with the most caring teacher. You are creating an AUDIO OVERVIEW for a ${gradeLevelStr} student.
 
 ${MULTI_LANGUAGE_INSTRUCTION}
 
-OUTPUT LANGUAGE: Generate the summary in ${audioLang}. If the language is Hindi, write in Hindi. If Odia, write in Odia. Etc.
+OUTPUT LANGUAGE: Generate the summary in ${audioLang}. If the language is Hindi, write in Hindi (Devanagari script). If Odia, write in Odia script. Etc.
 
-RULES:
-- Create a clear, engaging spoken summary of the resource that sounds natural when read aloud by text-to-speech
-- Keep it concise but comprehensive — cover all key points, formulas, and concepts
-- Use simple sentence structures that flow well when spoken
-- Avoid markdown, bullet points, or special characters — write in natural paragraphs
-- Adjust complexity for ${gradeLevelStr}: ${difficultyGuide}
-- Include exam-relevant highlights like "Remember this for your exam..." or "A common question is..."
-- Duration target: ${gradeNumber <= 5 ? '1-2 minutes' : gradeNumber <= 8 ? '2-3 minutes' : '3-5 minutes'} of spoken content
-- Make it feel like a friendly teacher explaining the topic verbally
+STYLE:
+- Sound like a friendly, passionate teacher talking directly to ONE student
+- Use conversational tone: "So, let me tell you about...", "Now here's the interesting part...", "Think about it this way..."
+- Build up concepts step by step, like telling a story
+- Use vivid analogies and real-life examples to explain abstract concepts
+- Add emphasis phrases: "This is SUPER important for your exam!", "Pay close attention here..."
+- Include brief pauses with phrases like "Let that sink in for a moment."
+- Summarize key points at the end: "So to wrap up, the three things you must remember are..."
+
+CONTENT DEPTH:
+- Cover ALL key concepts, formulas, theorems, and definitions from the material
+- Explain the WHY behind concepts, not just the WHAT
+- Include exam-relevant highlights, common mistakes students make, and tips
+- For ${gradeLevelStr}: ${difficultyGuide}
+- Duration target: ${gradeNumber <= 5 ? '2-3 minutes' : gradeNumber <= 8 ? '3-5 minutes' : '5-8 minutes'} of spoken content
+
+FORMAT:
+- Write in natural flowing paragraphs — NO bullet points, NO markdown, NO special characters
+- NO asterisks, NO hashes, NO dashes at start of lines
+- Just pure spoken word text that sounds amazing when read aloud
+- Use punctuation for natural pauses: commas, periods, ellipses
 
 Resource:\n${resourceContext}`,
         },
         {
           role: "user",
-          content: `Create a spoken audio overview of this resource in ${audioLang}. Make it sound natural for text-to-speech.`,
+          content: `Create an engaging, podcast-style audio overview of this resource in ${audioLang}. Make it sound like the best study podcast episode ever — warm, clear, and incredibly helpful. Focus on the ACTUAL TOPIC from the content, not the title.`,
         },
       ];
 
@@ -208,6 +292,7 @@ Resource:\n${resourceContext}`,
       if (!response.ok) {
         const status = response.status;
         if (status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        if (status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         const t = await response.text();
         console.error("AI gateway error:", status, t);
         return new Response(JSON.stringify({ error: "AI service error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -232,6 +317,7 @@ ${MULTI_LANGUAGE_INSTRUCTION}
 
 CRITICAL RULES:
 - You MUST go DEEP into the actual topic content, not just the title or headers
+- If the title is very short or unclear, focus on the CONTENT and URL to determine the real topic
 - Explain concepts with crystal clarity using analogies, real-world examples, and step-by-step breakdowns
 - When a student asks about a topic, provide COMPREHENSIVE answers covering theory, formulas, derivations, examples, and common exam traps
 - Use board exam terminology and marking scheme awareness
@@ -295,6 +381,7 @@ RULES:
 - Back of cards should have complete, exam-ready answers
 - Include "Exam Tip" on relevant cards
 - Go DEEP into the content - don't just ask surface-level questions about titles
+- If the title is short or unclear, derive the topic from the actual content
 - Test conceptual understanding, not just recall
 - Include numerical/problem-solving flashcards where applicable
 - For language subjects (Hindi, Sanskrit, Odia etc.), write cards in that language
@@ -344,6 +431,7 @@ RULES:
 - Structure: Introduction → Core Concepts → Formulas/Definitions → Applications → Key Differences → Summary
 - Make it so a student can revise the entire topic just from these slides
 - Go deep into the actual content, not surface-level
+- If the title is short or unclear, derive the topic from the actual content
 - Adjust language and complexity for ${gradeLevelStr}
 - For language subjects, use that language in the slides
 
@@ -393,7 +481,8 @@ RULES:
 - Include tricky questions with subtle differences in options
 - Include questions that test common mistakes ${gradeLevelStr} students make
 - Make it feel like a real ${gradeNumber >= 10 ? 'board exam' : 'school exam'} mini-test
-- Questions MUST be about the actual content/topic, not about metadata
+- Questions MUST be about the actual content/topic, not about metadata or the title
+- If the title is short or unclear, derive the topic from the actual content
 - For language subjects, write questions in that language
 
 Resource:\n${resourceContext}`,
@@ -443,7 +532,8 @@ RULES:
 - Include questions that test practical understanding and real-world application
 - The expected answers should be detailed, showing what a top-scoring student would say
 - Include examiner tips on what they look for in answers
-- Questions MUST be about the actual topic content, not about metadata
+- Questions MUST be about the actual topic content, not about metadata or the title
+- If the title is short or unclear, derive the topic from the actual content
 - Make it feel like a real viva voce examination
 - For ${gradeLevelStr}, ${gradeNumber >= 10 ? 'ask probing questions that test deep understanding, derivations, and inter-topic connections' : 'focus on fundamentals with encouraging follow-ups'}
 
@@ -498,7 +588,7 @@ Resource:\n${resourceContext}`,
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: config.systemPrompt },
-          { role: "user", content: `Generate ${effectiveType === "viva" ? "mock viva questions" : effectiveType} from this resource. Go deep into the actual content and topic. This is for ${gradeLevelStr} board exam preparation - make it rigorous and comprehensive. Generate exactly ${questionCount.min}-${questionCount.max} items.` },
+          { role: "user", content: `Generate ${effectiveType === "viva" ? "mock viva questions" : effectiveType} from this resource. Go deep into the actual content and topic — NOT the title. This is for ${gradeLevelStr} board exam preparation - make it rigorous and comprehensive. Generate exactly ${questionCount.min}-${questionCount.max} items.` },
         ],
         tools: [config.tool],
         tool_choice: { type: "function", function: { name: config.tool.function.name } },

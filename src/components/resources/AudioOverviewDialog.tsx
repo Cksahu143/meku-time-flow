@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { Play, Pause, Square, RotateCcw, Volume2, Languages } from 'lucide-react';
+import { Play, Pause, Square, RotateCcw, Volume2, Languages, Loader2 } from 'lucide-react';
 import { DbResource } from '@/hooks/useResources';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -39,8 +39,13 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
   const [rate, setRate] = useState([1]);
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [progress, setProgress] = useState(0);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const [currentChunk, setCurrentChunk] = useState(0);
+  const [totalChunks, setTotalChunks] = useState(0);
+  const chunksRef = useRef<string[]>([]);
+  const currentChunkRef = useRef(0);
+  const isPlayingRef = useRef(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startTimeRef = useRef(0);
 
   // Load voices
   useEffect(() => {
@@ -59,11 +64,7 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
   // Cleanup on close
   useEffect(() => {
     if (!open) {
-      speechSynthesis.cancel();
-      setPlaying(false);
-      setPaused(false);
-      setProgress(0);
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      stopPlayback();
     }
   }, [open]);
 
@@ -84,6 +85,8 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
           content,
           subject: resource.subject,
           title: resource.title,
+          resourceUrl: resource.url,
+          resourceType: resource.resource_type,
           gradeLevel: gradeLevel || 'Grade 8',
           language: VOICE_LANGUAGES.find(v => v.code === lang)?.label || 'English',
         }),
@@ -91,7 +94,6 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
 
       if (!res.ok) throw new Error('Failed to generate summary');
 
-      // Handle streaming
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
       let text = '';
@@ -120,7 +122,6 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
       }
     } catch (err) {
       console.error('Audio overview error:', err);
-      // Fallback: use the resource content directly
       const fallback = content.length > 500
         ? `Here is a summary of ${resource.title}: ${content.substring(0, 800)}...`
         : `Here is an overview of ${resource.title}: ${content || resource.description}`;
@@ -130,75 +131,115 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
   };
 
   const findVoice = useCallback(() => {
-    // Try to find a voice matching the selected language
-    const langCode = lang === 'or' ? 'od' : lang; // Odia code varies
+    const langCode = lang === 'or' ? 'od' : lang;
     const match = availableVoices.find(v =>
       v.lang.startsWith(lang) || v.lang.startsWith(langCode)
     );
     return match || availableVoices.find(v => v.lang.startsWith('en')) || availableVoices[0];
   }, [lang, availableVoices]);
 
-  const speak = () => {
-    if (paused) {
-      speechSynthesis.resume();
+  // Split text into chunks to avoid Chrome's ~15s speech cutoff
+  const splitIntoChunks = (text: string): string[] => {
+    const sentences = text.match(/[^.!?।]+[.!?।]+[\s]*/g) || [text];
+    const chunks: string[] = [];
+    let current = '';
+
+    for (const sentence of sentences) {
+      if ((current + sentence).length > 200) {
+        if (current) chunks.push(current.trim());
+        current = sentence;
+      } else {
+        current += sentence;
+      }
+    }
+    if (current.trim()) chunks.push(current.trim());
+    return chunks;
+  };
+
+  const speakChunk = (index: number) => {
+    if (index >= chunksRef.current.length) {
+      // All chunks done
+      isPlayingRef.current = false;
+      setPlaying(false);
       setPaused(false);
-      setPlaying(true);
-      startProgressTracker();
+      setProgress(100);
+      if (intervalRef.current) clearInterval(intervalRef.current);
       return;
     }
 
-    speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(summary);
+    const utterance = new SpeechSynthesisUtterance(chunksRef.current[index]);
     const voice = findVoice();
     if (voice) utterance.voice = voice;
     utterance.rate = rate[0];
     utterance.pitch = 1;
 
     utterance.onend = () => {
-      setPlaying(false);
-      setPaused(false);
-      setProgress(100);
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (!isPlayingRef.current) return;
+      currentChunkRef.current = index + 1;
+      setCurrentChunk(index + 1);
+      const pct = ((index + 1) / chunksRef.current.length) * 100;
+      setProgress(pct);
+      speakChunk(index + 1);
     };
 
-    utteranceRef.current = utterance;
+    utterance.onerror = (e) => {
+      // Skip errored chunks
+      if (e.error === 'interrupted' || e.error === 'cancelled') return;
+      console.warn('TTS chunk error:', e.error);
+      if (!isPlayingRef.current) return;
+      currentChunkRef.current = index + 1;
+      speakChunk(index + 1);
+    };
+
     speechSynthesis.speak(utterance);
-    setPlaying(true);
-    setPaused(false);
-    startProgressTracker();
   };
 
-  const startProgressTracker = () => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    const estimatedDuration = (summary.length / 15) / rate[0]; // rough estimate
-    const start = Date.now();
-    intervalRef.current = setInterval(() => {
-      const elapsed = (Date.now() - start) / 1000;
-      const pct = Math.min((elapsed / estimatedDuration) * 100, 99);
-      setProgress(pct);
-    }, 200);
+  const speak = () => {
+    if (paused) {
+      speechSynthesis.resume();
+      setPaused(false);
+      setPlaying(true);
+      isPlayingRef.current = true;
+      return;
+    }
+
+    speechSynthesis.cancel();
+    const chunks = splitIntoChunks(summary);
+    chunksRef.current = chunks;
+    currentChunkRef.current = 0;
+    setCurrentChunk(0);
+    setTotalChunks(chunks.length);
+    isPlayingRef.current = true;
+    setPlaying(true);
+    setPaused(false);
+    setProgress(0);
+    speakChunk(0);
   };
 
   const pause = () => {
     speechSynthesis.pause();
     setPaused(true);
     setPlaying(false);
-    if (intervalRef.current) clearInterval(intervalRef.current);
+    isPlayingRef.current = false;
   };
 
-  const stop = () => {
+  const stopPlayback = () => {
     speechSynthesis.cancel();
+    isPlayingRef.current = false;
     setPlaying(false);
     setPaused(false);
     setProgress(0);
+    setCurrentChunk(0);
     if (intervalRef.current) clearInterval(intervalRef.current);
   };
 
   const regenerate = () => {
-    stop();
+    stopPlayback();
     setSummary('');
     generateSummary();
   };
+
+  const estimatedMinutes = summary ? Math.max(1, Math.round((summary.length / 15 / 60) / rate[0])) : 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -211,7 +252,7 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Volume2 className="h-5 w-5 text-primary" />
-            Audio Overview — {resource.title}
+            Audio Overview
           </DialogTitle>
         </DialogHeader>
 
@@ -222,7 +263,7 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
               <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                 <Languages className="h-3 w-3" /> Language
               </label>
-              <Select value={lang} onValueChange={v => { setLang(v); stop(); }}>
+              <Select value={lang} onValueChange={v => { setLang(v); stopPlayback(); }}>
                 <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
@@ -239,7 +280,7 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
               </label>
               <Slider
                 value={rate}
-                onValueChange={v => { setRate(v); stop(); }}
+                onValueChange={v => { setRate(v); stopPlayback(); }}
                 min={0.5}
                 max={2}
                 step={0.25}
@@ -251,9 +292,9 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
           {/* Summary text */}
           <div className="bg-muted/50 rounded-lg p-3 min-h-[120px] max-h-[240px] overflow-y-auto text-sm leading-relaxed">
             {loading ? (
-              <div className="flex items-center gap-2 text-muted-foreground animate-pulse">
-                <div className="h-2 w-2 rounded-full bg-primary animate-bounce" />
-                Generating audio script...
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                <span>Generating audio script{resource.url ? ' (fetching content from link...)' : ''}...</span>
               </div>
             ) : summary ? (
               <p className="whitespace-pre-wrap">{summary}</p>
@@ -262,11 +303,21 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
             )}
           </div>
 
+          {/* Info bar */}
+          {summary && !loading && (
+            <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+              <span>~{estimatedMinutes} min at {rate[0]}x speed</span>
+              {totalChunks > 0 && (playing || paused) && (
+                <span>Part {Math.min(currentChunk + 1, totalChunks)}/{totalChunks}</span>
+              )}
+            </div>
+          )}
+
           {/* Progress bar */}
           {(playing || paused || progress > 0) && (
-            <div className="w-full bg-muted rounded-full h-1.5">
+            <div className="w-full bg-muted rounded-full h-2">
               <div
-                className="bg-primary h-1.5 rounded-full transition-all duration-200"
+                className="bg-primary h-2 rounded-full transition-all duration-300"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -284,7 +335,7 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
                 <Pause className="h-4 w-4" /> Pause
               </Button>
             )}
-            <Button onClick={stop} size="sm" variant="outline" disabled={!playing && !paused} className="gap-2">
+            <Button onClick={stopPlayback} size="sm" variant="outline" disabled={!playing && !paused} className="gap-2">
               <Square className="h-4 w-4" /> Stop
             </Button>
             <Button onClick={regenerate} size="sm" variant="ghost" disabled={loading} className="gap-2">
