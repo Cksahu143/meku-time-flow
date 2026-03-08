@@ -10,7 +10,8 @@ import { toast } from 'sonner';
 
 type Msg = { role: 'user' | 'assistant'; content: string };
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-study-tools`;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || `https://gkkeysrfmgmxoypnjkdl.supabase.co`;
+const CHAT_URL = `${SUPABASE_URL}/functions/v1/ai-study-tools`;
 
 interface CoCoChatDialogProps {
   open: boolean;
