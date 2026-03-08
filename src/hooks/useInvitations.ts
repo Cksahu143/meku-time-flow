@@ -101,12 +101,15 @@ export const useInvitations = () => {
       if (updateError) throw updateError;
 
       // Add to shared timetables
+      const invitation = invitations.find(i => i.id === invitationId);
+      if (!invitation) throw new Error('Invitation not found');
+
       const { error: shareError } = await supabase
         .from('shared_timetables')
         .insert({
           user_id: user.id,
           timetable_id: timetableId,
-          shared_by_user_id: invitations.find(i => i.id === invitationId)?.from_user_id || '',
+          shared_by_user_id: invitation.from_user_id,
         });
 
       if (shareError) throw shareError;

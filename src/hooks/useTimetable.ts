@@ -108,7 +108,7 @@ export const useTimetable = () => {
         theme_colors: (data.theme_colors as unknown as Record<string, string>) || {},
       };
 
-      setTimetables([...timetables, timetable]);
+      setTimetables(prev => [...prev, timetable]);
       setCurrentTimetable(timetable);
       
       toast({
@@ -150,7 +150,7 @@ export const useTimetable = () => {
         theme_colors: (data.theme_colors as unknown as Record<string, string>) || {},
       };
 
-      setTimetables(timetables.map(t => t.id === id ? timetable : t));
+      setTimetables(prev => prev.map(t => t.id === id ? timetable : t));
       if (currentTimetable?.id === id) {
         setCurrentTimetable(timetable);
       }

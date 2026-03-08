@@ -70,7 +70,7 @@ export const useGroupInvitations = () => {
       if (data && data.length > 0) {
         const inviterIds = [...new Set(data.map(inv => inv.invited_by))];
         const { data: profiles } = await supabase
-          .from('profiles')
+          .from('profiles_secure')
           .select('id, username, display_name, avatar_url')
           .in('id', inviterIds);
 

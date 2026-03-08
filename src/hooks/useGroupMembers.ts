@@ -52,7 +52,7 @@ export const useGroupMembers = (groupId: string) => {
       if (membersData && membersData.length > 0) {
         const userIds = membersData.map(m => m.user_id);
         const { data: profilesData, error: profilesError } = await supabase
-          .from('profiles')
+          .from('profiles_secure')
           .select('id, display_name, username, avatar_url')
           .in('id', userIds);
 
