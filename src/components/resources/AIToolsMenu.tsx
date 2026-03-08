@@ -102,6 +102,7 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
       case 'flashcards': setShowFlashcards(true); break;
       case 'slides': setShowSlides(true); break;
       case 'quiz': setShowQuiz(true); break;
+      case 'audio': setShowAudio(true); break;
     }
   };
 
