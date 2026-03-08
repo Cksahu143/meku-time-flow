@@ -24,6 +24,19 @@ import { ClassesManagementView } from '@/components/admin/ClassesManagementView'
 import { AboutView } from '@/components/about/AboutView';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { PageTransition } from '@/components/motion/PageTransition';
+
+// Unique per-view transition variants
+const viewTransitions: Record<string, { initial: object; animate: object; exit: object }> = {
+  dashboard: { initial: { opacity: 0, scale: 0.95, filter: 'blur(6px)' }, animate: { opacity: 1, scale: 1, filter: 'blur(0px)' }, exit: { opacity: 0, scale: 1.02, filter: 'blur(4px)' } },
+  timetable: { initial: { opacity: 0, x: 60 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: -60 } },
+  calendar: { initial: { opacity: 0, y: 40, rotateX: 8 }, animate: { opacity: 1, y: 0, rotateX: 0 }, exit: { opacity: 0, y: -40, rotateX: -8 } },
+  todo: { initial: { opacity: 0, x: -50, scale: 0.96 }, animate: { opacity: 1, x: 0, scale: 1 }, exit: { opacity: 0, x: 50, scale: 0.96 } },
+  pomodoro: { initial: { opacity: 0, scale: 0.9, rotate: -3 }, animate: { opacity: 1, scale: 1, rotate: 0 }, exit: { opacity: 0, scale: 0.9, rotate: 3 } },
+  groups: { initial: { opacity: 0, y: -50 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: 50 } },
+  resources: { initial: { opacity: 0, x: 80, filter: 'blur(8px)' }, animate: { opacity: 1, x: 0, filter: 'blur(0px)' }, exit: { opacity: 0, x: -80, filter: 'blur(8px)' } },
+  transcribe: { initial: { opacity: 0, scale: 1.1, filter: 'blur(6px)' }, animate: { opacity: 1, scale: 1, filter: 'blur(0px)' }, exit: { opacity: 0, scale: 0.9, filter: 'blur(6px)' } },
+  about: { initial: { opacity: 0, y: 60, scale: 0.95 }, animate: { opacity: 1, y: 0, scale: 1 }, exit: { opacity: 0, y: -30 } },
+};
 import { FeatureDetailView } from '@/components/search/FeatureDetailView';
 import { ViewType } from '@/types';
 import { useRBACContext } from '@/contexts/RBACContext';
