@@ -457,6 +457,6 @@ export function PomodoroView() {
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

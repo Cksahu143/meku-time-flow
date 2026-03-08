@@ -345,6 +345,6 @@ export function TodoView() {
           ))
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
