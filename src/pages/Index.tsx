@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, type TargetAndTransition } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { Sidebar } from '@/components/Sidebar';
 import { MobileSidebar } from '@/components/MobileSidebar';
@@ -26,7 +26,7 @@ import { LoadingScreen } from '@/components/LoadingScreen';
 import { PageTransition } from '@/components/motion/PageTransition';
 
 // Unique per-view transition variants
-const viewTransitions: Record<string, { initial: object; animate: object; exit: object }> = {
+const viewTransitions: Record<string, { initial: TargetAndTransition; animate: TargetAndTransition; exit: TargetAndTransition }> = {
   dashboard: { initial: { opacity: 0, scale: 0.95, filter: 'blur(6px)' }, animate: { opacity: 1, scale: 1, filter: 'blur(0px)' }, exit: { opacity: 0, scale: 1.02, filter: 'blur(4px)' } },
   timetable: { initial: { opacity: 0, x: 60 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: -60 } },
   calendar: { initial: { opacity: 0, y: 40, rotateX: 8 }, animate: { opacity: 1, y: 0, rotateX: 0 }, exit: { opacity: 0, y: -40, rotateX: -8 } },
