@@ -11,9 +11,9 @@ import {
 import { toast } from 'sonner';
 
 const tracks = [
-  { name: 'Lofi Study', url: 'https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3' },
-  { name: 'Nature Sounds', url: 'https://cdn.pixabay.com/audio/2024/03/18/audio_59f255d39a.mp3' },
-  { name: 'Calm Piano', url: 'https://cdn.pixabay.com/audio/2022/10/25/audio_3a6c2c0ac7.mp3' },
+  { name: 'Lofi Study', url: '/audio/lofi-study.mp3' },
+  { name: 'Calm Piano', url: '/audio/calm-piano.mp3' },
+  { name: 'Ambient Chill', url: '/audio/ambient-chill.mp3' },
 ];
 
 export function MusicPlayer() {
