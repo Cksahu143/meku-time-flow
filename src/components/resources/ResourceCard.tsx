@@ -6,6 +6,7 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DbResource } from '@/hooks/useResources';
+import { AIToolsMenu } from './AIToolsMenu';
 import {
   Tooltip,
   TooltipContent,
