@@ -56,17 +56,22 @@ export const PostsFeed: React.FC<PostsFeedProps> = ({ userId, currentUserId }) =
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
     
-    if (data) {
-      // Fetch profile for each post
-      const postsWithProfiles = await Promise.all(data.map(async (post) => {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('username, display_name, avatar_url')
-          .eq('id', post.user_id)
-          .maybeSingle();
-        return { ...post, profile };
+    if (data && data.length > 0) {
+      // Batch fetch profiles instead of N+1 queries
+      const userIds = [...new Set(data.map(p => p.user_id))];
+      const { data: profiles } = await supabase
+        .from('profiles_secure')
+        .select('id, username, display_name, avatar_url')
+        .in('id', userIds);
+      
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+      const postsWithProfiles = data.map(post => ({
+        ...post,
+        profile: profileMap.get(post.user_id) || null,
       }));
       setPosts(postsWithProfiles);
+    } else {
+      setPosts([]);
     }
     setLoading(false);
   };
