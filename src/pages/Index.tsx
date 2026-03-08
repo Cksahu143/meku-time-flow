@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Sidebar } from '@/components/Sidebar';
 import { MobileSidebar } from '@/components/MobileSidebar';
 import { TopHeader } from '@/components/TopHeader';
+import { MobileTopBar } from '@/components/MobileTopBar';
 import { DashboardView } from '@/components/dashboard/DashboardView';
 import { TimetableView } from '@/components/timetable/TimetableView';
 import { CalendarView } from '@/components/calendar/CalendarView';
