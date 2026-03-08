@@ -142,7 +142,7 @@ export function Sidebar({ currentView, onViewChange, collapsed = false, onToggle
 
   return (
     <aside className={cn(
-      'h-screen flex flex-col transition-all duration-300 overflow-hidden border-r border-sidebar-border/50 relative',
+      'h-full flex flex-col transition-all duration-300 border-r border-sidebar-border/50 relative overflow-hidden',
       collapsed ? 'w-[68px]' : 'w-60'
     )} style={{ background: 'hsl(var(--sidebar))' }}>
       {/* Subtle ambient glow */}
