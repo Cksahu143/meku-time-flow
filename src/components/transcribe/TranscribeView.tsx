@@ -101,13 +101,32 @@ export const TranscribeView: React.FC = () => {
     };
   }, []);
 
-  const startLiveTranscription = useCallback(() => {
+  const startLiveTranscription = useCallback(async () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
       toast({
         variant: 'destructive',
         title: 'Not Supported',
         description: 'Live transcription requires Chrome or Edge browser.',
+      });
+      return;
+    }
+
+    // CRITICAL: Request microphone permission directly in click handler
+    // This ensures the user gesture context is maintained for iframe/secure contexts
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 44100 },
+      });
+      // Stop the stream immediately — SpeechRecognition manages its own mic access,
+      // but getUserMedia ensures the permission prompt fires within the gesture
+      stream.getTracks().forEach(t => t.stop());
+    } catch (err) {
+      console.error('Microphone permission error:', err);
+      toast({
+        variant: 'destructive',
+        title: 'Microphone Access Denied',
+        description: 'Please allow microphone access in your browser settings and try again.',
       });
       return;
     }
@@ -153,10 +172,8 @@ export const TranscribeView: React.FC = () => {
         isListeningRef.current = false;
         setIsLiveListening(false);
       } else if (event.error === 'no-speech') {
-        // Normal silence timeout — will auto-restart via onend
         console.log('No speech detected, will restart...');
       } else if (event.error !== 'aborted') {
-        // Transient error — attempt restart
         if (isListeningRef.current) {
           try { recognition.start(); } catch {}
         }
@@ -164,7 +181,6 @@ export const TranscribeView: React.FC = () => {
     };
 
     recognition.onend = () => {
-      // Use ref (not state) to avoid stale closure
       if (isListeningRef.current) {
         try { recognition.start(); } catch {}
       } else {
@@ -173,11 +189,10 @@ export const TranscribeView: React.FC = () => {
     };
 
     recognitionRef.current = recognition;
-    liveTranscriptRef.current = liveTranscript; // preserve existing text
+    liveTranscriptRef.current = liveTranscript;
     isListeningRef.current = true;
     setIsLiveListening(true);
 
-    // CRITICAL: start() must be called directly inside a user-gesture handler
     recognition.start();
 
     toast({
