@@ -24,6 +24,7 @@ import { ClassesManagementView } from '@/components/admin/ClassesManagementView'
 import { AboutView } from '@/components/about/AboutView';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { PageTransition } from '@/components/motion/PageTransition';
+import { NotificationListener } from '@/components/NotificationListener';
 
 // Unique per-view transition variants
 const viewTransitions: Record<string, { initial: TargetAndTransition; animate: TargetAndTransition; exit: TargetAndTransition }> = {
@@ -99,6 +100,7 @@ const Index = () => {
 
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden">
+      <NotificationListener />
       {/* Desktop Sidebar */}
       <div className="hidden md:block flex-shrink-0">
         <Sidebar
