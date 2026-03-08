@@ -149,19 +149,37 @@ export function CalendarView() {
   };
 
   return (
-    <div className="min-h-full h-full p-4 md:p-6 lg:p-8 animate-slide-in-right">
-      <div className="flex items-center justify-between mb-6">
+    <motion.div
+      className="min-h-full h-full p-4 md:p-6 lg:p-8"
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+    >
+      <motion.div
+        className="flex items-center justify-between mb-6"
+        initial={{ opacity: 0, x: -15 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.1 }}
+      >
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-primary/10">
+          <motion.div
+            className="p-2.5 rounded-xl bg-primary/10"
+            whileHover={{ scale: 1.1, rotate: 8 }}
+          >
             <CalendarIcon className="w-6 h-6 text-primary" />
-          </div>
+          </motion.div>
           <div>
             <h2 className="text-2xl font-bold text-foreground font-display">Calendar</h2>
             <p className="text-sm text-muted-foreground">Track exams and schedules</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <motion.div
+          className="flex items-center gap-2 flex-wrap"
+          initial={{ opacity: 0, x: 15 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.15 }}
+        >
           <Button onClick={handleAddExam} variant="outline" className="gap-2 rounded-xl border-border/30 hover:border-primary/20 hover:shadow-sm">
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">Quick Exam</span>
@@ -170,8 +188,8 @@ export function CalendarView() {
             <GraduationCap className="w-4 h-4" />
             <span className="hidden sm:inline">Exam Period</span>
           </Button>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
