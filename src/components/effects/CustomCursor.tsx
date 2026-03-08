@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, useSpring, useMotionValue } from 'framer-motion';
 
 export function CustomCursor() {
   const [visible, setVisible] = useState(false);
   const [clicking, setClicking] = useState(false);
   const [hovering, setHovering] = useState(false);
+  const visibleRef = useRef(false);
 
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
@@ -20,13 +21,16 @@ export function CustomCursor() {
     const move = (e: MouseEvent) => {
       mouseX.set(e.clientX);
       mouseY.set(e.clientY);
-      if (!visible) setVisible(true);
+      if (!visibleRef.current) {
+        visibleRef.current = true;
+        setVisible(true);
+      }
     };
 
     const down = () => setClicking(true);
     const up = () => setClicking(false);
-    const leave = () => setVisible(false);
-    const enter = () => setVisible(true);
+    const leave = () => { visibleRef.current = false; setVisible(false); };
+    const enter = () => { visibleRef.current = true; setVisible(true); };
 
     const checkHover = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -58,7 +62,7 @@ export function CustomCursor() {
       document.documentElement.style.cursor = '';
       document.getElementById('custom-cursor-style')?.remove();
     };
-  }, [mouseX, mouseY, visible]);
+  }, [mouseX, mouseY]);
 
   // Don't render on touch devices
   if (typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches) return null;
