@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,16 +8,16 @@ const corsHeaders = {
 };
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "https://gkkeysrfmgmxoypnjkdl.supabase.co";
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+
+// ─── YouTube helpers ───────────────────────────────────────────────────────
 
 function extractYouTubeVideoId(url: string): string | null {
   try {
     const u = new URL(url);
-    if (u.hostname.includes("youtube.com")) {
-      return u.searchParams.get("v");
-    }
-    if (u.hostname === "youtu.be") {
-      return u.pathname.slice(1);
-    }
+    if (u.hostname.includes("youtube.com")) return u.searchParams.get("v");
+    if (u.hostname === "youtu.be") return u.pathname.slice(1);
   } catch {}
   return null;
 }
@@ -27,40 +28,27 @@ function isYouTubeUrl(url: string): boolean {
 
 async function fetchYouTubeInfo(url: string): Promise<string> {
   try {
-    // Fetch the YouTube page to get the title and description from meta tags
     const resp = await fetch(url, {
       headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" },
       redirect: "follow",
     });
     if (!resp.ok) return "";
     const html = await resp.text();
-
-    // Extract title
-    const titleMatch = html.match(/<meta\s+name="title"\s+content="([^"]*)"/) ||
-                        html.match(/<title>([^<]*)<\/title>/);
+    const titleMatch = html.match(/<meta\s+name="title"\s+content="([^"]*)"/) || html.match(/<title>([^<]*)<\/title>/);
     const title = titleMatch?.[1] || "";
-
-    // Extract description (YouTube puts full description in meta)
-    const descMatch = html.match(/<meta\s+name="description"\s+content="([^"]*)"/) ||
-                      html.match(/<meta\s+property="og:description"\s+content="([^"]*)"/);
+    const descMatch = html.match(/<meta\s+name="description"\s+content="([^"]*)"/) || html.match(/<meta\s+property="og:description"\s+content="([^"]*)"/);
     const description = descMatch?.[1] || "";
-
-    // Extract keywords
     const kwMatch = html.match(/<meta\s+name="keywords"\s+content="([^"]*)"/);
     const keywords = kwMatch?.[1] || "";
-
-    // Try to get chapter/timestamp info from the page
     const chapterRegex = /(\d{1,2}:\d{2}(?::\d{2})?)\s*[-–]?\s*(.+?)(?=\d{1,2}:\d{2}|$)/g;
     const chapters: string[] = [];
     let cm;
     while ((cm = chapterRegex.exec(html)) !== null && chapters.length < 30) {
       chapters.push(`${cm[1]} - ${cm[2].trim()}`);
     }
-
     let info = `[YouTube Video]\nVideo Title: ${title}\nDescription: ${description}`;
     if (keywords) info += `\nKeywords: ${keywords}`;
     if (chapters.length > 0) info += `\nChapters:\n${chapters.join("\n")}`;
-
     return info;
   } catch (e) {
     console.error("YouTube fetch failed:", e);
@@ -68,11 +56,196 @@ async function fetchYouTubeInfo(url: string): Promise<string> {
   }
 }
 
-async function fetchUrlContent(url: string): Promise<string> {
-  // Special handling for YouTube
-  if (isYouTubeUrl(url)) {
-    return fetchYouTubeInfo(url);
+// ─── File content extraction ────────────────────────────────────────────────
+
+function getFileExtension(fileName: string): string {
+  return (fileName.split('.').pop() || '').toLowerCase();
+}
+
+function isTextFile(ext: string): boolean {
+  return ['txt', 'md', 'csv', 'json', 'xml', 'html', 'htm', 'css', 'js', 'ts', 'py', 'java', 'c', 'cpp', 'rb', 'yaml', 'yml', 'toml', 'ini', 'log', 'rtf'].includes(ext);
+}
+
+function isBinaryDocument(ext: string): boolean {
+  return ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'odt', 'ods', 'odp'].includes(ext);
+}
+
+/** Fetch a file from a URL (signed or public) and return raw bytes */
+async function fetchFileBytes(url: string): Promise<Uint8Array | null> {
+  try {
+    const resp = await fetch(url, { redirect: "follow" });
+    if (!resp.ok) {
+      console.error("File fetch failed:", resp.status);
+      return null;
+    }
+    return new Uint8Array(await resp.arrayBuffer());
+  } catch (e) {
+    console.error("File fetch error:", e);
+    return null;
   }
+}
+
+/** Extract text from a text-based file */
+async function extractTextFile(url: string): Promise<string> {
+  try {
+    const resp = await fetch(url, { redirect: "follow" });
+    if (!resp.ok) return "";
+    const text = await resp.text();
+    return text.slice(0, 30000); // Generous limit for text files
+  } catch (e) {
+    console.error("Text file extraction error:", e);
+    return "";
+  }
+}
+
+/** Use Gemini multimodal to extract text from binary documents (PDF, DOCX, etc.) */
+async function extractBinaryDocumentContent(
+  fileBytes: Uint8Array,
+  fileName: string,
+  ext: string,
+  apiKey: string
+): Promise<string> {
+  try {
+    const base64 = btoa(String.fromCharCode(...fileBytes));
+    
+    // Map extensions to MIME types
+    const mimeMap: Record<string, string> = {
+      pdf: 'application/pdf',
+      doc: 'application/msword',
+      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      ppt: 'application/vnd.ms-powerpoint',
+      pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      xls: 'application/vnd.ms-excel',
+      xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      odt: 'application/vnd.oasis.opendocument.text',
+    };
+    const mimeType = mimeMap[ext] || 'application/octet-stream';
+
+    console.log(`Extracting content from ${ext} file (${(fileBytes.length / 1024).toFixed(0)}KB) using AI vision...`);
+
+    const resp = await fetch(GATEWAY_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `Extract ALL the text content from this document file (${fileName}). Preserve the structure including headings, paragraphs, lists, tables, formulas, and any important formatting. Output ONLY the extracted text content — no commentary, no preamble. If there are images with text, describe what they show. If there are diagrams, describe them. If there are formulas, write them out clearly. Be thorough — extract EVERYTHING.`,
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:${mimeType};base64,${base64}`,
+                },
+              },
+            ],
+          },
+        ],
+      }),
+    });
+
+    if (!resp.ok) {
+      console.error("AI extraction failed:", resp.status);
+      return "";
+    }
+
+    const data = await resp.json();
+    const extractedText = data.choices?.[0]?.message?.content || "";
+    console.log(`Extracted ${extractedText.length} chars from ${fileName}`);
+    return extractedText;
+  } catch (e) {
+    console.error("Binary document extraction error:", e);
+    return "";
+  }
+}
+
+/** 
+ * Get a fresh signed URL for a Supabase storage file.
+ * The resource URL might be expired, so we regenerate it.
+ */
+async function getFreshFileUrl(resourceUrl: string, fileName: string): Promise<string | null> {
+  if (!SUPABASE_SERVICE_ROLE_KEY) return resourceUrl;
+  
+  try {
+    // Try to extract the storage path from the URL
+    // Supabase signed URLs contain the path after /object/sign/resources/
+    const match = resourceUrl.match(/\/object\/sign\/resources\/(.+?)(?:\?|$)/);
+    if (!match) {
+      // Maybe it's a public URL or direct URL, try it as-is
+      return resourceUrl;
+    }
+    
+    const filePath = decodeURIComponent(match[1]);
+    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    
+    const { data, error } = await supabaseAdmin.storage
+      .from('resources')
+      .createSignedUrl(filePath, 300); // 5 min expiry
+    
+    if (error || !data?.signedUrl) {
+      console.error("Fresh signed URL error:", error);
+      return resourceUrl; // Fall back to original
+    }
+    
+    return data.signedUrl;
+  } catch (e) {
+    console.error("getFreshFileUrl error:", e);
+    return resourceUrl;
+  }
+}
+
+/** Main file content extraction orchestrator */
+async function extractFileContent(
+  resourceUrl: string | undefined,
+  fileName: string | undefined,
+  apiKey: string
+): Promise<string> {
+  if (!resourceUrl || !fileName) return "";
+  
+  const ext = getFileExtension(fileName);
+  if (!ext) return "";
+
+  console.log(`Attempting file extraction: ${fileName} (${ext})`);
+
+  // Get fresh URL in case signed URL expired
+  const freshUrl = await getFreshFileUrl(resourceUrl, fileName);
+  if (!freshUrl) return "";
+
+  // Text files — read directly
+  if (isTextFile(ext)) {
+    console.log("Extracting text file directly...");
+    const text = await extractTextFile(freshUrl);
+    if (text) return `[Extracted from ${fileName}]\n\n${text}`;
+  }
+
+  // Binary documents (PDF, DOCX, etc.) — use AI multimodal extraction
+  if (isBinaryDocument(ext)) {
+    const fileBytes = await fetchFileBytes(freshUrl);
+    if (fileBytes && fileBytes.length > 0) {
+      // Limit file size for AI processing (10MB max)
+      if (fileBytes.length > 10 * 1024 * 1024) {
+        console.log("File too large for AI extraction, truncating...");
+        return `[File ${fileName} is too large for full extraction. Using metadata only.]`;
+      }
+      const extracted = await extractBinaryDocumentContent(fileBytes, fileName, ext, apiKey);
+      if (extracted) return `[Extracted from ${fileName}]\n\n${extracted}`;
+    }
+  }
+
+  return `[File: ${fileName} — content could not be extracted. Using title, subject, and description for context.]`;
+}
+
+// ─── URL content fetching ──────────────────────────────────────────────────
+
+async function fetchUrlContent(url: string): Promise<string> {
+  if (isYouTubeUrl(url)) return fetchYouTubeInfo(url);
 
   try {
     const resp = await fetch(url, {
@@ -81,7 +254,7 @@ async function fetchUrlContent(url: string): Promise<string> {
     });
     if (!resp.ok) return "";
     const contentType = resp.headers.get("content-type") || "";
-    
+
     if (contentType.includes("text/html") || contentType.includes("text/plain")) {
       const text = await resp.text();
       const stripped = text
@@ -100,8 +273,9 @@ async function fetchUrlContent(url: string): Promise<string> {
       return stripped.slice(0, 12000);
     }
 
+    // Don't try to read PDFs as text here — they'll be handled by extractFileContent
     if (contentType.includes("application/pdf")) {
-      return "[PDF file detected - content extraction from PDF binary is limited. Using title, subject, and description for context.]";
+      return "";
     }
 
     const text = await resp.text();
@@ -111,6 +285,8 @@ async function fetchUrlContent(url: string): Promise<string> {
     return "";
   }
 }
+
+// ─── Subject knowledge enrichment ──────────────────────────────────────────
 
 async function searchWebForSubject(subject: string, title: string, apiKey: string): Promise<string> {
   try {
@@ -142,6 +318,8 @@ async function searchWebForSubject(subject: string, title: string, apiKey: strin
     return "";
   }
 }
+
+// ─── Grade & difficulty helpers ────────────────────────────────────────────
 
 function getGradeNumber(gradeLevel?: string): number {
   if (!gradeLevel) return 10;
@@ -181,11 +359,13 @@ LANGUAGE SUPPORT:
 - You understand: English, Hindi (हिन्दी), Odia (ଓଡ଼ିଆ), Sanskrit (संस्कृत), Bengali (বাংলা), Tamil (தமிழ்), Telugu (తెలుగు), Marathi (मराठी), Gujarati (ગુજરાતી), Kannada (ಕನ್ನಡ), Malayalam (മലയാളം), Punjabi (ਪੰਜਾਬੀ), Urdu (اردو), and many more.
 `;
 
+// ─── Main handler ──────────────────────────────────────────────────────────
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { type, tool, content, title, subject, messages, resourceUrl, resourceType, gradeLevel, language } = await req.json();
+    const { type, tool, content, title, subject, messages, resourceUrl, resourceType, gradeLevel, language, fileName } = await req.json();
     const effectiveType = type || tool;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
@@ -194,11 +374,20 @@ serve(async (req) => {
     const gradeLevelStr = gradeLevel || `Grade ${gradeNumber}`;
     const questionCount = getQuestionCount(gradeNumber, effectiveType);
 
-    // Build rich content from all sources
+    // ── Build rich content from all sources ──
     let enrichedContent = content || "";
 
-    // ALWAYS try to fetch URL content for link-type resources
-    if (resourceUrl) {
+    // STEP 1: Try to extract content from uploaded files (PDF, TXT, DOCX, etc.)
+    const isUploadedFile = resourceType === 'pdf' || resourceType === 'document' || resourceType === 'file';
+    if (fileName && resourceUrl && (isUploadedFile || isBinaryDocument(getFileExtension(fileName)) || isTextFile(getFileExtension(fileName)))) {
+      console.log(`Extracting content from uploaded file: ${fileName}`);
+      const fileContent = await extractFileContent(resourceUrl, fileName, LOVABLE_API_KEY);
+      if (fileContent && fileContent.length > 50) {
+        enrichedContent = fileContent + (enrichedContent ? `\n\n--- User Notes ---\n${enrichedContent}` : "");
+      }
+    }
+    // STEP 2: For link-type resources, fetch URL content
+    else if (resourceUrl && (resourceType === 'link' || resourceType === 'video' || !isUploadedFile)) {
       console.log("Fetching content from URL:", resourceUrl);
       const urlContent = await fetchUrlContent(resourceUrl);
       if (urlContent) {
@@ -206,10 +395,9 @@ serve(async (req) => {
       }
     }
 
-    // If content is still thin, use AI to generate comprehensive notes
+    // STEP 3: If content is still thin, use AI to generate comprehensive notes
     if (!enrichedContent || enrichedContent.length < 200) {
       console.log("Content thin, searching for subject knowledge...");
-      // Use the title AND subject to generate relevant content
       const searchTitle = title && title.length > 3 ? title : `${subject || "General"} study material`;
       const webContent = await searchWebForSubject(subject || "General", searchTitle, LOVABLE_API_KEY);
       if (webContent) {
@@ -219,12 +407,12 @@ serve(async (req) => {
       }
     }
 
-    // CRITICAL: If the title is very short (like "h"), tell the AI to focus on the actual content, not the title
     const titleNote = title && title.length <= 3
       ? `\n\nIMPORTANT: The resource title "${title}" is very short and may not describe the topic. Focus on the ACTUAL CONTENT below, not the title. Derive the real topic from the content, URL, and subject.`
       : "";
 
-    const resourceContext = `Resource Title: ${title || "Untitled"}\nSubject: ${subject || "General"}\nResource Type: ${resourceType || "unknown"}\nStudent Grade Level: ${gradeLevelStr}${titleNote}\n\nContent:\n${enrichedContent || "No content available - use your deep knowledge of this subject to help the student."}`;
+    const fileNote = fileName ? `\nSource File: ${fileName}` : "";
+    const resourceContext = `Resource Title: ${title || "Untitled"}\nSubject: ${subject || "General"}\nResource Type: ${resourceType || "unknown"}${fileNote}\nStudent Grade Level: ${gradeLevelStr}${titleNote}\n\nContent:\n${enrichedContent || "No content available - use your deep knowledge of this subject to help the student."}`;
 
     const difficultyGuide = gradeNumber <= 5
       ? "Keep language simple and age-appropriate. Use fun examples and relatable scenarios. Focus on basic concepts and recall."
@@ -234,7 +422,7 @@ serve(async (req) => {
       ? "Board exam level difficulty. Include conceptual, application, and analytical questions. Use proper technical terminology. Test common misconceptions."
       : "Advanced board exam / competitive exam level. Include HOTS (Higher Order Thinking Skills) questions, multi-step problems, inter-topic connections, derivations, and case-study style questions. This is Class 11-12 material - be rigorous.";
 
-    // Audio overview mode: streaming summary for TTS
+    // ── Audio overview mode: streaming ──
     if (effectiveType === "audio_overview") {
       const audioLang = language || "English";
       const audioMessages = [
@@ -303,7 +491,7 @@ Resource:\n${resourceContext}`,
       });
     }
 
-    // Chat mode: streaming
+    // ── Chat mode: streaming ──
     if (effectiveType === "chat") {
       const chatMessages = [
         {
@@ -364,7 +552,7 @@ Remember: You're not just explaining - you're preparing a student to score maxim
       });
     }
 
-    // Non-streaming modes
+    // ── Non-streaming modes (flashcards, slides, quiz, viva) ──
     const toolConfigs: Record<string, { systemPrompt: string; tool: any }> = {
       flashcards: {
         systemPrompt: `You are an elite board exam tutor. Create POWERFUL study flashcards for a ${gradeLevelStr} student.
