@@ -65,7 +65,6 @@ const LIVE_LANGUAGE_OPTIONS = [
   { value: 'en-US', label: 'English (US)' },
   { value: 'en-IN', label: 'English (India)' },
   { value: 'hi-IN', label: 'Hindi' },
-  { value: 'or-IN', label: 'Odia' },
 ];
 
 export const TranscribeView: React.FC = () => {
