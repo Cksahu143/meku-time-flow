@@ -15,6 +15,7 @@ import Profile from "./pages/Profile";
 import EditProfile from "./pages/EditProfile";
 import NotificationHub from "./pages/NotificationHub";
 import ResetPassword from "./pages/ResetPassword";
+import { CustomCursor } from "./components/effects/CustomCursor";
 
 const queryClient = new QueryClient({
   defaultOptions: {
