@@ -156,44 +156,6 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
     return chunks;
   };
 
-  const speakChunk = (index: number) => {
-    if (index >= chunksRef.current.length) {
-      // All chunks done
-      isPlayingRef.current = false;
-      setPlaying(false);
-      setPaused(false);
-      setProgress(100);
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      return;
-    }
-
-    const utterance = new SpeechSynthesisUtterance(chunksRef.current[index]);
-    const voice = findVoice();
-    if (voice) utterance.voice = voice;
-    utterance.rate = rate[0];
-    utterance.pitch = 1;
-
-    utterance.onend = () => {
-      if (!isPlayingRef.current) return;
-      currentChunkRef.current = index + 1;
-      setCurrentChunk(index + 1);
-      const pct = ((index + 1) / chunksRef.current.length) * 100;
-      setProgress(pct);
-      speakChunk(index + 1);
-    };
-
-    utterance.onerror = (e) => {
-      // Skip errored chunks
-      if (e.error === 'interrupted' || e.error === 'canceled') return;
-      console.warn('TTS chunk error:', e.error);
-      if (!isPlayingRef.current) return;
-      currentChunkRef.current = index + 1;
-      speakChunk(index + 1);
-    };
-
-    speechSynthesis.speak(utterance);
-  };
-
   const speak = () => {
     if (paused) {
       speechSynthesis.resume();
@@ -213,7 +175,36 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
     setPlaying(true);
     setPaused(false);
     setProgress(0);
-    speakChunk(0);
+
+    // Queue ALL chunks at once so there's zero gap between them
+    const voice = findVoice();
+    chunks.forEach((text, index) => {
+      const utterance = new SpeechSynthesisUtterance(text);
+      if (voice) utterance.voice = voice;
+      utterance.rate = rate[0];
+      utterance.pitch = 1;
+
+      utterance.onend = () => {
+        if (!isPlayingRef.current) return;
+        currentChunkRef.current = index + 1;
+        setCurrentChunk(index + 1);
+        setProgress(((index + 1) / chunks.length) * 100);
+
+        if (index === chunks.length - 1) {
+          isPlayingRef.current = false;
+          setPlaying(false);
+          setPaused(false);
+          setProgress(100);
+        }
+      };
+
+      utterance.onerror = (e) => {
+        if (e.error === 'interrupted' || e.error === 'canceled') return;
+        console.warn('TTS chunk error:', e.error);
+      };
+
+      speechSynthesis.speak(utterance);
+    });
   };
 
   const pause = () => {
