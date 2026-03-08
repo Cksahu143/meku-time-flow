@@ -42,6 +42,7 @@ export const FlashcardsDialog = ({ open, onOpenChange, resource, content, gradeL
           subject: resource.subject,
           resourceUrl: resource.url,
           resourceType: resource.resource_type,
+          gradeLevel,
         },
       });
       if (error) throw error;
