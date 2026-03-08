@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Sidebar } from '@/components/Sidebar';
 import { MobileSidebar } from '@/components/MobileSidebar';
 import { TopHeader } from '@/components/TopHeader';
+import { MobileTopBar } from '@/components/MobileTopBar';
 import { DashboardView } from '@/components/dashboard/DashboardView';
 import { TimetableView } from '@/components/timetable/TimetableView';
 import { CalendarView } from '@/components/calendar/CalendarView';
@@ -114,9 +115,12 @@ const Index = () => {
       {/* Mobile Sidebar */}
       <MobileSidebar currentView={currentView} onViewChange={handleViewChange} />
 
+      {/* Mobile Top Bar */}
+      <MobileTopBar onSelectFeature={handleSelectFeature} />
+
       {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top Header */}
+        {/* Top Header (desktop only) */}
         <div className="hidden md:block">
           <TopHeader onSelectFeature={handleSelectFeature} />
         </div>
