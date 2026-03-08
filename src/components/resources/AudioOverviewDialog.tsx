@@ -165,7 +165,9 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
       return;
     }
 
+    // Cancel any previous speech without delay
     speechSynthesis.cancel();
+
     const chunks = splitIntoChunks(summary);
     chunksRef.current = chunks;
     currentChunkRef.current = 0;
@@ -176,34 +178,40 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
     setPaused(false);
     setProgress(0);
 
-    // Queue ALL chunks at once so there's zero gap between them
+    // Queue all chunks immediately — browser plays them seamlessly
     const voice = findVoice();
-    chunks.forEach((text, index) => {
-      const utterance = new SpeechSynthesisUtterance(text);
-      if (voice) utterance.voice = voice;
-      utterance.rate = rate[0];
-      utterance.pitch = 1;
+    
+    // Use requestAnimationFrame to ensure cancel() has completed
+    requestAnimationFrame(() => {
+      chunks.forEach((text, index) => {
+        const utterance = new SpeechSynthesisUtterance(text);
+        if (voice) utterance.voice = voice;
+        utterance.rate = rate[0];
+        utterance.pitch = 1;
 
-      utterance.onend = () => {
-        if (!isPlayingRef.current) return;
-        currentChunkRef.current = index + 1;
-        setCurrentChunk(index + 1);
-        setProgress(((index + 1) / chunks.length) * 100);
+        utterance.onstart = () => {
+          currentChunkRef.current = index;
+          setCurrentChunk(index);
+          setProgress((index / chunks.length) * 100);
+        };
 
-        if (index === chunks.length - 1) {
-          isPlayingRef.current = false;
-          setPlaying(false);
-          setPaused(false);
-          setProgress(100);
-        }
-      };
+        utterance.onend = () => {
+          if (!isPlayingRef.current) return;
+          if (index === chunks.length - 1) {
+            isPlayingRef.current = false;
+            setPlaying(false);
+            setPaused(false);
+            setProgress(100);
+          }
+        };
 
-      utterance.onerror = (e) => {
-        if (e.error === 'interrupted' || e.error === 'canceled') return;
-        console.warn('TTS chunk error:', e.error);
-      };
+        utterance.onerror = (e) => {
+          if (e.error === 'interrupted' || e.error === 'canceled') return;
+          console.warn('TTS chunk error:', e.error);
+        };
 
-      speechSynthesis.speak(utterance);
+        speechSynthesis.speak(utterance);
+      });
     });
   };
 
