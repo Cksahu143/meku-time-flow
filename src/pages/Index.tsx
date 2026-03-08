@@ -133,7 +133,13 @@ const Index = () => {
                 </ErrorBoundary>
               </PageTransition>
             ) : (
-              <PageTransition key={currentView}>
+              <motion.div
+                key={currentView}
+                initial={viewTransitions[currentView]?.initial ?? { opacity: 0, y: 12 }}
+                animate={viewTransitions[currentView]?.animate ?? { opacity: 1, y: 0 }}
+                exit={viewTransitions[currentView]?.exit ?? { opacity: 0, y: -8 }}
+                transition={{ type: 'spring', stiffness: 280, damping: 26, mass: 0.8 }}
+              >
                 <ErrorBoundary>
                   {currentView === 'dashboard' && <DashboardView onNavigate={handleNavigate} />}
                   {currentView === 'about' && <AboutView onNavigate={handleNavigate} />}
@@ -152,7 +158,7 @@ const Index = () => {
                   {currentView === 'schools-management' && <SchoolsManagementView />}
                   {currentView === 'feature-toggles' && <FeatureTogglesView />}
                 </ErrorBoundary>
-              </PageTransition>
+              </motion.div>
             )}
           </AnimatePresence>
         </main>
