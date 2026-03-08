@@ -184,7 +184,7 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
 
     utterance.onerror = (e) => {
       // Skip errored chunks
-      if (e.error === 'interrupted' || e.error === 'cancelled') return;
+      if (e.error === 'interrupted' || e.error === 'canceled') return;
       console.warn('TTS chunk error:', e.error);
       if (!isPlayingRef.current) return;
       currentChunkRef.current = index + 1;
