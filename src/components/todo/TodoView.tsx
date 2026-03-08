@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Task, Period } from '@/types';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { ListTodo, Plus, Trash2, Edit2, Check, X, Calendar } from 'lucide-react';
@@ -131,26 +132,45 @@ export function TodoView() {
   };
 
   return (
-    <div className="min-h-full h-full p-4 md:p-6 lg:p-8 animate-slide-in-right">
-      <div className="flex items-center justify-between mb-6">
+    <motion.div
+      className="min-h-full h-full p-4 md:p-6 lg:p-8"
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+    >
+      <motion.div
+        className="flex items-center justify-between mb-6"
+        initial={{ opacity: 0, x: -15 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.1 }}
+      >
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-primary/10">
+          <motion.div
+            className="p-2.5 rounded-xl bg-primary/10"
+            whileHover={{ scale: 1.1, rotate: 8 }}
+            whileTap={{ scale: 0.95 }}
+          >
             <ListTodo className="w-6 h-6 text-primary" />
-          </div>
+          </motion.div>
           <div>
             <h2 className="text-2xl font-bold text-foreground font-display">To-Do List</h2>
             <p className="text-sm text-muted-foreground">Stay organized and productive</p>
           </div>
         </div>
 
-        <button
+        <motion.button
           onClick={() => setIsAdding(!isAdding)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground shadow-md hover:scale-105 transition-transform btn-premium"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground shadow-md btn-premium"
+          whileHover={{ scale: 1.05, y: -2 }}
+          whileTap={{ scale: 0.95 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 17 }}
         >
-          <Plus className="w-5 h-5" />
+          <motion.div animate={{ rotate: isAdding ? 45 : 0 }} transition={{ duration: 0.2 }}>
+            <Plus className="w-5 h-5" />
+          </motion.div>
           Add Task
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
 
       {/* Progress Header */}
       <div className="card-premium rounded-2xl overflow-hidden mb-6">
