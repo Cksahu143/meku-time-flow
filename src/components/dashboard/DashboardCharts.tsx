@@ -90,7 +90,7 @@ export const DashboardCharts: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.25 }}
-              className="h-[220px]"
+              className="h-[220px]" style={{ minWidth: 1, minHeight: 1 }}
             >
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={data}>
