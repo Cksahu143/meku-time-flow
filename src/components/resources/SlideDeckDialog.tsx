@@ -16,9 +16,10 @@ interface SlideDeckDialogProps {
   resource: DbResource;
   content: string;
   gradeLevel?: string;
+  fileName?: string;
 }
 
-export const SlideDeckDialog = ({ open, onOpenChange, resource, content, gradeLevel }: SlideDeckDialogProps) => {
+export const SlideDeckDialog = ({ open, onOpenChange, resource, content, gradeLevel, fileName }: SlideDeckDialogProps) => {
   const [slides, setSlides] = useState<Slide[]>([]);
   const [loading, setLoading] = useState(false);
   const [current, setCurrent] = useState(0);
@@ -41,6 +42,7 @@ export const SlideDeckDialog = ({ open, onOpenChange, resource, content, gradeLe
           subject: resource.subject,
           resourceUrl: resource.url,
           resourceType: resource.resource_type,
+          fileName: fileName || resource.file_name,
           gradeLevel,
         },
       });

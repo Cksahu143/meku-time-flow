@@ -19,9 +19,10 @@ interface CoCoChatDialogProps {
   resource: DbResource;
   content: string;
   gradeLevel?: string;
+  fileName?: string;
 }
 
-export const CoCoChatDialog = ({ open, onOpenChange, resource, content, gradeLevel }: CoCoChatDialogProps) => {
+export const CoCoChatDialog = ({ open, onOpenChange, resource, content, gradeLevel, fileName }: CoCoChatDialogProps) => {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -79,6 +80,7 @@ export const CoCoChatDialog = ({ open, onOpenChange, resource, content, gradeLev
           subject: resource.subject,
           resourceUrl: resource.url,
           resourceType: resource.resource_type,
+          fileName: fileName || resource.file_name,
           gradeLevel,
           messages: apiMessages.map(m => ({ role: m.role, content: m.content })),
         }),

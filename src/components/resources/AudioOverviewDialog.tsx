@@ -13,6 +13,7 @@ interface AudioOverviewDialogProps {
   resource: DbResource;
   content: string;
   gradeLevel?: string;
+  fileName?: string;
 }
 
 const VOICE_LANGUAGES = [
@@ -30,7 +31,7 @@ const VOICE_LANGUAGES = [
   { code: 'pa', label: 'Punjabi' },
 ];
 
-export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gradeLevel }: AudioOverviewDialogProps) => {
+export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gradeLevel, fileName }: AudioOverviewDialogProps) => {
   const [summary, setSummary] = useState('');
   const [loading, setLoading] = useState(false);
   const [playing, setPlaying] = useState(false);
@@ -87,6 +88,7 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
           title: resource.title,
           resourceUrl: resource.url,
           resourceType: resource.resource_type,
+          fileName: fileName || resource.file_name,
           gradeLevel: gradeLevel || 'Grade 8',
           language: VOICE_LANGUAGES.find(v => v.code === lang)?.label || 'English',
         }),

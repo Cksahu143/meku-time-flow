@@ -35,9 +35,10 @@ interface QuizDialogProps {
   resource: DbResource;
   content: string;
   gradeLevel?: string;
+  fileName?: string;
 }
 
-export const QuizDialog = ({ open, onOpenChange, resource, content, gradeLevel }: QuizDialogProps) => {
+export const QuizDialog = ({ open, onOpenChange, resource, content, gradeLevel, fileName }: QuizDialogProps) => {
   const [mode, setMode] = useState<QuizMode>('quiz');
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [vivaQuestions, setVivaQuestions] = useState<VivaQuestion[]>([]);
@@ -88,6 +89,7 @@ export const QuizDialog = ({ open, onOpenChange, resource, content, gradeLevel }
           subject: resource.subject,
           resourceUrl: resource.url,
           resourceType: resource.resource_type,
+          fileName: fileName || resource.file_name,
           gradeLevel,
         },
       });

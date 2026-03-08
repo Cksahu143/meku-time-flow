@@ -16,9 +16,10 @@ interface FlashcardsDialogProps {
   resource: DbResource;
   content: string;
   gradeLevel?: string;
+  fileName?: string;
 }
 
-export const FlashcardsDialog = ({ open, onOpenChange, resource, content, gradeLevel }: FlashcardsDialogProps) => {
+export const FlashcardsDialog = ({ open, onOpenChange, resource, content, gradeLevel, fileName }: FlashcardsDialogProps) => {
   const [cards, setCards] = useState<Flashcard[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -42,6 +43,7 @@ export const FlashcardsDialog = ({ open, onOpenChange, resource, content, gradeL
           subject: resource.subject,
           resourceUrl: resource.url,
           resourceType: resource.resource_type,
+          fileName: fileName || resource.file_name,
           gradeLevel,
         },
       });
