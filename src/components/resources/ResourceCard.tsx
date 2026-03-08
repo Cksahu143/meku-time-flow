@@ -6,6 +6,7 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DbResource } from '@/hooks/useResources';
+import { AIToolsMenu } from './AIToolsMenu';
 import {
   Tooltip,
   TooltipContent,
@@ -199,6 +200,12 @@ export const ResourceCard: React.FC<ResourceCardProps> = ({
           <CardFooter className="p-4 pt-0 flex gap-2">
             <div className="flex gap-1 mr-auto">
               <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div><AIToolsMenu resource={resource} /></div>
+                  </TooltipTrigger>
+                  <TooltipContent>AI Study Tools</TooltipContent>
+                </Tooltip>
                 {onEdit && (
                   <Tooltip>
                     <TooltipTrigger asChild>
