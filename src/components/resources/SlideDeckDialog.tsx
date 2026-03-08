@@ -16,6 +16,7 @@ interface SlideDeckDialogProps {
   resource: DbResource;
   content: string;
   gradeLevel?: string;
+  fileName?: string;
 }
 
 export const SlideDeckDialog = ({ open, onOpenChange, resource, content, gradeLevel }: SlideDeckDialogProps) => {
