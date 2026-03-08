@@ -18,7 +18,7 @@ interface FlashcardsDialogProps {
   gradeLevel?: string;
 }
 
-export const FlashcardsDialog = ({ open, onOpenChange, resource, content }: FlashcardsDialogProps) => {
+export const FlashcardsDialog = ({ open, onOpenChange, resource, content, gradeLevel }: FlashcardsDialogProps) => {
   const [cards, setCards] = useState<Flashcard[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
