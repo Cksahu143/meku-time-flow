@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bot, Layers, MessageSquareText, BrainCircuit, Sparkles } from 'lucide-react';
+import { Bot, Layers, MessageSquareText, BrainCircuit, Sparkles, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -28,6 +28,7 @@ import { CoCoChatDialog } from './CoCoChatDialog';
 import { FlashcardsDialog } from './FlashcardsDialog';
 import { SlideDeckDialog } from './SlideDeckDialog';
 import { QuizDialog } from './QuizDialog';
+import { AudioOverviewDialog } from './AudioOverviewDialog';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AIToolsMenuProps {
@@ -45,10 +46,11 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
   const [showFlashcards, setShowFlashcards] = useState(false);
   const [showSlides, setShowSlides] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
+  const [showAudio, setShowAudio] = useState(false);
   const [gradeLevel, setGradeLevel] = useState<string | null>(null);
   const [gradeLoaded, setGradeLoaded] = useState(false);
   const [showGradePicker, setShowGradePicker] = useState(false);
-  const [pendingTool, setPendingTool] = useState<'coco' | 'flashcards' | 'slides' | 'quiz' | null>(null);
+  const [pendingTool, setPendingTool] = useState<'coco' | 'flashcards' | 'slides' | 'quiz' | 'audio' | null>(null);
 
   const resourceContent = resource.content || resource.description || '';
 
@@ -83,7 +85,7 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
     fetchGrade();
   }, []);
 
-  const openTool = (tool: 'coco' | 'flashcards' | 'slides' | 'quiz') => {
+  const openTool = (tool: 'coco' | 'flashcards' | 'slides' | 'quiz' | 'audio') => {
     if (!gradeLoaded) return;
     if (!gradeLevel) {
       // Ask student to pick their grade
@@ -100,6 +102,7 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
       case 'flashcards': setShowFlashcards(true); break;
       case 'slides': setShowSlides(true); break;
       case 'quiz': setShowQuiz(true); break;
+      case 'audio': setShowAudio(true); break;
     }
   };
 
@@ -135,6 +138,10 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => openTool('quiz')} className="gap-2">
             <Sparkles className="h-4 w-4" /> Quiz / Mock Viva
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => openTool('audio')} className="gap-2">
+            <Volume2 className="h-4 w-4" /> Audio Overview
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -188,6 +195,13 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
       <QuizDialog
         open={showQuiz}
         onOpenChange={setShowQuiz}
+        resource={resource}
+        content={resourceContent}
+        gradeLevel={gradeLevel || undefined}
+      />
+      <AudioOverviewDialog
+        open={showAudio}
+        onOpenChange={setShowAudio}
         resource={resource}
         content={resourceContent}
         gradeLevel={gradeLevel || undefined}

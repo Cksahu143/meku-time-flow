@@ -120,13 +120,14 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { type, content, title, subject, messages, resourceUrl, resourceType, gradeLevel } = await req.json();
+    const { type, tool, content, title, subject, messages, resourceUrl, resourceType, gradeLevel, language } = await req.json();
+    const effectiveType = type || tool;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const gradeNumber = getGradeNumber(gradeLevel);
     const gradeLevelStr = gradeLevel || `Grade ${gradeNumber}`;
-    const questionCount = getQuestionCount(gradeNumber, type);
+    const questionCount = getQuestionCount(gradeNumber, effectiveType);
 
     // Build rich content from all sources
     let enrichedContent = content || "";
@@ -161,8 +162,64 @@ serve(async (req) => {
       ? "Board exam level difficulty. Include conceptual, application, and analytical questions. Use proper technical terminology. Test common misconceptions."
       : "Advanced board exam / competitive exam level. Include HOTS (Higher Order Thinking Skills) questions, multi-step problems, inter-topic connections, derivations, and case-study style questions. This is Class 11-12 material - be rigorous.";
 
+    // Audio overview mode: streaming summary for TTS
+    if (effectiveType === "audio_overview") {
+      const audioLang = language || "English";
+      const audioMessages = [
+        {
+          role: "system",
+          content: `You are a brilliant study narrator creating an audio overview for a ${gradeLevelStr} student.
+
+${MULTI_LANGUAGE_INSTRUCTION}
+
+OUTPUT LANGUAGE: Generate the summary in ${audioLang}. If the language is Hindi, write in Hindi. If Odia, write in Odia. Etc.
+
+RULES:
+- Create a clear, engaging spoken summary of the resource that sounds natural when read aloud by text-to-speech
+- Keep it concise but comprehensive — cover all key points, formulas, and concepts
+- Use simple sentence structures that flow well when spoken
+- Avoid markdown, bullet points, or special characters — write in natural paragraphs
+- Adjust complexity for ${gradeLevelStr}: ${difficultyGuide}
+- Include exam-relevant highlights like "Remember this for your exam..." or "A common question is..."
+- Duration target: ${gradeNumber <= 5 ? '1-2 minutes' : gradeNumber <= 8 ? '2-3 minutes' : '3-5 minutes'} of spoken content
+- Make it feel like a friendly teacher explaining the topic verbally
+
+Resource:\n${resourceContext}`,
+        },
+        {
+          role: "user",
+          content: `Create a spoken audio overview of this resource in ${audioLang}. Make it sound natural for text-to-speech.`,
+        },
+      ];
+
+      const response = await fetch(GATEWAY_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: audioMessages,
+          stream: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const status = response.status;
+        if (status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        const t = await response.text();
+        console.error("AI gateway error:", status, t);
+        return new Response(JSON.stringify({ error: "AI service error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      return new Response(response.body, {
+        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+      });
+    }
+
     // Chat mode: streaming
-    if (type === "chat") {
+    if (effectiveType === "chat") {
       const chatMessages = [
         {
           role: "system",
@@ -423,9 +480,9 @@ Resource:\n${resourceContext}`,
       },
     };
 
-    const config = toolConfigs[type];
+    const config = toolConfigs[effectiveType];
     if (!config) {
-      return new Response(JSON.stringify({ error: `Invalid type: ${type}` }), {
+      return new Response(JSON.stringify({ error: `Invalid type: ${effectiveType}` }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -441,7 +498,7 @@ Resource:\n${resourceContext}`,
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: config.systemPrompt },
-          { role: "user", content: `Generate ${type === "viva" ? "mock viva questions" : type} from this resource. Go deep into the actual content and topic. This is for ${gradeLevelStr} board exam preparation - make it rigorous and comprehensive. Generate exactly ${questionCount.min}-${questionCount.max} items.` },
+          { role: "user", content: `Generate ${effectiveType === "viva" ? "mock viva questions" : effectiveType} from this resource. Go deep into the actual content and topic. This is for ${gradeLevelStr} board exam preparation - make it rigorous and comprehensive. Generate exactly ${questionCount.min}-${questionCount.max} items.` },
         ],
         tools: [config.tool],
         tool_choice: { type: "function", function: { name: config.tool.function.name } },
