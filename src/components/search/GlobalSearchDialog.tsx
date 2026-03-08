@@ -7,7 +7,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, ArrowRight, Sparkles } from 'lucide-react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -83,7 +84,8 @@ export const GlobalSearchDialog: React.FC<GlobalSearchDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden rounded-2xl border-border/40 shadow-2xl bg-card/98 backdrop-blur-2xl">
+      <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden rounded-2xl border-border/40 shadow-2xl bg-card/98 backdrop-blur-2xl" aria-describedby={undefined}>
+        <VisuallyHidden><DialogTitle>Search Features</DialogTitle></VisuallyHidden>
         {/* Search Input */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-border/30">
           <Search className="h-5 w-5 text-muted-foreground shrink-0" />

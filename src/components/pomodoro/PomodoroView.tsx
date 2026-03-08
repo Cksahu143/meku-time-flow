@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Timer, Play, Pause, RotateCcw, Settings, Coffee, Brain, Award } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { PomodoroSettings } from '@/types';
@@ -175,25 +176,42 @@ export function PomodoroView() {
   const SessionIcon = getSessionIcon();
 
   return (
-    <div className="min-h-full h-full p-4 md:p-6 lg:p-8 animate-slide-in-right">
-      <div className="flex items-center justify-between mb-6">
+    <motion.div
+      className="min-h-full h-full p-4 md:p-6 lg:p-8"
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+    >
+      <motion.div
+        className="flex items-center justify-between mb-6"
+        initial={{ opacity: 0, x: -15 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.1 }}
+      >
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-primary/10">
+          <motion.div
+            className="p-2.5 rounded-xl bg-primary/10"
+            whileHover={{ scale: 1.1, rotate: 8 }}
+            animate={isRunning ? { rotate: [0, 360] } : {}}
+            transition={isRunning ? { duration: 8, repeat: Infinity, ease: 'linear' } : {}}
+          >
             <Timer className="w-6 h-6 text-primary" />
-          </div>
+          </motion.div>
           <div>
             <h2 className="text-2xl font-bold text-foreground font-display">Pomodoro Timer</h2>
             <p className="text-sm text-muted-foreground">Stay focused and productive</p>
           </div>
         </div>
 
-        <button
+        <motion.button
           onClick={() => setShowSettings(!showSettings)}
-          className="p-2.5 rounded-xl bg-secondary hover:bg-secondary/80 transition-all hover:scale-110 hover:rotate-45"
+          className="p-2.5 rounded-xl bg-secondary hover:bg-secondary/80 transition-all"
+          whileHover={{ scale: 1.1, rotate: 45 }}
+          whileTap={{ scale: 0.9 }}
         >
           <Settings className="w-5 h-5" />
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
 
       {showSettings ? (
         <div className="card-premium rounded-2xl p-6 animate-scale-in max-w-md mx-auto">
@@ -439,6 +457,6 @@ export function PomodoroView() {
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

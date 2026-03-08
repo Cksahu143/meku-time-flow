@@ -77,7 +77,7 @@ export const DashboardCharts: React.FC = () => {
               Tasks
             </div>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <div className="w-2.5 h-2.5 rounded-full bg-purple-400" />
+              <div className="w-2.5 h-2.5 rounded-full bg-chart-2" />
               Completed
             </div>
           </div>
@@ -90,7 +90,7 @@ export const DashboardCharts: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.25 }}
-              className="h-[220px]"
+              className="h-[220px]" style={{ minWidth: 1, minHeight: 1 }}
             >
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={data}>
