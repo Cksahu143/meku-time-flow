@@ -177,6 +177,7 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
         resource={resource}
         content={resourceContent}
         gradeLevel={gradeLevel || undefined}
+        fileName={resource.file_name || undefined}
       />
       <FlashcardsDialog
         open={showFlashcards}
@@ -184,6 +185,7 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
         resource={resource}
         content={resourceContent}
         gradeLevel={gradeLevel || undefined}
+        fileName={resource.file_name || undefined}
       />
       <SlideDeckDialog
         open={showSlides}
@@ -191,6 +193,7 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
         resource={resource}
         content={resourceContent}
         gradeLevel={gradeLevel || undefined}
+        fileName={resource.file_name || undefined}
       />
       <QuizDialog
         open={showQuiz}
@@ -198,6 +201,7 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
         resource={resource}
         content={resourceContent}
         gradeLevel={gradeLevel || undefined}
+        fileName={resource.file_name || undefined}
       />
       <AudioOverviewDialog
         open={showAudio}
@@ -205,6 +209,7 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
         resource={resource}
         content={resourceContent}
         gradeLevel={gradeLevel || undefined}
+        fileName={resource.file_name || undefined}
       />
     </>
   );
