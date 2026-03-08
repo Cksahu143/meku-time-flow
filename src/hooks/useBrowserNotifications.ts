@@ -1,56 +1,84 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useNotificationPreferences } from './useNotificationPreferences';
+
+type NotificationType = 'messages' | 'tasks' | 'pomodoro' | 'groupInvites' | 'mentions' | 'replies' | 'follows' | 'reactions' | 'system' | 'announcements';
+
+const isMac = () => typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent);
 
 export const useBrowserNotifications = () => {
   const { preferences, shouldShowNotification } = useNotificationPreferences();
+  const swRegistrationRef = useRef<ServiceWorkerRegistration | null>(null);
 
   useEffect(() => {
-    // Register service worker on mount
-    if ('serviceWorker' in navigator && preferences.browserNotifications) {
-      navigator.serviceWorker.register('/service-worker.js')
-        .then(registration => {
-          console.log('Service Worker registered:', registration);
-        })
-        .catch(error => {
-          console.error('Service Worker registration failed:', error);
-        });
-    }
-  }, [preferences.browserNotifications]);
+    if (!('serviceWorker' in navigator)) return;
 
-  const showNotification = (
-    type: 'messages' | 'tasks' | 'pomodoro' | 'groupInvites',
+    navigator.serviceWorker.register('/service-worker.js')
+      .then(registration => {
+        swRegistrationRef.current = registration;
+        console.log('Service Worker registered for notifications');
+      })
+      .catch(error => {
+        console.error('Service Worker registration failed:', error);
+      });
+  }, []);
+
+  const requestPermission = useCallback(async (): Promise<boolean> => {
+    if (!('Notification' in window)) return false;
+
+    if (Notification.permission === 'granted') return true;
+    if (Notification.permission === 'denied') return false;
+
+    const result = await Notification.requestPermission();
+    return result === 'granted';
+  }, []);
+
+  const showNotification = useCallback((
+    type: NotificationType,
     title: string,
     body: string,
-    options?: NotificationOptions
+    options?: {
+      url?: string;
+      tag?: string;
+      silent?: boolean;
+    }
   ) => {
-    // Check if we should show this notification
-    if (!shouldShowNotification(type)) {
-      return;
-    }
+    if (!shouldShowNotification(type)) return;
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
-    // Check if browser notifications are enabled
-    if (!('Notification' in window)) {
-      console.warn('Browser notifications not supported');
-      return;
-    }
+    // Mac-specific: append a friendly suffix
+    const macSuffix = isMac() ? '\n📱 From EDAS on your Mac' : '';
+    const finalBody = body + macSuffix;
 
-    if (Notification.permission === 'granted') {
-      // If the page is visible, we can just show a toast instead
-      if (document.visibilityState === 'visible') {
-        return; // Let toast handle it
-      }
+    const tag = options?.tag || type;
+    const notifData = {
+      url: options?.url || '/app',
+    };
 
-      // Show browser notification when tab is hidden
-      new Notification(title, {
-        body,
+    // Use service worker to show notification (works in background & when closed)
+    if (swRegistrationRef.current?.active) {
+      swRegistrationRef.current.active.postMessage({
+        type: 'SHOW_NOTIFICATION',
+        title,
+        body: finalBody,
+        tag,
+        data: notifData,
         icon: '/favicon.ico',
         badge: '/favicon.ico',
-        tag: type,
+      });
+      return;
+    }
+
+    // Fallback: direct Notification API (only works when tab exists)
+    if (document.visibilityState !== 'visible') {
+      new Notification(title, {
+        body: finalBody,
+        icon: '/favicon.ico',
+        badge: '/favicon.ico',
+        tag,
         requireInteraction: false,
-        ...options,
       });
     }
-  };
+  }, [shouldShowNotification]);
 
-  return { showNotification };
+  return { showNotification, requestPermission };
 };
