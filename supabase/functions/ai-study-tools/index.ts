@@ -17,10 +17,8 @@ async function fetchUrlContent(url: string): Promise<string> {
     if (!resp.ok) return "";
     const contentType = resp.headers.get("content-type") || "";
     
-    // For text/html pages, extract text content
     if (contentType.includes("text/html") || contentType.includes("text/plain")) {
       const text = await resp.text();
-      // Strip HTML tags for a rough text extraction
       const stripped = text
         .replace(/<script[\s\S]*?<\/script>/gi, "")
         .replace(/<style[\s\S]*?<\/style>/gi, "")
@@ -34,13 +32,10 @@ async function fetchUrlContent(url: string): Promise<string> {
         .replace(/&gt;/g, ">")
         .replace(/\s+/g, " ")
         .trim();
-      // Limit to ~12000 chars to stay within context limits
       return stripped.slice(0, 12000);
     }
 
-    // For PDFs or other binary, try to read as text (won't always work)
     if (contentType.includes("application/pdf")) {
-      // Can't parse PDF binary in edge function easily, return note
       return "[PDF file detected - content extraction from PDF binary is limited. Using title, subject, and description for context.]";
     }
 
@@ -54,7 +49,6 @@ async function fetchUrlContent(url: string): Promise<string> {
 
 async function searchWebForSubject(subject: string, title: string, apiKey: string): Promise<string> {
   try {
-    const searchQuery = `${subject} ${title} study notes key concepts board exam`;
     const resp = await fetch(GATEWAY_URL, {
       method: "POST",
       headers: {
@@ -66,7 +60,7 @@ async function searchWebForSubject(subject: string, title: string, apiKey: strin
         messages: [
           {
             role: "system",
-            content: "You are a subject matter expert. Provide comprehensive study notes on the given topic. Include key concepts, formulas, definitions, important dates/events, and common exam questions. Be thorough and detailed. This is for board exam preparation.",
+            content: "You are a subject matter expert. Provide comprehensive study notes on the given topic. Include key concepts, formulas, definitions, important dates/events, and common exam questions. Be thorough and detailed. This is for board exam preparation. You can respond in English, Hindi, Odia, Sanskrit, or any language the topic is typically taught in.",
           },
           {
             role: "user",
@@ -84,18 +78,59 @@ async function searchWebForSubject(subject: string, title: string, apiKey: strin
   }
 }
 
+function getGradeNumber(gradeLevel?: string): number {
+  if (!gradeLevel) return 10; // default assumption
+  const match = gradeLevel.match(/(\d+)/);
+  if (match) return parseInt(match[1]);
+  const lower = gradeLevel.toLowerCase();
+  if (lower.includes('nursery') || lower.includes('lkg') || lower.includes('ukg')) return 1;
+  return 10;
+}
+
+function getQuestionCount(gradeNumber: number, type: string): { min: number; max: number } {
+  if (type === 'viva') {
+    if (gradeNumber <= 5) return { min: 4, max: 6 };
+    if (gradeNumber <= 8) return { min: 6, max: 8 };
+    if (gradeNumber <= 10) return { min: 8, max: 10 };
+    return { min: 10, max: 15 };
+  }
+  if (type === 'quiz') {
+    if (gradeNumber <= 5) return { min: 5, max: 8 };
+    if (gradeNumber <= 8) return { min: 8, max: 10 };
+    if (gradeNumber <= 10) return { min: 10, max: 12 };
+    return { min: 15, max: 20 };
+  }
+  if (type === 'flashcards') {
+    if (gradeNumber <= 5) return { min: 8, max: 10 };
+    if (gradeNumber <= 8) return { min: 10, max: 12 };
+    return { min: 15, max: 20 };
+  }
+  return { min: 8, max: 12 };
+}
+
+const MULTI_LANGUAGE_INSTRUCTION = `
+LANGUAGE SUPPORT:
+- You MUST understand and respond in the language the student uses. If they write in Hindi, respond in Hindi. If Odia, respond in Odia. If Sanskrit, respond in Sanskrit. Same for any other language.
+- For subjects like Hindi, Sanskrit, Odia, or any regional language subject, generate ALL content (questions, answers, explanations) in that language.
+- For science/math subjects, use English for technical terms but explain in the student's preferred language if they ask in a non-English language.
+- You understand: English, Hindi (हिन्दी), Odia (ଓଡ଼ିଆ), Sanskrit (संस्कृत), Bengali (বাংলা), Tamil (தமிழ்), Telugu (తెలుగు), Marathi (मराठी), Gujarati (ગુજરાતી), Kannada (ಕನ್ನಡ), Malayalam (മലയാളം), Punjabi (ਪੰਜਾਬੀ), Urdu (اردو), and many more.
+`;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { type, content, title, subject, messages, resourceUrl, resourceType, quizMode } = await req.json();
+    const { type, content, title, subject, messages, resourceUrl, resourceType, gradeLevel } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    // Step 1: Build rich content from all sources
+    const gradeNumber = getGradeNumber(gradeLevel);
+    const gradeLevelStr = gradeLevel || `Grade ${gradeNumber}`;
+    const questionCount = getQuestionCount(gradeNumber, type);
+
+    // Build rich content from all sources
     let enrichedContent = content || "";
 
-    // Fetch content from URL if provided
     if (resourceUrl && (!enrichedContent || enrichedContent.length < 100)) {
       console.log("Fetching content from URL:", resourceUrl);
       const urlContent = await fetchUrlContent(resourceUrl);
@@ -106,7 +141,6 @@ serve(async (req) => {
       }
     }
 
-    // If content is still thin, use AI to generate subject knowledge
     if (!enrichedContent || enrichedContent.length < 200) {
       console.log("Content thin, searching for subject knowledge...");
       const webContent = await searchWebForSubject(subject || "General", title || "Study Material", LOVABLE_API_KEY);
@@ -117,7 +151,15 @@ serve(async (req) => {
       }
     }
 
-    const resourceContext = `Resource Title: ${title || "Untitled"}\nSubject: ${subject || "General"}\nResource Type: ${resourceType || "unknown"}\n\nContent:\n${enrichedContent || "No content available - use your deep knowledge of this subject to help the student."}`;
+    const resourceContext = `Resource Title: ${title || "Untitled"}\nSubject: ${subject || "General"}\nResource Type: ${resourceType || "unknown"}\nStudent Grade Level: ${gradeLevelStr}\n\nContent:\n${enrichedContent || "No content available - use your deep knowledge of this subject to help the student."}`;
+
+    const difficultyGuide = gradeNumber <= 5
+      ? "Keep language simple and age-appropriate. Use fun examples and relatable scenarios. Focus on basic concepts and recall."
+      : gradeNumber <= 8
+      ? "Use clear language with some technical terms. Include application-based questions. Balance between recall and understanding."
+      : gradeNumber <= 10
+      ? "Board exam level difficulty. Include conceptual, application, and analytical questions. Use proper technical terminology. Test common misconceptions."
+      : "Advanced board exam / competitive exam level. Include HOTS (Higher Order Thinking Skills) questions, multi-step problems, inter-topic connections, derivations, and case-study style questions. This is Class 11-12 material - be rigorous.";
 
     // Chat mode: streaming
     if (type === "chat") {
@@ -125,6 +167,11 @@ serve(async (req) => {
         {
           role: "system",
           content: `You are CoCo, the most powerful AI study assistant ever built. You are designed to help students ACE their board exams. You have encyclopedic knowledge of every subject.
+
+STUDENT CONTEXT: This student is in ${gradeLevelStr}. Adjust your explanations, vocabulary, and depth accordingly.
+${difficultyGuide}
+
+${MULTI_LANGUAGE_INSTRUCTION}
 
 CRITICAL RULES:
 - You MUST go DEEP into the actual topic content, not just the title or headers
@@ -138,6 +185,7 @@ CRITICAL RULES:
 - Be encouraging but rigorous - this is board exam prep, not casual tutoring
 - If asked about a topic you know well, share ALL relevant knowledge even beyond the resource
 - Provide "Exam Tips" and "Common Mistakes" when relevant
+- For ${gradeLevelStr} students, focus on ${gradeNumber >= 10 ? 'board exam patterns, previous year questions, and marking scheme tips' : 'building strong fundamentals and conceptual clarity'}
 
 You have access to this resource:\n\n${resourceContext}
 
@@ -176,17 +224,24 @@ Remember: You're not just explaining - you're preparing a student to score maxim
     // Non-streaming modes
     const toolConfigs: Record<string, { systemPrompt: string; tool: any }> = {
       flashcards: {
-        systemPrompt: `You are an elite board exam tutor. Create POWERFUL study flashcards that will help a student score full marks.
+        systemPrompt: `You are an elite board exam tutor. Create POWERFUL study flashcards for a ${gradeLevelStr} student.
+
+${MULTI_LANGUAGE_INSTRUCTION}
+
+STUDENT LEVEL: ${gradeLevelStr}
+${difficultyGuide}
 
 RULES:
-- Generate 12-15 flashcards covering ALL key concepts from the material
-- Questions should be the type asked in board exams (not trivial)
+- Generate ${questionCount.min}-${questionCount.max} flashcards covering ALL key concepts from the material
+- Questions should match ${gradeLevelStr} board exam difficulty
 - Include formula-based cards, definition cards, application-based cards, and comparison cards
 - Back of cards should have complete, exam-ready answers
 - Include "Exam Tip" on relevant cards
 - Go DEEP into the content - don't just ask surface-level questions about titles
 - Test conceptual understanding, not just recall
 - Include numerical/problem-solving flashcards where applicable
+- For language subjects (Hindi, Sanskrit, Odia etc.), write cards in that language
+- Adjust complexity to ${gradeLevelStr} level
 
 Resource:\n${resourceContext}`,
         tool: {
@@ -202,7 +257,7 @@ Resource:\n${resourceContext}`,
                   items: {
                     type: "object",
                     properties: {
-                      front: { type: "string", description: "Question or prompt - board exam level" },
+                      front: { type: "string", description: "Question or prompt - grade-appropriate difficulty" },
                       back: { type: "string", description: "Complete, exam-ready answer with key points" },
                     },
                     required: ["front", "back"],
@@ -217,16 +272,23 @@ Resource:\n${resourceContext}`,
         },
       },
       slides: {
-        systemPrompt: `You are a presentation expert creating revision slides for board exam preparation.
+        systemPrompt: `You are a presentation expert creating revision slides for ${gradeLevelStr} board exam preparation.
+
+${MULTI_LANGUAGE_INSTRUCTION}
+
+STUDENT LEVEL: ${gradeLevelStr}
+${difficultyGuide}
 
 RULES:
-- Create 8-12 comprehensive slides covering the topic thoroughly
+- Create ${questionCount.min}-${questionCount.max} comprehensive slides covering the topic thoroughly
 - Each slide should be a complete revision unit
 - Include formulas, key definitions, diagrams descriptions, and important points
 - Add speaker notes with extra context, exam tips, and common mistakes
 - Structure: Introduction → Core Concepts → Formulas/Definitions → Applications → Key Differences → Summary
 - Make it so a student can revise the entire topic just from these slides
 - Go deep into the actual content, not surface-level
+- Adjust language and complexity for ${gradeLevelStr}
+- For language subjects, use that language in the slides
 
 Resource:\n${resourceContext}`,
         tool: {
@@ -258,18 +320,24 @@ Resource:\n${resourceContext}`,
         },
       },
       quiz: {
-        systemPrompt: `You are a strict board exam paper setter. Create a challenging quiz that truly tests understanding.
+        systemPrompt: `You are a strict board exam paper setter for ${gradeLevelStr}. Create a challenging quiz that truly tests understanding.
+
+${MULTI_LANGUAGE_INSTRUCTION}
+
+STUDENT LEVEL: ${gradeLevelStr}
+${difficultyGuide}
 
 RULES:
-- Generate 10-12 questions of BOARD EXAM difficulty
+- Generate ${questionCount.min}-${questionCount.max} questions of ${gradeLevelStr} board exam difficulty
 - Mix question types: conceptual, application-based, numerical, analytical
-- Options should include common wrong answers that students typically choose (distractors)
+- Options should include common wrong answers that ${gradeLevelStr} students typically choose (distractors)
 - Explanations should teach WHY each wrong answer is wrong
 - Questions should test DEEP understanding, not surface-level recall
-- Include at least 2-3 tricky questions with subtle differences in options
-- Include questions that test common mistakes students make
-- Make it feel like a real board exam mini-test
+- Include tricky questions with subtle differences in options
+- Include questions that test common mistakes ${gradeLevelStr} students make
+- Make it feel like a real ${gradeNumber >= 10 ? 'board exam' : 'school exam'} mini-test
 - Questions MUST be about the actual content/topic, not about metadata
+- For language subjects, write questions in that language
 
 Resource:\n${resourceContext}`,
         tool: {
@@ -302,10 +370,15 @@ Resource:\n${resourceContext}`,
         },
       },
       viva: {
-        systemPrompt: `You are a strict board exam viva examiner conducting a mock oral examination.
+        systemPrompt: `You are a strict board exam viva examiner conducting a mock oral examination for a ${gradeLevelStr} student.
+
+${MULTI_LANGUAGE_INSTRUCTION}
+
+STUDENT LEVEL: ${gradeLevelStr}
+${difficultyGuide}
 
 RULES:
-- Generate 8-10 viva-style questions that an examiner would ask face-to-face
+- Generate ${questionCount.min}-${questionCount.max} viva-style questions appropriate for ${gradeLevelStr}
 - Questions should be open-ended, probing, and require detailed verbal answers
 - Include follow-up style questions ("And why is that?", "Can you explain further?")
 - Mix difficulty: start easier, progressively get harder
@@ -315,6 +388,7 @@ RULES:
 - Include examiner tips on what they look for in answers
 - Questions MUST be about the actual topic content, not about metadata
 - Make it feel like a real viva voce examination
+- For ${gradeLevelStr}, ${gradeNumber >= 10 ? 'ask probing questions that test deep understanding, derivations, and inter-topic connections' : 'focus on fundamentals with encouraging follow-ups'}
 
 Resource:\n${resourceContext}`,
         tool: {
@@ -367,7 +441,7 @@ Resource:\n${resourceContext}`,
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: config.systemPrompt },
-          { role: "user", content: `Generate ${type === "viva" ? "mock viva questions" : type} from this resource. Go deep into the actual content and topic. This is for board exam preparation - make it rigorous and comprehensive.` },
+          { role: "user", content: `Generate ${type === "viva" ? "mock viva questions" : type} from this resource. Go deep into the actual content and topic. This is for ${gradeLevelStr} board exam preparation - make it rigorous and comprehensive. Generate exactly ${questionCount.min}-${questionCount.max} items.` },
         ],
         tools: [config.tool],
         tool_choice: { type: "function", function: { name: config.tool.function.name } },

@@ -34,9 +34,10 @@ interface QuizDialogProps {
   onOpenChange: (open: boolean) => void;
   resource: DbResource;
   content: string;
+  gradeLevel?: string;
 }
 
-export const QuizDialog = ({ open, onOpenChange, resource, content }: QuizDialogProps) => {
+export const QuizDialog = ({ open, onOpenChange, resource, content, gradeLevel }: QuizDialogProps) => {
   const [mode, setMode] = useState<QuizMode>('quiz');
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [vivaQuestions, setVivaQuestions] = useState<VivaQuestion[]>([]);
@@ -87,6 +88,7 @@ export const QuizDialog = ({ open, onOpenChange, resource, content }: QuizDialog
           subject: resource.subject,
           resourceUrl: resource.url,
           resourceType: resource.resource_type,
+          gradeLevel,
         },
       });
       if (error) throw error;
@@ -152,7 +154,7 @@ export const QuizDialog = ({ open, onOpenChange, resource, content }: QuizDialog
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh]">
+      <DialogContent className="max-w-2xl max-h-[85vh]" onInteractOutside={e => e.preventDefault()} onPointerDownOutside={e => e.preventDefault()} onEscapeKeyDown={e => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />

@@ -15,9 +15,10 @@ interface SlideDeckDialogProps {
   onOpenChange: (open: boolean) => void;
   resource: DbResource;
   content: string;
+  gradeLevel?: string;
 }
 
-export const SlideDeckDialog = ({ open, onOpenChange, resource, content }: SlideDeckDialogProps) => {
+export const SlideDeckDialog = ({ open, onOpenChange, resource, content, gradeLevel }: SlideDeckDialogProps) => {
   const [slides, setSlides] = useState<Slide[]>([]);
   const [loading, setLoading] = useState(false);
   const [current, setCurrent] = useState(0);
@@ -40,6 +41,7 @@ export const SlideDeckDialog = ({ open, onOpenChange, resource, content }: Slide
           subject: resource.subject,
           resourceUrl: resource.url,
           resourceType: resource.resource_type,
+          gradeLevel,
         },
       });
       if (error) throw error;
@@ -55,7 +57,7 @@ export const SlideDeckDialog = ({ open, onOpenChange, resource, content }: Slide
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) { setSlides([]); setCurrent(0); } onOpenChange(v); }}>
-      <DialogContent className="max-w-4xl max-h-[90vh]">
+      <DialogContent className="max-w-4xl max-h-[90vh]" onInteractOutside={e => e.preventDefault()} onPointerDownOutside={e => e.preventDefault()} onEscapeKeyDown={e => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <BrainCircuit className="h-5 w-5 text-primary" />

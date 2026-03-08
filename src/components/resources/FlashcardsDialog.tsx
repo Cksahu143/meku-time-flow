@@ -15,9 +15,10 @@ interface FlashcardsDialogProps {
   onOpenChange: (open: boolean) => void;
   resource: DbResource;
   content: string;
+  gradeLevel?: string;
 }
 
-export const FlashcardsDialog = ({ open, onOpenChange, resource, content }: FlashcardsDialogProps) => {
+export const FlashcardsDialog = ({ open, onOpenChange, resource, content, gradeLevel }: FlashcardsDialogProps) => {
   const [cards, setCards] = useState<Flashcard[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -41,6 +42,7 @@ export const FlashcardsDialog = ({ open, onOpenChange, resource, content }: Flas
           subject: resource.subject,
           resourceUrl: resource.url,
           resourceType: resource.resource_type,
+          gradeLevel,
         },
       });
       if (error) throw error;
@@ -57,7 +59,7 @@ export const FlashcardsDialog = ({ open, onOpenChange, resource, content }: Flas
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) { setCards([]); setCurrentIndex(0); setFlipped(false); } onOpenChange(v); }}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="max-w-xl" onInteractOutside={e => e.preventDefault()} onPointerDownOutside={e => e.preventDefault()} onEscapeKeyDown={e => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Layers className="h-5 w-5 text-primary" />
