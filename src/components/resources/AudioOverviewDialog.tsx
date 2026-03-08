@@ -31,7 +31,7 @@ const VOICE_LANGUAGES = [
   { code: 'pa', label: 'Punjabi' },
 ];
 
-export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gradeLevel }: AudioOverviewDialogProps) => {
+export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gradeLevel, fileName }: AudioOverviewDialogProps) => {
   const [summary, setSummary] = useState('');
   const [loading, setLoading] = useState(false);
   const [playing, setPlaying] = useState(false);
