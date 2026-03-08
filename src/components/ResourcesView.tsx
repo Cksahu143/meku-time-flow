@@ -24,7 +24,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useResources, DbResource, ResourceInput } from '@/hooks/useResources';
 
-const SUBJECTS = ['Mathematics', 'Physics', 'English', 'History', 'Chemistry', 'Biology'];
+const DEFAULT_SUBJECTS = ['Mathematics', 'Physics', 'English', 'History', 'Chemistry', 'Biology'];
 
 export const ResourcesView: React.FC = () => {
   const {
