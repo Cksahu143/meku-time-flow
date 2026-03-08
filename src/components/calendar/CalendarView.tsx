@@ -380,6 +380,6 @@ export function CalendarView() {
 
       <ExamFormDialog open={examDialogOpen} onOpenChange={setExamDialogOpen} exam={selectedExam} onSave={createExam} onUpdate={updateExam} onDelete={deleteExam} />
       <ExamPeriodFormDialog open={periodDialogOpen} onOpenChange={setPeriodDialogOpen} onSave={createPeriod} />
-    </div>
+    </motion.div>
   );
 }
