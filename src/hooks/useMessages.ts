@@ -30,7 +30,23 @@ export const useMessages = (groupId: string | null) => {
           filter: `group_id=eq.${groupId}`
         },
         (payload) => {
-          setMessages(prev => [...prev, payload.new as Message]);
+          setMessages(prev => {
+            // Avoid duplicates from optimistic updates
+            if (prev.some(m => m.id === (payload.new as Message).id)) return prev;
+            return [...prev, payload.new as Message];
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `group_id=eq.${groupId}`
+        },
+        (payload) => {
+          setMessages(prev => prev.map(m => m.id === (payload.new as Message).id ? (payload.new as Message) : m));
         }
       )
       .subscribe();

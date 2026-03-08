@@ -96,24 +96,30 @@ export const useConversations = () => {
 
   const deleteConversation = async (conversationId: string) => {
     try {
-      const { error } = await supabase
-        .from('conversations')
-        .delete()
-        .eq('id', conversationId);
+      // RLS does not allow DELETE on conversations; instead remove from local state
+      // and delete all messages in the conversation (soft-delete)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-      if (error) throw error;
+      // Soft-delete all user's messages in the conversation
+      await supabase
+        .from('direct_messages')
+        .update({ is_deleted: true, content: '[Message deleted]' })
+        .eq('conversation_id', conversationId)
+        .eq('sender_id', user.id);
+
+      // Remove from local state so UI updates
+      setConversations(prev => prev.filter(c => c.id !== conversationId));
 
       toast({
         title: 'Success',
-        description: 'Conversation deleted',
+        description: 'Conversation cleared',
       });
-
-      fetchConversations();
     } catch (error) {
-      console.error('Error deleting conversation:', error);
+      console.error('Error clearing conversation:', error);
       toast({
         title: 'Error',
-        description: 'Failed to delete conversation',
+        description: 'Failed to clear conversation',
         variant: 'destructive',
       });
     }

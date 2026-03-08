@@ -28,7 +28,22 @@ export const useDirectMessages = (conversationId: string | null) => {
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
-          setMessages((current) => [...current, payload.new as DirectMessage]);
+          setMessages((current) => {
+            if (current.some(m => m.id === (payload.new as DirectMessage).id)) return current;
+            return [...current, payload.new as DirectMessage];
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'direct_messages',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          setMessages((current) => current.map(m => m.id === (payload.new as DirectMessage).id ? (payload.new as DirectMessage) : m));
         }
       )
       .subscribe();
