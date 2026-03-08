@@ -6,7 +6,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -21,6 +20,7 @@ import {
   Share2,
   Music,
   HelpCircle,
+  Smartphone,
 } from 'lucide-react';
 
 interface HelpDialogProps {
@@ -138,11 +138,23 @@ export const HelpDialog = ({ open, onOpenChange }: HelpDialogProps) => {
     {
       icon: Music,
       title: 'Music Player',
-      description: 'Enjoy music while you work',
+      description: 'Stream music via SoundCloud while you work',
       steps: [
-        'Click the music icon to open the player',
-        'Play, pause, and skip tracks',
-        'Choose from nature sounds or calm piano',
+        'Click the music icon in the header to open the player',
+        'Choose from curated playlists: Lofi Hip Hop, Study Beats, or Chill Piano',
+        'Switch between playlists using the tabs',
+        'Music streams directly from SoundCloud — no account required',
+      ],
+    },
+    {
+      icon: Smartphone,
+      title: 'Mobile Navigation',
+      description: 'Full access on any device',
+      steps: [
+        'Tap the hamburger menu (☰) to open the sidebar on mobile',
+        'Quick-access profile, edit profile, and notifications links are at the bottom of the sidebar',
+        'The top bar provides search, music, help, and settings on mobile',
+        'Tap your avatar in the top-right for profile actions and sign out',
       ],
     },
   ];
