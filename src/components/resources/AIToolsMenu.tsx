@@ -50,7 +50,7 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
             <BrainCircuit className="h-4 w-4" /> Generate Slide Deck
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setShowQuiz(true)} className="gap-2">
-            <Sparkles className="h-4 w-4" /> Generate Quiz
+            <Sparkles className="h-4 w-4" /> Quiz / Mock Viva
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

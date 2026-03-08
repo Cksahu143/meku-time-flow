@@ -33,7 +33,14 @@ export const SlideDeckDialog = ({ open, onOpenChange, resource, content }: Slide
     setCurrent(0);
     try {
       const { data, error } = await supabase.functions.invoke('ai-study-tools', {
-        body: { type: 'slides', content, title: resource.title, subject: resource.subject },
+        body: {
+          type: 'slides',
+          content,
+          title: resource.title,
+          subject: resource.subject,
+          resourceUrl: resource.url,
+          resourceType: resource.resource_type,
+        },
       });
       if (error) throw error;
       if (data?.slides) setSlides(data.slides);
@@ -59,7 +66,7 @@ export const SlideDeckDialog = ({ open, onOpenChange, resource, content }: Slide
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">Generating slides...</p>
+            <p className="text-sm text-muted-foreground">Generating revision slides...</p>
           </div>
         ) : slides.length > 0 ? (
           <div className="space-y-4">
@@ -118,7 +125,7 @@ export const SlideDeckDialog = ({ open, onOpenChange, resource, content }: Slide
 
                 {showNotes && slide.notes && (
                   <div className="mt-3 p-3 rounded-lg bg-muted/50 border border-border/50">
-                    <p className="text-xs font-medium text-muted-foreground mb-1">Speaker Notes</p>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Speaker Notes & Exam Tips</p>
                     <p className="text-sm text-foreground">{slide.notes}</p>
                   </div>
                 )}

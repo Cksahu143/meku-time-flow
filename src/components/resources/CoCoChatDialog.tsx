@@ -30,7 +30,7 @@ export const CoCoChatDialog = ({ open, onOpenChange, resource, content }: CoCoCh
     if (open && messages.length === 0) {
       setMessages([{
         role: 'assistant',
-        content: `Hey there! 👋 I'm **CoCo**, your AI study buddy! I've read through **"${resource.title}"** and I'm ready to help you understand it. Ask me anything!`,
+        content: `Hey there! 👋 I'm **CoCo**, your AI study buddy built to help you ace your board exams! I've analyzed **"${resource.title}"** (${resource.subject}) and I'm ready to help you master this topic.\n\nAsk me anything — explanations, formulas, exam tips, practice questions, or concept breakdowns. Let's get you that top score! 🎯`,
       }]);
     }
   }, [open, resource.title]);
@@ -63,7 +63,6 @@ export const CoCoChatDialog = ({ open, onOpenChange, resource, content }: CoCoCh
     };
 
     try {
-      // Filter out the initial greeting for API calls
       const apiMessages = allMessages.filter((_, i) => i > 0 || allMessages[0].role === 'user');
       const resp = await fetch(CHAT_URL, {
         method: 'POST',
@@ -76,6 +75,8 @@ export const CoCoChatDialog = ({ open, onOpenChange, resource, content }: CoCoCh
           content,
           title: resource.title,
           subject: resource.subject,
+          resourceUrl: resource.url,
+          resourceType: resource.resource_type,
           messages: apiMessages.map(m => ({ role: m.role, content: m.content })),
         }),
         signal: controller.signal,
@@ -175,7 +176,7 @@ export const CoCoChatDialog = ({ open, onOpenChange, resource, content }: CoCoCh
             <Input
               value={input}
               onChange={e => setInput(e.target.value)}
-              placeholder="Ask CoCo anything about this resource..."
+              placeholder="Ask CoCo anything — explanations, exam tips, practice questions..."
               disabled={isLoading}
               className="flex-1"
             />

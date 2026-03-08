@@ -34,7 +34,14 @@ export const FlashcardsDialog = ({ open, onOpenChange, resource, content }: Flas
     setFlipped(false);
     try {
       const { data, error } = await supabase.functions.invoke('ai-study-tools', {
-        body: { type: 'flashcards', content, title: resource.title, subject: resource.subject },
+        body: {
+          type: 'flashcards',
+          content,
+          title: resource.title,
+          subject: resource.subject,
+          resourceUrl: resource.url,
+          resourceType: resource.resource_type,
+        },
       });
       if (error) throw error;
       if (data?.flashcards) setCards(data.flashcards);
@@ -61,7 +68,7 @@ export const FlashcardsDialog = ({ open, onOpenChange, resource, content }: Flas
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">Generating flashcards...</p>
+            <p className="text-sm text-muted-foreground">Generating board exam flashcards...</p>
           </div>
         ) : cards.length > 0 ? (
           <div className="space-y-4">
