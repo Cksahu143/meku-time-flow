@@ -13,6 +13,7 @@ interface AudioOverviewDialogProps {
   resource: DbResource;
   content: string;
   gradeLevel?: string;
+  fileName?: string;
 }
 
 const VOICE_LANGUAGES = [
