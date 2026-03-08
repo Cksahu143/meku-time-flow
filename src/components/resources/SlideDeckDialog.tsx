@@ -42,6 +42,7 @@ export const SlideDeckDialog = ({ open, onOpenChange, resource, content, gradeLe
           subject: resource.subject,
           resourceUrl: resource.url,
           resourceType: resource.resource_type,
+          fileName: fileName || resource.file_name,
           gradeLevel,
         },
       });

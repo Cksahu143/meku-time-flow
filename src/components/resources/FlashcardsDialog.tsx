@@ -43,6 +43,7 @@ export const FlashcardsDialog = ({ open, onOpenChange, resource, content, gradeL
           subject: resource.subject,
           resourceUrl: resource.url,
           resourceType: resource.resource_type,
+          fileName: fileName || resource.file_name,
           gradeLevel,
         },
       });
