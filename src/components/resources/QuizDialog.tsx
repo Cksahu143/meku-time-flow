@@ -37,7 +37,7 @@ interface QuizDialogProps {
   gradeLevel?: string;
 }
 
-export const QuizDialog = ({ open, onOpenChange, resource, content }: QuizDialogProps) => {
+export const QuizDialog = ({ open, onOpenChange, resource, content, gradeLevel }: QuizDialogProps) => {
   const [mode, setMode] = useState<QuizMode>('quiz');
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [vivaQuestions, setVivaQuestions] = useState<VivaQuestion[]>([]);
