@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { MusicPlayer } from '@/components/MusicPlayer';
 import { motion } from 'framer-motion';
 import { Search, Bell, ChevronDown, HelpCircle, Users } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
