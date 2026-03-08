@@ -482,7 +482,7 @@ Resource:\n${resourceContext}`,
 
     const config = toolConfigs[effectiveType];
     if (!config) {
-      return new Response(JSON.stringify({ error: `Invalid type: ${type}` }), {
+      return new Response(JSON.stringify({ error: `Invalid type: ${effectiveType}` }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
