@@ -20,7 +20,7 @@ interface CoCoChatDialogProps {
   gradeLevel?: string;
 }
 
-export const CoCoChatDialog = ({ open, onOpenChange, resource, content }: CoCoChatDialogProps) => {
+export const CoCoChatDialog = ({ open, onOpenChange, resource, content, gradeLevel }: CoCoChatDialogProps) => {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
