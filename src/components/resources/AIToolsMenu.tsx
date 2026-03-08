@@ -28,6 +28,7 @@ import { CoCoChatDialog } from './CoCoChatDialog';
 import { FlashcardsDialog } from './FlashcardsDialog';
 import { SlideDeckDialog } from './SlideDeckDialog';
 import { QuizDialog } from './QuizDialog';
+import { AudioOverviewDialog } from './AudioOverviewDialog';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AIToolsMenuProps {
