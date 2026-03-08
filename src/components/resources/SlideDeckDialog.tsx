@@ -19,7 +19,7 @@ interface SlideDeckDialogProps {
   fileName?: string;
 }
 
-export const SlideDeckDialog = ({ open, onOpenChange, resource, content, gradeLevel }: SlideDeckDialogProps) => {
+export const SlideDeckDialog = ({ open, onOpenChange, resource, content, gradeLevel, fileName }: SlideDeckDialogProps) => {
   const [slides, setSlides] = useState<Slide[]>([]);
   const [loading, setLoading] = useState(false);
   const [current, setCurrent] = useState(0);
