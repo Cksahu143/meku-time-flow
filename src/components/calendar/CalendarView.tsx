@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Task } from '@/types';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useExams, Exam } from '@/hooks/useExams';
