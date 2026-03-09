@@ -141,6 +141,9 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
           <DropdownMenuItem onClick={() => openTool('quiz')} className="gap-2">
             <Sparkles className="h-4 w-4" /> Quiz / Mock Viva
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => openTool('mindmap')} className="gap-2">
+            <GitBranch className="h-4 w-4" /> Mind Map
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => openTool('audio')} className="gap-2">
             <Volume2 className="h-4 w-4" /> Audio Overview
