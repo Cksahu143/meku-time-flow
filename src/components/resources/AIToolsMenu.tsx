@@ -52,7 +52,7 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
   const [gradeLevel, setGradeLevel] = useState<string | null>(null);
   const [gradeLoaded, setGradeLoaded] = useState(false);
   const [showGradePicker, setShowGradePicker] = useState(false);
-  const [pendingTool, setPendingTool] = useState<'coco' | 'flashcards' | 'slides' | 'quiz' | 'audio' | null>(null);
+  const [pendingTool, setPendingTool] = useState<'coco' | 'flashcards' | 'slides' | 'quiz' | 'audio' | 'mindmap' | null>(null);
 
   const resourceContent = resource.content || resource.description || '';
 
