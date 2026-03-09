@@ -765,8 +765,6 @@ Resource:\n${resourceContext}`,
           },
         },
       },
-    };
-
       mindmap: {
         systemPrompt: `You are an expert mind map designer for ${gradeLevelStr} students. Create a comprehensive, well-structured mind map.
 
