@@ -48,6 +48,7 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
   const [showSlides, setShowSlides] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
   const [showAudio, setShowAudio] = useState(false);
+  const [showMindMap, setShowMindMap] = useState(false);
   const [gradeLevel, setGradeLevel] = useState<string | null>(null);
   const [gradeLoaded, setGradeLoaded] = useState(false);
   const [showGradePicker, setShowGradePicker] = useState(false);
