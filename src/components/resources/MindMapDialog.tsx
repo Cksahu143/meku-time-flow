@@ -1,9 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Loader2, ChevronRight, ChevronDown, Plus, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
+import { Sparkles, Loader2, Plus, RotateCcw, ZoomIn, ZoomOut, Maximize2, Download } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { DbResource } from '@/hooks/useResources';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,6 +11,7 @@ import { toast } from 'sonner';
 interface MindMapNode {
   id: string;
   label: string;
+  description?: string;
   children?: MindMapNode[];
 }
 
@@ -29,121 +29,301 @@ interface MindMapDialogProps {
   fileName?: string;
 }
 
+// NotebookLM-style color palette
 const BRANCH_COLORS = [
-  'hsl(var(--primary))',
-  'hsl(220, 70%, 55%)',
-  'hsl(160, 60%, 45%)',
-  'hsl(30, 80%, 55%)',
-  'hsl(280, 60%, 55%)',
-  'hsl(0, 65%, 55%)',
-  'hsl(190, 70%, 45%)',
-  'hsl(45, 80%, 50%)',
+  '#4285F4', // Google Blue
+  '#EA4335', // Google Red
+  '#34A853', // Google Green
+  '#FBBC04', // Google Yellow
+  '#9334E6', // Purple
+  '#E67C73', // Salmon
+  '#00ACC1', // Teal
+  '#F4511E', // Deep Orange
 ];
 
-const NodeItem = ({
-  node,
-  depth = 0,
-  color,
+interface LayoutNode {
+  node: MindMapNode;
+  x: number;
+  y: number;
+  color: string;
+  depth: number;
+  parentX?: number;
+  parentY?: number;
+  branchIndex: number;
+  angle: number;
+}
+
+function layoutTree(data: MindMapData, centerX: number, centerY: number): LayoutNode[] {
+  const result: LayoutNode[] = [];
+  const mainNodes = data.nodes;
+  const count = mainNodes.length;
+
+  mainNodes.forEach((node, i) => {
+    const angle = (i / count) * Math.PI * 2 - Math.PI / 2;
+    const radius = 220;
+    const x = centerX + Math.cos(angle) * radius;
+    const y = centerY + Math.sin(angle) * radius;
+    const color = BRANCH_COLORS[i % BRANCH_COLORS.length];
+
+    result.push({ node, x, y, color, depth: 1, parentX: centerX, parentY: centerY, branchIndex: i, angle });
+
+    if (node.children) {
+      const childSpread = Math.min(0.6, Math.PI / Math.max(count, 4));
+      node.children.forEach((child, ci) => {
+        const childCount = node.children!.length;
+        const childAngle = angle + (ci - (childCount - 1) / 2) * (childSpread / Math.max(childCount - 1, 1));
+        const childRadius = 150;
+        const cx = x + Math.cos(childAngle) * childRadius;
+        const cy = y + Math.sin(childAngle) * childRadius;
+
+        result.push({ node: child, x: cx, y: cy, color, depth: 2, parentX: x, parentY: y, branchIndex: i, angle: childAngle });
+
+        if (child.children) {
+          child.children.forEach((grandchild, gi) => {
+            const gcCount = child.children!.length;
+            const gcAngle = childAngle + (gi - (gcCount - 1) / 2) * (0.3 / Math.max(gcCount - 1, 1));
+            const gcRadius = 120;
+            const gx = cx + Math.cos(gcAngle) * gcRadius;
+            const gy = cy + Math.sin(gcAngle) * gcRadius;
+            result.push({ node: grandchild, x: gx, y: gy, color, depth: 3, parentX: cx, parentY: cy, branchIndex: i, angle: gcAngle });
+          });
+        }
+      });
+    }
+  });
+
+  return result;
+}
+
+// Curved path between two points
+function curvePath(x1: number, y1: number, x2: number, y2: number): string {
+  const midX = (x1 + x2) / 2;
+  const midY = (y1 + y2) / 2;
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const cx = midX - dy * 0.15;
+  const cy = midY + dx * 0.15;
+  return `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`;
+}
+
+const MindMapCanvas = ({
+  mindMap,
   onExtend,
   extending,
 }: {
-  node: MindMapNode;
-  depth?: number;
-  color: string;
+  mindMap: MindMapData;
   onExtend: (nodeId: string, label: string) => void;
   extending: string | null;
 }) => {
-  const [expanded, setExpanded] = useState(true);
-  const hasChildren = node.children && node.children.length > 0;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.85);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+
+  const centerX = 600;
+  const centerY = 450;
+  const layoutNodes = useMemo(() => layoutTree(mindMap, centerX, centerY), [mindMap]);
+
+  // Compute bounding box for auto-fit
+  useEffect(() => {
+    if (layoutNodes.length === 0) return;
+    const xs = layoutNodes.map(n => n.x);
+    const ys = layoutNodes.map(n => n.y);
+    const minX = Math.min(...xs) - 120;
+    const maxX = Math.max(...xs) + 120;
+    const minY = Math.min(...ys) - 80;
+    const maxY = Math.max(...ys) + 80;
+    const width = maxX - minX;
+    const height = maxY - minY;
+    const container = containerRef.current;
+    if (!container) return;
+    const cw = container.clientWidth;
+    const ch = container.clientHeight;
+    const scaleX = cw / width;
+    const scaleY = ch / height;
+    const autoScale = Math.min(scaleX, scaleY, 1) * 0.9;
+    setScale(autoScale);
+    setOffset({
+      x: (cw - width * autoScale) / 2 - minX * autoScale,
+      y: (ch - height * autoScale) / 2 - minY * autoScale,
+    });
+  }, [layoutNodes]);
+
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 0.92 : 1.08;
+    setScale(s => Math.max(0.2, Math.min(2.5, s * delta)));
+  }, []);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    setDragging(true);
+    setDragStart({ x: e.clientX - offset.x, y: e.clientY - offset.y });
+  }, [offset]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!dragging) return;
+    setOffset({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
+  }, [dragging, dragStart]);
+
+  const handleMouseUp = useCallback(() => setDragging(false), []);
+
+  const nodeRadius = (depth: number) => depth === 0 ? 50 : depth === 1 ? 40 : depth === 2 ? 32 : 26;
 
   return (
-    <div className="relative">
-      <div className="flex items-center gap-1 group">
-        {/* Connector line */}
-        {depth > 0 && (
-          <div
-            className="absolute left-0 top-1/2 w-4 h-px"
-            style={{ backgroundColor: color, opacity: 0.4 }}
-          />
-        )}
-
-        {/* Toggle button */}
-        {hasChildren ? (
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="shrink-0 p-0.5 rounded hover:bg-muted/50 transition-colors"
-          >
-            {expanded ? (
-              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-            ) : (
-              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-            )}
-          </button>
-        ) : (
-          <div className="w-[18px] shrink-0" />
-        )}
-
-        {/* Node pill */}
-        <motion.div
-          initial={{ opacity: 0, x: -8 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: depth * 0.05 }}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-sm cursor-default transition-all hover:shadow-sm"
-          style={{
-            borderColor: color,
-            backgroundColor: `color-mix(in srgb, ${color} 8%, transparent)`,
-          }}
-        >
-          <div
-            className="h-2 w-2 rounded-full shrink-0"
-            style={{ backgroundColor: color }}
-          />
-          <span className="font-medium whitespace-nowrap">{node.label}</span>
-        </motion.div>
-
-        {/* Extend button */}
-        <button
-          onClick={() => onExtend(node.id, node.label)}
-          disabled={extending !== null}
-          className="opacity-0 group-hover:opacity-100 shrink-0 p-1 rounded-full hover:bg-muted/50 transition-all"
-          title="Extend this branch"
-        >
-          {extending === node.id ? (
-            <Loader2 className="h-3 w-3 animate-spin text-primary" />
-          ) : (
-            <Plus className="h-3 w-3 text-muted-foreground" />
-          )}
-        </button>
+    <div className="relative w-full h-full">
+      {/* Controls */}
+      <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-background/80 backdrop-blur-sm rounded-lg border border-border/50 p-1">
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setScale(s => Math.max(0.2, s * 0.85))}>
+          <ZoomOut className="h-3.5 w-3.5" />
+        </Button>
+        <Badge variant="outline" className="text-[10px] px-1.5 font-mono">{Math.round(scale * 100)}%</Badge>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setScale(s => Math.min(2.5, s * 1.15))}>
+          <ZoomIn className="h-3.5 w-3.5" />
+        </Button>
       </div>
 
-      {/* Children */}
-      <AnimatePresence>
-        {expanded && hasChildren && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="ml-6 mt-1 space-y-1 relative overflow-hidden"
-          >
-            {/* Vertical connector */}
-            <div
-              className="absolute left-[9px] top-0 bottom-0 w-px"
-              style={{ backgroundColor: color, opacity: 0.2 }}
-            />
-            {node.children!.map((child) => (
-              <NodeItem
-                key={child.id}
-                node={child}
-                depth={depth + 1}
-                color={color}
-                onExtend={onExtend}
-                extending={extending}
+      <div
+        ref={containerRef}
+        className="w-full h-full overflow-hidden cursor-grab active:cursor-grabbing select-none"
+        onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+      >
+        <svg
+          width="100%"
+          height="100%"
+          style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`, transformOrigin: '0 0' }}
+        >
+          {/* Connection lines */}
+          {layoutNodes.map((ln) =>
+            ln.parentX !== undefined ? (
+              <motion.path
+                key={`line-${ln.node.id}`}
+                d={curvePath(ln.parentX, ln.parentY, ln.x, ln.y)}
+                stroke={ln.color}
+                strokeWidth={ln.depth === 1 ? 3 : ln.depth === 2 ? 2 : 1.5}
+                fill="none"
+                opacity={0.5}
+                initial={{ pathLength: 0, opacity: 0 }}
+                animate={{ pathLength: 1, opacity: 0.5 }}
+                transition={{ duration: 0.6, delay: ln.depth * 0.1 }}
               />
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
+            ) : null
+          )}
+
+          {/* Central node */}
+          <motion.g initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 200 }}>
+            <circle cx={centerX} cy={centerY} r={54} fill="hsl(var(--primary))" opacity={0.15} />
+            <circle cx={centerX} cy={centerY} r={46} fill="hsl(var(--primary))" opacity={0.25} />
+            <circle cx={centerX} cy={centerY} r={38} fill="hsl(var(--primary))" />
+            <text x={centerX} y={centerY} textAnchor="middle" dominantBaseline="middle"
+              fill="hsl(var(--primary-foreground))" fontWeight="700" fontSize="13"
+              className="pointer-events-none">
+              {mindMap.centralTopic.length > 24 ? mindMap.centralTopic.slice(0, 22) + '…' : mindMap.centralTopic}
+            </text>
+          </motion.g>
+
+          {/* Branch nodes */}
+          {layoutNodes.map((ln, idx) => {
+            const r = nodeRadius(ln.depth);
+            const isHovered = hoveredNode === ln.node.id;
+            const isExtending = extending === ln.node.id;
+            const hasChildren = ln.node.children && ln.node.children.length > 0;
+            const labelMax = ln.depth === 1 ? 20 : ln.depth === 2 ? 16 : 14;
+            const label = ln.node.label.length > labelMax ? ln.node.label.slice(0, labelMax - 1) + '…' : ln.node.label;
+            const fontSize = ln.depth === 1 ? 11 : ln.depth === 2 ? 10 : 9;
+
+            return (
+              <motion.g
+                key={ln.node.id}
+                initial={{ opacity: 0, x: ln.parentX || centerX, y: ln.parentY || centerY }}
+                animate={{ opacity: 1, x: ln.x, y: ln.y }}
+                transition={{ duration: 0.5, delay: idx * 0.03 + ln.depth * 0.1 }}
+                onMouseEnter={() => setHoveredNode(ln.node.id)}
+                onMouseLeave={() => setHoveredNode(null)}
+                style={{ cursor: 'pointer' }}
+              >
+                {/* Glow on hover */}
+                {isHovered && (
+                  <circle cx={0} cy={0} r={r + 6} fill={ln.color} opacity={0.15} />
+                )}
+
+                {/* Node circle */}
+                <circle
+                  cx={0} cy={0} r={r}
+                  fill={ln.depth === 1 ? ln.color : 'hsl(var(--background))'}
+                  stroke={ln.color}
+                  strokeWidth={ln.depth === 1 ? 0 : 2}
+                  opacity={ln.depth === 1 ? 0.9 : 1}
+                />
+
+                {/* Label */}
+                <text
+                  x={0} y={ln.depth === 1 ? -2 : 0}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fill={ln.depth === 1 ? 'white' : 'hsl(var(--foreground))'}
+                  fontWeight={ln.depth === 1 ? '700' : '500'}
+                  fontSize={fontSize}
+                  className="pointer-events-none"
+                >
+                  {label}
+                </text>
+
+                {/* Child count badge */}
+                {hasChildren && ln.depth >= 2 && (
+                  <>
+                    <circle cx={r * 0.7} cy={-r * 0.7} r={8} fill={ln.color} />
+                    <text x={r * 0.7} y={-r * 0.7} textAnchor="middle" dominantBaseline="middle"
+                      fill="white" fontSize="8" fontWeight="700" className="pointer-events-none">
+                      {ln.node.children!.length}
+                    </text>
+                  </>
+                )}
+
+                {/* Extend button on hover */}
+                {isHovered && (
+                  <g
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!extending) onExtend(ln.node.id, ln.node.label);
+                    }}
+                    style={{ cursor: extending ? 'not-allowed' : 'pointer' }}
+                  >
+                    <circle cx={r + 14} cy={0} r={11} fill={ln.color} opacity={0.9} />
+                    {isExtending ? (
+                      <text x={r + 14} y={1} textAnchor="middle" dominantBaseline="middle"
+                        fill="white" fontSize="10" className="pointer-events-none animate-spin origin-center">⟳</text>
+                    ) : (
+                      <text x={r + 14} y={1} textAnchor="middle" dominantBaseline="middle"
+                        fill="white" fontSize="14" fontWeight="700" className="pointer-events-none">+</text>
+                    )}
+                  </g>
+                )}
+
+                {/* Description tooltip */}
+                {isHovered && ln.node.description && (
+                  <g>
+                    <rect x={-100} y={r + 8} width={200} height={30} rx={6}
+                      fill="hsl(var(--popover))" stroke="hsl(var(--border))" strokeWidth={1} />
+                    <text x={0} y={r + 27} textAnchor="middle" dominantBaseline="middle"
+                      fill="hsl(var(--popover-foreground))" fontSize="9" className="pointer-events-none">
+                      {ln.node.description && ln.node.description.length > 40
+                        ? ln.node.description.slice(0, 38) + '…'
+                        : ln.node.description}
+                    </text>
+                  </g>
+                )}
+              </motion.g>
+            );
+          })}
+        </svg>
+      </div>
     </div>
   );
 };
@@ -152,13 +332,9 @@ export const MindMapDialog = ({ open, onOpenChange, resource, content, gradeLeve
   const [mindMap, setMindMap] = useState<MindMapData | null>(null);
   const [loading, setLoading] = useState(false);
   const [extending, setExtending] = useState<string | null>(null);
-  const [scale, setScale] = useState(1);
 
   useEffect(() => {
-    if (open) {
-      setMindMap(null);
-      setScale(1);
-    }
+    if (open) setMindMap(null);
   }, [open]);
 
   const generate = async () => {
@@ -191,10 +367,7 @@ export const MindMapDialog = ({ open, onOpenChange, resource, content, gradeLeve
   const findAndAddChildren = (nodes: MindMapNode[], targetId: string, newChildren: MindMapNode[]): MindMapNode[] => {
     return nodes.map(node => {
       if (node.id === targetId) {
-        return {
-          ...node,
-          children: [...(node.children || []), ...newChildren],
-        };
+        return { ...node, children: [...(node.children || []), ...newChildren] };
       }
       if (node.children) {
         return { ...node, children: findAndAddChildren(node.children, targetId, newChildren) };
@@ -210,7 +383,7 @@ export const MindMapDialog = ({ open, onOpenChange, resource, content, gradeLeve
       const { data, error } = await supabase.functions.invoke('ai-study-tools', {
         body: {
           type: 'mindmap',
-          content: `${content}\n\nFOCUS: Expand specifically on the subtopic "${nodeLabel}" within the context of "${mindMap.centralTopic}". The parent topic is "${resource.title}" in ${resource.subject}.`,
+          content: `${content}\n\nFOCUS: Expand specifically on "${nodeLabel}" within "${mindMap.centralTopic}".`,
           title: nodeLabel,
           subject: resource.subject,
           resourceUrl: resource.url,
@@ -221,13 +394,9 @@ export const MindMapDialog = ({ open, onOpenChange, resource, content, gradeLeve
       });
       if (error) throw error;
       if (data?.nodes) {
-        // Add the generated nodes as children of the target node
         setMindMap(prev => {
           if (!prev) return prev;
-          return {
-            ...prev,
-            nodes: findAndAddChildren(prev.nodes, nodeId, data.nodes),
-          };
+          return { ...prev, nodes: findAndAddChildren(prev.nodes, nodeId, data.nodes) };
         });
         toast.success(`Extended "${nodeLabel}" with ${data.nodes.length} branches`);
       }
@@ -237,93 +406,62 @@ export const MindMapDialog = ({ open, onOpenChange, resource, content, gradeLeve
     setExtending(null);
   }, [mindMap, content, resource, fileName, gradeLevel]);
 
-  const handleClose = (v: boolean) => {
-    if (!v) setMindMap(null);
-    onOpenChange(v);
-  };
-
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-3xl max-h-[85vh]"
+        className="max-w-[95vw] w-[1100px] h-[85vh] flex flex-col p-0 gap-0"
         onInteractOutside={e => e.preventDefault()}
         onPointerDownOutside={e => e.preventDefault()}
         onEscapeKeyDown={e => e.preventDefault()}
       >
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+        <DialogHeader className="px-5 pt-4 pb-2 border-b border-border/50">
+          <DialogTitle className="flex items-center gap-2 text-base">
             <Sparkles className="h-5 w-5 text-primary" />
             Mind Map — {resource.title}
+            {mindMap && (
+              <div className="ml-auto flex items-center gap-2">
+                <Button onClick={generate} variant="outline" size="sm" className="gap-1.5 h-7 text-xs">
+                  <RotateCcw className="h-3 w-3" /> Regenerate
+                </Button>
+              </div>
+            )}
           </DialogTitle>
         </DialogHeader>
 
-        {!mindMap && !loading ? (
-          <div className="flex flex-col items-center justify-center py-12 gap-4">
-            <div className="p-4 rounded-lg bg-muted/50 border border-border/50 text-center max-w-md">
-              <h4 className="font-semibold text-sm mb-1">🧠 AI Mind Map</h4>
-              <p className="text-sm text-muted-foreground">
-                Generates a visual mind map of key concepts from this resource. Hover over any node and click + to expand it with more detail.
-              </p>
-            </div>
-            <Button onClick={generate} size="lg" className="gap-2">
-              <Sparkles className="h-4 w-4" /> Generate Mind Map
-            </Button>
-          </div>
-        ) : loading ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">Building mind map...</p>
-          </div>
-        ) : mindMap ? (
-          <div className="space-y-3">
-            {/* Controls */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setScale(s => Math.max(0.6, s - 0.1))}>
-                  <ZoomOut className="h-3.5 w-3.5" />
-                </Button>
-                <Badge variant="outline" className="text-xs">{Math.round(scale * 100)}%</Badge>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setScale(s => Math.min(1.5, s + 0.1))}>
-                  <ZoomIn className="h-3.5 w-3.5" />
-                </Button>
+        <div className="flex-1 relative overflow-hidden">
+          {!mindMap && !loading ? (
+            <div className="flex flex-col items-center justify-center h-full gap-5">
+              <div className="p-5 rounded-2xl bg-muted/30 border border-border/30 text-center max-w-md">
+                <div className="text-4xl mb-3">🧠</div>
+                <h4 className="font-bold text-lg mb-2">AI Mind Map</h4>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Generate a beautiful, interactive mind map of key concepts. Hover over any node and click <span className="font-bold text-primary">+</span> to expand it with AI-generated sub-topics.
+                </p>
               </div>
-              <Button onClick={generate} variant="outline" size="sm" className="gap-1.5">
-                <RotateCcw className="h-3.5 w-3.5" /> Regenerate
+              <Button onClick={generate} size="lg" className="gap-2 px-8 rounded-full">
+                <Sparkles className="h-4 w-4" /> Generate Mind Map
               </Button>
             </div>
-
-            <ScrollArea className="h-[55vh]">
-              <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }} className="pb-8 pr-8">
-                {/* Central topic */}
-                <motion.div
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-bold text-base shadow-md mb-4"
-                >
-                  🧠 {mindMap.centralTopic}
-                </motion.div>
-
-                {/* Branches */}
-                <div className="ml-4 space-y-2">
-                  {mindMap.nodes.map((node, i) => (
-                    <NodeItem
-                      key={node.id}
-                      node={node}
-                      depth={0}
-                      color={BRANCH_COLORS[i % BRANCH_COLORS.length]}
-                      onExtend={handleExtend}
-                      extending={extending}
-                    />
-                  ))}
-                </div>
+          ) : loading ? (
+            <div className="flex flex-col items-center justify-center h-full gap-4">
+              <div className="relative">
+                <div className="w-16 h-16 border-4 border-primary/20 rounded-full" />
+                <Loader2 className="absolute inset-0 m-auto h-8 w-8 animate-spin text-primary" />
               </div>
-            </ScrollArea>
+              <p className="text-sm text-muted-foreground animate-pulse">Building your mind map...</p>
+            </div>
+          ) : mindMap ? (
+            <MindMapCanvas mindMap={mindMap} onExtend={handleExtend} extending={extending} />
+          ) : null}
+        </div>
 
-            <p className="text-xs text-muted-foreground text-center">
-              Hover over any node and click <Plus className="h-3 w-3 inline" /> to expand it with AI
+        {mindMap && (
+          <div className="px-5 py-2 border-t border-border/50 text-center">
+            <p className="text-[11px] text-muted-foreground">
+              Scroll to zoom · Drag to pan · Hover a node and click <span className="font-bold text-primary">+</span> to expand with AI
             </p>
           </div>
-        ) : null}
+        )}
       </DialogContent>
     </Dialog>
   );
