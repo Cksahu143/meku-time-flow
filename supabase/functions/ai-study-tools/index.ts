@@ -767,6 +767,81 @@ Resource:\n${resourceContext}`,
       },
     };
 
+      mindmap: {
+        systemPrompt: `You are an expert mind map designer for ${gradeLevelStr} students. Create a comprehensive, well-structured mind map.
+
+${MULTI_LANGUAGE_INSTRUCTION}
+
+STUDENT LEVEL: ${gradeLevelStr}
+${difficultyGuide}
+
+RULES:
+- Create a mind map with a central topic and branching subtopics
+- Each node should have a clear, concise label (1-6 words)
+- Include 4-8 main branches from the central topic
+- Each main branch should have 2-5 sub-branches
+- Sub-branches can have their own children (up to 3 levels deep)
+- Cover ALL key concepts, formulas, definitions from the material
+- Use the actual content to determine the real topic, not just the title
+- Make it exam-ready: include important facts, formulas, and key terms
+- For language subjects, use that language
+- Structure it logically: definitions → properties → formulas → applications → examples
+
+Resource:\n${resourceContext}`,
+        tool: {
+          type: "function",
+          function: {
+            name: "generate_mindmap",
+            description: "Generate a mind map from resource content",
+            parameters: {
+              type: "object",
+              properties: {
+                centralTopic: { type: "string", description: "The central topic of the mind map" },
+                nodes: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      id: { type: "string" },
+                      label: { type: "string", description: "Short label for this node (1-6 words)" },
+                      children: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            id: { type: "string" },
+                            label: { type: "string" },
+                            children: {
+                              type: "array",
+                              items: {
+                                type: "object",
+                                properties: {
+                                  id: { type: "string" },
+                                  label: { type: "string" },
+                                },
+                                required: ["id", "label"],
+                                additionalProperties: false,
+                              },
+                            },
+                          },
+                          required: ["id", "label"],
+                          additionalProperties: false,
+                        },
+                      },
+                    },
+                    required: ["id", "label"],
+                    additionalProperties: false,
+                  },
+                },
+              },
+              required: ["centralTopic", "nodes"],
+              additionalProperties: false,
+            },
+          },
+        },
+      },
+    };
+
     const config = toolConfigs[effectiveType];
     if (!config) {
       return new Response(JSON.stringify({ error: `Invalid type: ${effectiveType}` }), {
