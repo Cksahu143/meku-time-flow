@@ -87,10 +87,9 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
     fetchGrade();
   }, []);
 
-  const openTool = (tool: 'coco' | 'flashcards' | 'slides' | 'quiz' | 'audio') => {
+  const openTool = (tool: 'coco' | 'flashcards' | 'slides' | 'quiz' | 'audio' | 'mindmap') => {
     if (!gradeLoaded) return;
     if (!gradeLevel) {
-      // Ask student to pick their grade
       setPendingTool(tool);
       setShowGradePicker(true);
       return;
@@ -105,6 +104,7 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
       case 'slides': setShowSlides(true); break;
       case 'quiz': setShowQuiz(true); break;
       case 'audio': setShowAudio(true); break;
+      case 'mindmap': setShowMindMap(true); break;
     }
   };
 
