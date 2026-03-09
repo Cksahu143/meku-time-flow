@@ -660,11 +660,19 @@ ${MULTI_LANGUAGE_INSTRUCTION}
 STUDENT LEVEL: ${gradeLevelStr}
 ${difficultyGuide}
 
-RULES:
+CRITICAL QUESTION FORMAT RULES:
+- NEVER use negative questions like "Which of the following is NOT correct", "Which is incorrect", "Which is false", "All EXCEPT", or any variation asking students to identify wrong/incorrect/false options. These cause confusion in MCQ format.
+- ALWAYS phrase questions POSITIVELY: "Which of the following is correct?", "What is the correct explanation for...?", "Which statement best describes...?"
+- The correctIndex MUST point to the CORRECT answer — the one the student should select.
+- Double-check: the option at correctIndex must be factually, scientifically, and academically CORRECT.
+- The other options (distractors) must be plausible but clearly WRONG.
+- VERIFY every answer before returning — make sure correctIndex matches the truly correct option.
+
+CONTENT RULES:
 - Generate ${questionCount.min}-${questionCount.max} questions of ${gradeLevelStr} board exam difficulty
 - Mix question types: conceptual, application-based, numerical, analytical
 - Options should include common wrong answers that ${gradeLevelStr} students typically choose (distractors)
-- Explanations should teach WHY each wrong answer is wrong
+- Explanations should clearly state WHY the correct answer is right AND why each wrong answer is wrong
 - Questions should test DEEP understanding, not surface-level recall
 - Include tricky questions with subtle differences in options
 - Include questions that test common mistakes ${gradeLevelStr} students make
@@ -672,6 +680,7 @@ RULES:
 - Questions MUST be about the actual content/topic, not about metadata or the title
 - If the title is short or unclear, derive the topic from the actual content
 - For language subjects, write questions in that language
+- ALWAYS ensure factual accuracy — cross-check facts, dates, formulas, and definitions
 
 Resource:\n${resourceContext}`,
         tool: {
