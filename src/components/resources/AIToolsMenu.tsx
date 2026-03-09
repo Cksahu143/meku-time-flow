@@ -216,6 +216,14 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
         gradeLevel={gradeLevel || undefined}
         fileName={resource.file_name || undefined}
       />
+      <MindMapDialog
+        open={showMindMap}
+        onOpenChange={setShowMindMap}
+        resource={resource}
+        content={resourceContent}
+        gradeLevel={gradeLevel || undefined}
+        fileName={resource.file_name || undefined}
+      />
     </>
   );
 };
