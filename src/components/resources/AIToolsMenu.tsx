@@ -146,7 +146,7 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => openTool('audio')} className="gap-2">
-            <Volume2 className="h-4 w-4" /> Audio Overview
+            <Volume2 className="h-4 w-4" /> 🎙️ Deep Dive Podcast
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

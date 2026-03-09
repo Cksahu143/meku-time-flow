@@ -3,7 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { Play, Pause, Square, RotateCcw, Volume2, Languages, Loader2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Play, Pause, Square, RotateCcw, Volume2, Languages, Loader2, Mic2, Users } from 'lucide-react';
 import { DbResource } from '@/hooks/useResources';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -31,6 +32,8 @@ const VOICE_LANGUAGES = [
   { code: 'pa', label: 'Punjabi' },
 ];
 
+type AudioMode = 'solo' | 'podcast';
+
 export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gradeLevel, fileName }: AudioOverviewDialogProps) => {
   const [summary, setSummary] = useState('');
   const [loading, setLoading] = useState(false);
@@ -42,13 +45,12 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
   const [progress, setProgress] = useState(0);
   const [currentChunk, setCurrentChunk] = useState(0);
   const [totalChunks, setTotalChunks] = useState(0);
+  const [mode, setMode] = useState<AudioMode>('podcast');
+  const [activeHost, setActiveHost] = useState<'A' | 'B' | null>(null);
   const chunksRef = useRef<string[]>([]);
   const currentChunkRef = useRef(0);
   const isPlayingRef = useRef(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const startTimeRef = useRef(0);
 
-  // Load voices
   useEffect(() => {
     const loadVoices = () => setAvailableVoices(speechSynthesis.getVoices());
     loadVoices();
@@ -56,17 +58,13 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
     return () => { speechSynthesis.onvoiceschanged = null; };
   }, []);
 
-  // Generate summary when opened
   useEffect(() => {
     if (!open || summary) return;
     generateSummary();
   }, [open]);
 
-  // Cleanup on close
   useEffect(() => {
-    if (!open) {
-      stopPlayback();
-    }
+    if (!open) stopPlayback();
   }, [open]);
 
   const generateSummary = async () => {
@@ -74,6 +72,7 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || `https://gkkeysrfmgmxoypnjkdl.supabase.co`;
+      const toolType = mode === 'podcast' ? 'podcast_overview' : 'audio_overview';
 
       const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-study-tools`, {
         method: 'POST',
@@ -82,7 +81,7 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
           'Authorization': `Bearer ${session?.access_token}`,
         },
         body: JSON.stringify({
-          tool: 'audio_overview',
+          tool: toolType,
           content,
           subject: resource.subject,
           title: resource.title,
@@ -132,20 +131,68 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
     setLoading(false);
   };
 
-  const findVoice = useCallback(() => {
+  // Find two distinct voices for podcast mode
+  const findVoices = useCallback((): { voiceA: SpeechSynthesisVoice | null; voiceB: SpeechSynthesisVoice | null } => {
     const langCode = lang === 'or' ? 'od' : lang;
-    const match = availableVoices.find(v =>
-      v.lang.startsWith(lang) || v.lang.startsWith(langCode)
-    );
+    const langVoices = availableVoices.filter(v => v.lang.startsWith(lang) || v.lang.startsWith(langCode));
+    const enVoices = availableVoices.filter(v => v.lang.startsWith('en'));
+    const pool = langVoices.length >= 2 ? langVoices : enVoices.length >= 2 ? enVoices : availableVoices;
+
+    // Try to find male/female pair or at least two different voices
+    const voiceA = pool.find(v => v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('samantha') || v.name.toLowerCase().includes('karen') || v.name.toLowerCase().includes('google')) || pool[0] || null;
+    const voiceB = pool.find(v => v !== voiceA && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('daniel') || v.name.toLowerCase().includes('james') || v.name.toLowerCase().includes('google'))) || pool.find(v => v !== voiceA) || voiceA;
+    return { voiceA, voiceB };
+  }, [lang, availableVoices]);
+
+  const findSoloVoice = useCallback(() => {
+    const langCode = lang === 'or' ? 'od' : lang;
+    const match = availableVoices.find(v => v.lang.startsWith(lang) || v.lang.startsWith(langCode));
     return match || availableVoices.find(v => v.lang.startsWith('en')) || availableVoices[0];
   }, [lang, availableVoices]);
 
-  // Split text into chunks to avoid Chrome's ~15s speech cutoff
+  // Parse podcast script into segments with host labels
+  const parsePodcastSegments = (text: string): Array<{ host: 'A' | 'B'; text: string }> => {
+    const segments: Array<{ host: 'A' | 'B'; text: string }> = [];
+    // Match patterns like [Host A], [Host B], **Host A:**, Host A:, etc.
+    const regex = /(?:\[Host\s*(A|B)\]|\*\*Host\s*(A|B):\*\*|^Host\s*(A|B):)/gmi;
+    let lastIndex = 0;
+    let currentHost: 'A' | 'B' = 'A';
+    let match;
+
+    const rawSegments: Array<{ host: 'A' | 'B'; start: number }> = [];
+    while ((match = regex.exec(text)) !== null) {
+      const host = (match[1] || match[2] || match[3]).toUpperCase() as 'A' | 'B';
+      rawSegments.push({ host, start: match.index + match[0].length });
+    }
+
+    if (rawSegments.length === 0) {
+      // No host markers found — split by sentences, alternating hosts
+      const sentences = text.match(/[^.!?।]+[.!?।]+[\s]*/g) || [text];
+      let groupSize = 2;
+      let host: 'A' | 'B' = 'A';
+      for (let i = 0; i < sentences.length; i += groupSize) {
+        const chunk = sentences.slice(i, i + groupSize).join('').trim();
+        if (chunk) segments.push({ host, text: chunk });
+        host = host === 'A' ? 'B' : 'A';
+      }
+      return segments;
+    }
+
+    // Extract text between host markers
+    for (let i = 0; i < rawSegments.length; i++) {
+      const start = rawSegments[i].start;
+      const end = i + 1 < rawSegments.length ? text.lastIndexOf('[', rawSegments[i + 1].start) !== -1 ? text.lastIndexOf('[', rawSegments[i + 1].start) : rawSegments[i + 1].start - 20 : text.length;
+      const segText = text.slice(start, end).replace(/^\s*[:—\-]\s*/, '').trim();
+      if (segText) segments.push({ host: rawSegments[i].host, text: segText });
+    }
+
+    return segments.length > 0 ? segments : [{ host: 'A', text }];
+  };
+
   const splitIntoChunks = (text: string): string[] => {
     const sentences = text.match(/[^.!?।]+[.!?।]+[\s]*/g) || [text];
     const chunks: string[] = [];
     let current = '';
-
     for (const sentence of sentences) {
       if ((current + sentence).length > 200) {
         if (current) chunks.push(current.trim());
@@ -167,36 +214,36 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
       return;
     }
 
-    // Cancel any previous speech without delay
     speechSynthesis.cancel();
-
-    const chunks = splitIntoChunks(summary);
-    chunksRef.current = chunks;
-    currentChunkRef.current = 0;
-    setCurrentChunk(0);
-    setTotalChunks(chunks.length);
     isPlayingRef.current = true;
     setPlaying(true);
     setPaused(false);
     setProgress(0);
 
-    // Queue all chunks immediately — browser plays them seamlessly
-    const voice = findVoice();
-    
-    // Use requestAnimationFrame to ensure cancel() has completed
+    if (mode === 'podcast') {
+      speakPodcast();
+    } else {
+      speakSolo();
+    }
+  };
+
+  const speakSolo = () => {
+    const chunks = splitIntoChunks(summary);
+    chunksRef.current = chunks;
+    setTotalChunks(chunks.length);
+    const voice = findSoloVoice();
+
     requestAnimationFrame(() => {
       chunks.forEach((text, index) => {
         const utterance = new SpeechSynthesisUtterance(text);
         if (voice) utterance.voice = voice;
         utterance.rate = rate[0];
         utterance.pitch = 1;
-
         utterance.onstart = () => {
-          currentChunkRef.current = index;
           setCurrentChunk(index);
           setProgress((index / chunks.length) * 100);
+          setActiveHost(null);
         };
-
         utterance.onend = () => {
           if (!isPlayingRef.current) return;
           if (index === chunks.length - 1) {
@@ -206,12 +253,55 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
             setProgress(100);
           }
         };
-
         utterance.onerror = (e) => {
           if (e.error === 'interrupted' || e.error === 'canceled') return;
-          console.warn('TTS chunk error:', e.error);
         };
+        speechSynthesis.speak(utterance);
+      });
+    });
+  };
 
+  const speakPodcast = () => {
+    const segments = parsePodcastSegments(summary);
+    const allChunks: Array<{ host: 'A' | 'B'; text: string }> = [];
+
+    // Break each segment into smaller chunks for smooth playback
+    segments.forEach(seg => {
+      const chunks = splitIntoChunks(seg.text);
+      chunks.forEach(c => allChunks.push({ host: seg.host, text: c }));
+    });
+
+    chunksRef.current = allChunks.map(c => c.text);
+    setTotalChunks(allChunks.length);
+
+    const { voiceA, voiceB } = findVoices();
+
+    requestAnimationFrame(() => {
+      allChunks.forEach((chunk, index) => {
+        const utterance = new SpeechSynthesisUtterance(chunk.text);
+        const voice = chunk.host === 'A' ? voiceA : voiceB;
+        if (voice) utterance.voice = voice;
+        utterance.rate = rate[0];
+        utterance.pitch = chunk.host === 'A' ? 1.05 : 0.92;
+
+        utterance.onstart = () => {
+          setCurrentChunk(index);
+          setProgress((index / allChunks.length) * 100);
+          setActiveHost(chunk.host);
+        };
+        utterance.onend = () => {
+          if (!isPlayingRef.current) return;
+          if (index === allChunks.length - 1) {
+            isPlayingRef.current = false;
+            setPlaying(false);
+            setPaused(false);
+            setProgress(100);
+            setActiveHost(null);
+          }
+        };
+        utterance.onerror = (e) => {
+          if (e.error === 'interrupted' || e.error === 'canceled') return;
+        };
         speechSynthesis.speak(utterance);
       });
     });
@@ -231,13 +321,21 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
     setPaused(false);
     setProgress(0);
     setCurrentChunk(0);
-    if (intervalRef.current) clearInterval(intervalRef.current);
+    setActiveHost(null);
   };
 
   const regenerate = () => {
     stopPlayback();
     setSummary('');
     generateSummary();
+  };
+
+  const switchMode = (newMode: AudioMode) => {
+    stopPlayback();
+    setSummary('');
+    setMode(newMode);
+    // Will regenerate on next effect cycle
+    setTimeout(() => generateSummary(), 100);
   };
 
   const estimatedMinutes = summary ? Math.max(1, Math.round((summary.length / 15 / 60) / rate[0])) : 0;
@@ -253,11 +351,31 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Volume2 className="h-5 w-5 text-primary" />
-            Audio Overview
+            {mode === 'podcast' ? '🎙️ Deep Dive Podcast' : 'Audio Overview'}
           </DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto space-y-4">
+          {/* Mode toggle */}
+          <div className="flex gap-2">
+            <Button
+              variant={mode === 'podcast' ? 'default' : 'outline'}
+              size="sm"
+              className="flex-1 gap-1.5"
+              onClick={() => mode !== 'podcast' && switchMode('podcast')}
+            >
+              <Users className="h-3.5 w-3.5" /> Two-Host Podcast
+            </Button>
+            <Button
+              variant={mode === 'solo' ? 'default' : 'outline'}
+              size="sm"
+              className="flex-1 gap-1.5"
+              onClick={() => mode !== 'solo' && switchMode('solo')}
+            >
+              <Mic2 className="h-3.5 w-3.5" /> Solo Narrator
+            </Button>
+          </div>
+
           {/* Language & Speed controls */}
           <div className="flex gap-3 items-end">
             <div className="flex-1 space-y-1">
@@ -290,12 +408,30 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
             </div>
           </div>
 
+          {/* Host indicators for podcast mode */}
+          {mode === 'podcast' && (playing || paused) && (
+            <div className="flex gap-3 justify-center">
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${activeHost === 'A' ? 'bg-primary text-primary-foreground scale-105 shadow-md' : 'bg-muted text-muted-foreground'}`}>
+                <div className={`h-2 w-2 rounded-full ${activeHost === 'A' ? 'bg-primary-foreground animate-pulse' : 'bg-muted-foreground/50'}`} />
+                Host A
+              </div>
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${activeHost === 'B' ? 'bg-accent text-accent-foreground scale-105 shadow-md' : 'bg-muted text-muted-foreground'}`}>
+                <div className={`h-2 w-2 rounded-full ${activeHost === 'B' ? 'bg-accent-foreground animate-pulse' : 'bg-muted-foreground/50'}`} />
+                Host B
+              </div>
+            </div>
+          )}
+
           {/* Summary text */}
           <div className="bg-muted/50 rounded-lg p-3 min-h-[120px] max-h-[240px] overflow-y-auto text-sm leading-relaxed">
             {loading ? (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                <span>Generating audio script{resource.url ? ' (fetching content from link...)' : ''}...</span>
+                <span>
+                  {mode === 'podcast'
+                    ? 'Writing two-host podcast script...'
+                    : `Generating audio script${resource.url ? ' (fetching content from link...)' : ''}...`}
+                </span>
               </div>
             ) : summary ? (
               <p className="whitespace-pre-wrap">{summary}</p>
@@ -317,10 +453,7 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
           {/* Progress bar */}
           {(playing || paused || progress > 0) && (
             <div className="w-full bg-muted rounded-full h-2">
-              <div
-                className="bg-primary h-2 rounded-full transition-all duration-300"
-                style={{ width: `${progress}%` }}
-              />
+              <div className="bg-primary h-2 rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
             </div>
           )}
 
