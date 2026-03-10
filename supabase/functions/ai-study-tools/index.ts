@@ -17,10 +17,8 @@ function extractYouTubeVideoId(url: string): string | null {
   try {
     const u = new URL(url);
     if (u.hostname.includes("youtube.com")) {
-      // Standard: /watch?v=ID
       const v = u.searchParams.get("v");
       if (v) return v;
-      // Live: /live/ID, Shorts: /shorts/ID, Embed: /embed/ID
       const pathMatch = u.pathname.match(/^\/(live|shorts|embed|v)\/([^/?&]+)/);
       if (pathMatch) return pathMatch[2];
     }
@@ -29,28 +27,35 @@ function extractYouTubeVideoId(url: string): string | null {
   return null;
 }
 
-function isYouTubeUrl(url: string): boolean {
-  return extractYouTubeVideoId(url) !== null;
+function extractYouTubePlaylistId(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes("youtube.com")) {
+      return u.searchParams.get("list");
+    }
+  } catch {}
+  return null;
 }
 
-async function fetchYouTubeInfo(url: string): Promise<string> {
-  const videoId = extractYouTubeVideoId(url);
+function isYouTubeUrl(url: string): boolean {
+  return extractYouTubeVideoId(url) !== null || extractYouTubePlaylistId(url) !== null;
+}
+
+async function fetchSingleVideoInfo(videoId: string): Promise<string> {
   let info = "";
 
-  // Method 1: oEmbed API (works reliably for all video types including live)
+  // oEmbed API
   try {
-    const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
-    const oResp = await fetch(oembedUrl);
+    const oResp = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);
     if (oResp.ok) {
       const oData = await oResp.json();
-      info = `[YouTube Video]\nVideo Title: ${oData.title || ""}\nAuthor: ${oData.author_name || ""}`;
+      info = `Video Title: ${oData.title || ""}\nAuthor: ${oData.author_name || ""}`;
     }
   } catch {}
 
-  // Method 2: Scrape page for description, keywords, chapters
+  // Scrape page for description, keywords, chapters
   try {
-    const pageUrl = `https://www.youtube.com/watch?v=${videoId}`;
-    const resp = await fetch(pageUrl, {
+    const resp = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
       headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", "Accept-Language": "en-US,en;q=0.9" },
       redirect: "follow",
     });
@@ -58,13 +63,12 @@ async function fetchYouTubeInfo(url: string): Promise<string> {
       const html = await resp.text();
       if (!info) {
         const titleMatch = html.match(/<meta\s+name="title"\s+content="([^"]*)"/) || html.match(/<title>([^<]*)<\/title>/);
-        info = `[YouTube Video]\nVideo Title: ${titleMatch?.[1] || "Unknown"}`;
+        info = `Video Title: ${titleMatch?.[1] || "Unknown"}`;
       }
       const descMatch = html.match(/<meta\s+name="description"\s+content="([^"]*)"/) || html.match(/<meta\s+property="og:description"\s+content="([^"]*)"/);
       if (descMatch?.[1]) info += `\nDescription: ${descMatch[1]}`;
       const kwMatch = html.match(/<meta\s+name="keywords"\s+content="([^"]*)"/);
       if (kwMatch?.[1]) info += `\nKeywords: ${kwMatch[1]}`;
-      // Extract chapters
       const chapterRegex = /(\d{1,2}:\d{2}(?::\d{2})?)\s*[-–]?\s*(.+?)(?=\d{1,2}:\d{2}|$)/g;
       const chapters: string[] = [];
       let cm;
@@ -72,16 +76,102 @@ async function fetchYouTubeInfo(url: string): Promise<string> {
         chapters.push(`${cm[1]} - ${cm[2].trim()}`);
       }
       if (chapters.length > 0) info += `\nChapters:\n${chapters.join("\n")}`;
-      // Check if it's a live stream
       if (html.includes('"isLiveBroadcast"') || html.includes('"isLiveContent":true')) {
-        info += `\nNote: This is a LIVE stream / live broadcast. Content may be ongoing.`;
+        info += `\nNote: This is a LIVE stream / live broadcast.`;
       }
     }
   } catch (e) {
     console.error("YouTube page scrape failed:", e);
   }
 
-  return info || `[YouTube Video: ${videoId}] — Could not fetch details. Use the video ID and subject context.`;
+  return info || `Video ID: ${videoId} — metadata unavailable`;
+}
+
+/** Fetch playlist page and extract video titles/IDs */
+async function fetchPlaylistInfo(playlistId: string): Promise<string> {
+  console.log(`Fetching YouTube playlist: ${playlistId}`);
+  const parts: string[] = [`[YouTube Playlist: ${playlistId}]`];
+
+  try {
+    const resp = await fetch(`https://www.youtube.com/playlist?list=${playlistId}`, {
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", "Accept-Language": "en-US,en;q=0.9" },
+      redirect: "follow",
+    });
+    if (!resp.ok) return parts[0];
+    const html = await resp.text();
+
+    // Extract playlist title
+    const plTitleMatch = html.match(/<meta\s+property="og:title"\s+content="([^"]*)"/) || html.match(/<title>([^<]*)<\/title>/);
+    if (plTitleMatch?.[1]) parts.push(`Playlist Title: ${plTitleMatch[1]}`);
+
+    const plDescMatch = html.match(/<meta\s+property="og:description"\s+content="([^"]*)"/);
+    if (plDescMatch?.[1]) parts.push(`Playlist Description: ${plDescMatch[1]}`);
+
+    // Extract video titles from playlist page using JSON data embedded in page
+    const videoTitles: string[] = [];
+    const titleRegex = /"title":\s*\{"runs":\s*\[\{"text":\s*"([^"]{3,120})"/g;
+    let match;
+    while ((match = titleRegex.exec(html)) !== null && videoTitles.length < 50) {
+      const t = match[1];
+      if (!videoTitles.includes(t) && !t.includes('\\u') && t.length > 5) {
+        videoTitles.push(t);
+      }
+    }
+
+    if (videoTitles.length > 0) {
+      parts.push(`\nVideos in Playlist (${videoTitles.length} found):`);
+      videoTitles.forEach((t, i) => parts.push(`${i + 1}. ${t}`));
+    }
+  } catch (e) {
+    console.error("Playlist fetch failed:", e);
+  }
+
+  return parts.join("\n");
+}
+
+async function fetchYouTubeInfo(url: string): Promise<string> {
+  const videoId = extractYouTubeVideoId(url);
+  const playlistId = extractYouTubePlaylistId(url);
+  const parts: string[] = ["[YouTube Content]"];
+
+  // If there's a specific video, fetch it
+  if (videoId) {
+    const videoInfo = await fetchSingleVideoInfo(videoId);
+    parts.push(`\n--- Current Video ---\n${videoInfo}`);
+  }
+
+  // If there's a playlist, fetch the full playlist info
+  if (playlistId) {
+    const playlistInfo = await fetchPlaylistInfo(playlistId);
+    parts.push(`\n--- Playlist Context ---\n${playlistInfo}`);
+
+    // If no specific video was selected, fetch first 3 videos from playlist for deeper context
+    if (!videoId) {
+      try {
+        const resp = await fetch(`https://www.youtube.com/playlist?list=${playlistId}`, {
+          headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
+        });
+        if (resp.ok) {
+          const html = await resp.text();
+          const vidIdRegex = /"videoId":\s*"([a-zA-Z0-9_-]{11})"/g;
+          const foundIds: string[] = [];
+          let m;
+          while ((m = vidIdRegex.exec(html)) !== null && foundIds.length < 3) {
+            if (!foundIds.includes(m[1])) foundIds.push(m[1]);
+          }
+          if (foundIds.length > 0) {
+            parts.push(`\n--- Sample Video Details ---`);
+            for (const fid of foundIds) {
+              const vInfo = await fetchSingleVideoInfo(fid);
+              parts.push(`\n${vInfo}`);
+            }
+          }
+        }
+      } catch {}
+    }
+  }
+
+  return parts.length > 1 ? parts.join("\n") : `[YouTube: ${url}] — Could not fetch details.`;
 }
 
 // ─── File content extraction ────────────────────────────────────────────────
