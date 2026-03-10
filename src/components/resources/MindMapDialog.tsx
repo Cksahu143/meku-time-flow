@@ -223,7 +223,7 @@ const MindMapCanvas = ({
         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => zoomTo(1.25)}>
           <ZoomIn className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { hasAutoFit.current = false; setTransform({ x: 0, y: 0, scale: 1 }); setTimeout(() => { hasAutoFit.current = false; setTransform(prev => prev); }, 10); }}>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { hasAutoFit.current = false; /* trigger re-layout */ setTransform(prev => ({ ...prev, scale: prev.scale + 0.001 })); requestAnimationFrame(() => { hasAutoFit.current = false; }); }}>
           <Maximize2 className="h-3.5 w-3.5" />
         </Button>
       </div>
