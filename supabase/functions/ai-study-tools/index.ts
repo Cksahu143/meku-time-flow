@@ -16,8 +16,15 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "
 function extractYouTubeVideoId(url: string): string | null {
   try {
     const u = new URL(url);
-    if (u.hostname.includes("youtube.com")) return u.searchParams.get("v");
-    if (u.hostname === "youtu.be") return u.pathname.slice(1);
+    if (u.hostname.includes("youtube.com")) {
+      // Standard: /watch?v=ID
+      const v = u.searchParams.get("v");
+      if (v) return v;
+      // Live: /live/ID, Shorts: /shorts/ID, Embed: /embed/ID
+      const pathMatch = u.pathname.match(/^\/(live|shorts|embed|v)\/([^/?&]+)/);
+      if (pathMatch) return pathMatch[2];
+    }
+    if (u.hostname === "youtu.be") return u.pathname.slice(1).split('/')[0];
   } catch {}
   return null;
 }
