@@ -116,56 +116,96 @@ const MindMapCanvas = ({
   extending: string | null;
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(0.85);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
   const [dragging, setDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+  const hasAutoFit = useRef(false);
 
   const centerX = 600;
   const centerY = 450;
   const layoutNodes = useMemo(() => layoutTree(mindMap, centerX, centerY), [mindMap]);
 
-  // Compute bounding box for auto-fit
+  // Auto-fit on first render / data change
   useEffect(() => {
-    if (layoutNodes.length === 0) return;
-    const xs = layoutNodes.map(n => n.x);
-    const ys = layoutNodes.map(n => n.y);
-    const minX = Math.min(...xs) - 120;
-    const maxX = Math.max(...xs) + 120;
-    const minY = Math.min(...ys) - 80;
-    const maxY = Math.max(...ys) + 80;
-    const width = maxX - minX;
-    const height = maxY - minY;
+    hasAutoFit.current = false;
+  }, [mindMap]);
+
+  useEffect(() => {
+    if (layoutNodes.length === 0 || hasAutoFit.current) return;
     const container = containerRef.current;
     if (!container) return;
+
+    const xs = layoutNodes.map(n => n.x);
+    const ys = layoutNodes.map(n => n.y);
+    const padding = 140;
+    const minX = Math.min(...xs, centerX) - padding;
+    const maxX = Math.max(...xs, centerX) + padding;
+    const minY = Math.min(...ys, centerY) - padding;
+    const maxY = Math.max(...ys, centerY) + padding;
+    const contentW = maxX - minX;
+    const contentH = maxY - minY;
     const cw = container.clientWidth;
     const ch = container.clientHeight;
-    const scaleX = cw / width;
-    const scaleY = ch / height;
-    const autoScale = Math.min(scaleX, scaleY, 1) * 0.9;
-    setScale(autoScale);
-    setOffset({
-      x: (cw - width * autoScale) / 2 - minX * autoScale,
-      y: (ch - height * autoScale) / 2 - minY * autoScale,
+    const fitScale = Math.min(cw / contentW, ch / contentH, 1.2) * 0.85;
+    const contentCenterX = (minX + maxX) / 2;
+    const contentCenterY = (minY + maxY) / 2;
+
+    setTransform({
+      x: cw / 2 - contentCenterX * fitScale,
+      y: ch / 2 - contentCenterY * fitScale,
+      scale: fitScale,
     });
+    hasAutoFit.current = true;
   }, [layoutNodes]);
 
+  // Zoom towards mouse cursor
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
-    const delta = e.deltaY > 0 ? 0.92 : 1.08;
-    setScale(s => Math.max(0.2, Math.min(2.5, s * delta)));
+    const container = containerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    const factor = e.deltaY > 0 ? 0.9 : 1.1;
+
+    setTransform(prev => {
+      const newScale = Math.max(0.15, Math.min(3, prev.scale * factor));
+      const ratio = newScale / prev.scale;
+      return {
+        scale: newScale,
+        x: mouseX - (mouseX - prev.x) * ratio,
+        y: mouseY - (mouseY - prev.y) * ratio,
+      };
+    });
+  }, []);
+
+  // Zoom buttons zoom towards viewport center
+  const zoomTo = useCallback((factor: number) => {
+    const container = containerRef.current;
+    if (!container) return;
+    const cx = container.clientWidth / 2;
+    const cy = container.clientHeight / 2;
+    setTransform(prev => {
+      const newScale = Math.max(0.15, Math.min(3, prev.scale * factor));
+      const ratio = newScale / prev.scale;
+      return {
+        scale: newScale,
+        x: cx - (cx - prev.x) * ratio,
+        y: cy - (cy - prev.y) * ratio,
+      };
+    });
   }, []);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0) return;
     setDragging(true);
-    setDragStart({ x: e.clientX - offset.x, y: e.clientY - offset.y });
-  }, [offset]);
+    setDragStart({ x: e.clientX - transform.x, y: e.clientY - transform.y });
+  }, [transform]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!dragging) return;
-    setOffset({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
+    setTransform(prev => ({ ...prev, x: e.clientX - dragStart.x, y: e.clientY - dragStart.y }));
   }, [dragging, dragStart]);
 
   const handleMouseUp = useCallback(() => setDragging(false), []);
@@ -176,12 +216,15 @@ const MindMapCanvas = ({
     <div className="relative w-full h-full">
       {/* Controls */}
       <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-background/80 backdrop-blur-sm rounded-lg border border-border/50 p-1">
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setScale(s => Math.max(0.2, s * 0.85))}>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => zoomTo(0.8)}>
           <ZoomOut className="h-3.5 w-3.5" />
         </Button>
-        <Badge variant="outline" className="text-[10px] px-1.5 font-mono">{Math.round(scale * 100)}%</Badge>
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setScale(s => Math.min(2.5, s * 1.15))}>
+        <Badge variant="outline" className="text-[10px] px-1.5 font-mono">{Math.round(transform.scale * 100)}%</Badge>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => zoomTo(1.25)}>
           <ZoomIn className="h-3.5 w-3.5" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { hasAutoFit.current = false; setTransform({ x: 0, y: 0, scale: 1 }); setTimeout(() => { hasAutoFit.current = false; setTransform(prev => prev); }, 10); }}>
+          <Maximize2 className="h-3.5 w-3.5" />
         </Button>
       </div>
 
@@ -197,131 +240,133 @@ const MindMapCanvas = ({
         <svg
           width="100%"
           height="100%"
-          style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`, transformOrigin: '0 0' }}
+          style={{ overflow: 'visible' }}
         >
-          {/* Connection lines */}
-          {layoutNodes.map((ln) =>
-            ln.parentX !== undefined ? (
-              <motion.path
-                key={`line-${ln.node.id}`}
-                d={curvePath(ln.parentX, ln.parentY, ln.x, ln.y)}
-                stroke={ln.color}
-                strokeWidth={ln.depth === 1 ? 3 : ln.depth === 2 ? 2 : 1.5}
-                fill="none"
-                opacity={0.5}
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: 0.5 }}
-                transition={{ duration: 0.6, delay: ln.depth * 0.1 }}
-              />
-            ) : null
-          )}
-
-          {/* Central node */}
-          <motion.g initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 200 }}>
-            <circle cx={centerX} cy={centerY} r={54} fill="hsl(var(--primary))" opacity={0.15} />
-            <circle cx={centerX} cy={centerY} r={46} fill="hsl(var(--primary))" opacity={0.25} />
-            <circle cx={centerX} cy={centerY} r={38} fill="hsl(var(--primary))" />
-            <text x={centerX} y={centerY} textAnchor="middle" dominantBaseline="middle"
-              fill="hsl(var(--primary-foreground))" fontWeight="700" fontSize="13"
-              className="pointer-events-none">
-              {mindMap.centralTopic.length > 24 ? mindMap.centralTopic.slice(0, 22) + '…' : mindMap.centralTopic}
-            </text>
-          </motion.g>
-
-          {/* Branch nodes */}
-          {layoutNodes.map((ln, idx) => {
-            const r = nodeRadius(ln.depth);
-            const isHovered = hoveredNode === ln.node.id;
-            const isExtending = extending === ln.node.id;
-            const hasChildren = ln.node.children && ln.node.children.length > 0;
-            const labelMax = ln.depth === 1 ? 20 : ln.depth === 2 ? 16 : 14;
-            const label = ln.node.label.length > labelMax ? ln.node.label.slice(0, labelMax - 1) + '…' : ln.node.label;
-            const fontSize = ln.depth === 1 ? 11 : ln.depth === 2 ? 10 : 9;
-
-            return (
-              <motion.g
-                key={ln.node.id}
-                initial={{ opacity: 0, x: ln.parentX || centerX, y: ln.parentY || centerY }}
-                animate={{ opacity: 1, x: ln.x, y: ln.y }}
-                transition={{ duration: 0.5, delay: idx * 0.03 + ln.depth * 0.1 }}
-                onMouseEnter={() => setHoveredNode(ln.node.id)}
-                onMouseLeave={() => setHoveredNode(null)}
-                style={{ cursor: 'pointer' }}
-              >
-                {/* Glow on hover */}
-                {isHovered && (
-                  <circle cx={0} cy={0} r={r + 6} fill={ln.color} opacity={0.15} />
-                )}
-
-                {/* Node circle */}
-                <circle
-                  cx={0} cy={0} r={r}
-                  fill={ln.depth === 1 ? ln.color : 'hsl(var(--background))'}
+          <g transform={`translate(${transform.x}, ${transform.y}) scale(${transform.scale})`}>
+            {/* Connection lines */}
+            {layoutNodes.map((ln) =>
+              ln.parentX !== undefined ? (
+                <motion.path
+                  key={`line-${ln.node.id}`}
+                  d={curvePath(ln.parentX, ln.parentY, ln.x, ln.y)}
                   stroke={ln.color}
-                  strokeWidth={ln.depth === 1 ? 0 : 2}
-                  opacity={ln.depth === 1 ? 0.9 : 1}
+                  strokeWidth={ln.depth === 1 ? 3 : ln.depth === 2 ? 2 : 1.5}
+                  fill="none"
+                  opacity={0.5}
+                  initial={{ pathLength: 0, opacity: 0 }}
+                  animate={{ pathLength: 1, opacity: 0.5 }}
+                  transition={{ duration: 0.6, delay: ln.depth * 0.1 }}
                 />
+              ) : null
+            )}
 
-                {/* Label */}
-                <text
-                  x={0} y={ln.depth === 1 ? -2 : 0}
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  fill={ln.depth === 1 ? 'white' : 'hsl(var(--foreground))'}
-                  fontWeight={ln.depth === 1 ? '700' : '500'}
-                  fontSize={fontSize}
-                  className="pointer-events-none"
+            {/* Central node */}
+            <motion.g initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 200 }}>
+              <circle cx={centerX} cy={centerY} r={54} fill="hsl(var(--primary))" opacity={0.15} />
+              <circle cx={centerX} cy={centerY} r={46} fill="hsl(var(--primary))" opacity={0.25} />
+              <circle cx={centerX} cy={centerY} r={38} fill="hsl(var(--primary))" />
+              <text x={centerX} y={centerY} textAnchor="middle" dominantBaseline="middle"
+                fill="hsl(var(--primary-foreground))" fontWeight="700" fontSize="13"
+                className="pointer-events-none">
+                {mindMap.centralTopic.length > 24 ? mindMap.centralTopic.slice(0, 22) + '…' : mindMap.centralTopic}
+              </text>
+            </motion.g>
+
+            {/* Branch nodes */}
+            {layoutNodes.map((ln, idx) => {
+              const r = nodeRadius(ln.depth);
+              const isHovered = hoveredNode === ln.node.id;
+              const isExtending = extending === ln.node.id;
+              const hasChildren = ln.node.children && ln.node.children.length > 0;
+              const labelMax = ln.depth === 1 ? 20 : ln.depth === 2 ? 16 : 14;
+              const label = ln.node.label.length > labelMax ? ln.node.label.slice(0, labelMax - 1) + '…' : ln.node.label;
+              const fontSize = ln.depth === 1 ? 11 : ln.depth === 2 ? 10 : 9;
+
+              return (
+                <motion.g
+                  key={ln.node.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.4, delay: idx * 0.02 + ln.depth * 0.1 }}
+                  onMouseEnter={() => setHoveredNode(ln.node.id)}
+                  onMouseLeave={() => setHoveredNode(null)}
+                  style={{ cursor: 'pointer' }}
                 >
-                  {label}
-                </text>
+                  {/* Glow on hover */}
+                  {isHovered && (
+                    <circle cx={ln.x} cy={ln.y} r={r + 6} fill={ln.color} opacity={0.15} />
+                  )}
 
-                {/* Child count badge */}
-                {hasChildren && ln.depth >= 2 && (
-                  <>
-                    <circle cx={r * 0.7} cy={-r * 0.7} r={8} fill={ln.color} />
-                    <text x={r * 0.7} y={-r * 0.7} textAnchor="middle" dominantBaseline="middle"
-                      fill="white" fontSize="8" fontWeight="700" className="pointer-events-none">
-                      {ln.node.children!.length}
-                    </text>
-                  </>
-                )}
+                  {/* Node circle */}
+                  <circle
+                    cx={ln.x} cy={ln.y} r={r}
+                    fill={ln.depth === 1 ? ln.color : 'hsl(var(--background))'}
+                    stroke={ln.color}
+                    strokeWidth={ln.depth === 1 ? 0 : 2}
+                    opacity={ln.depth === 1 ? 0.9 : 1}
+                  />
 
-                {/* Extend button on hover */}
-                {isHovered && (
-                  <g
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (!extending) onExtend(ln.node.id, ln.node.label);
-                    }}
-                    style={{ cursor: extending ? 'not-allowed' : 'pointer' }}
+                  {/* Label */}
+                  <text
+                    x={ln.x} y={ln.depth === 1 ? ln.y - 2 : ln.y}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fill={ln.depth === 1 ? 'white' : 'hsl(var(--foreground))'}
+                    fontWeight={ln.depth === 1 ? '700' : '500'}
+                    fontSize={fontSize}
+                    className="pointer-events-none"
                   >
-                    <circle cx={r + 14} cy={0} r={11} fill={ln.color} opacity={0.9} />
-                    {isExtending ? (
-                      <text x={r + 14} y={1} textAnchor="middle" dominantBaseline="middle"
-                        fill="white" fontSize="10" className="pointer-events-none animate-spin origin-center">⟳</text>
-                    ) : (
-                      <text x={r + 14} y={1} textAnchor="middle" dominantBaseline="middle"
-                        fill="white" fontSize="14" fontWeight="700" className="pointer-events-none">+</text>
-                    )}
-                  </g>
-                )}
+                    {label}
+                  </text>
 
-                {/* Description tooltip */}
-                {isHovered && ln.node.description && (
-                  <g>
-                    <rect x={-100} y={r + 8} width={200} height={30} rx={6}
-                      fill="hsl(var(--popover))" stroke="hsl(var(--border))" strokeWidth={1} />
-                    <text x={0} y={r + 27} textAnchor="middle" dominantBaseline="middle"
-                      fill="hsl(var(--popover-foreground))" fontSize="9" className="pointer-events-none">
-                      {ln.node.description && ln.node.description.length > 40
-                        ? ln.node.description.slice(0, 38) + '…'
-                        : ln.node.description}
-                    </text>
-                  </g>
-                )}
-              </motion.g>
-            );
-          })}
+                  {/* Child count badge */}
+                  {hasChildren && ln.depth >= 2 && (
+                    <>
+                      <circle cx={ln.x + r * 0.7} cy={ln.y - r * 0.7} r={8} fill={ln.color} />
+                      <text x={ln.x + r * 0.7} y={ln.y - r * 0.7} textAnchor="middle" dominantBaseline="middle"
+                        fill="white" fontSize="8" fontWeight="700" className="pointer-events-none">
+                        {ln.node.children!.length}
+                      </text>
+                    </>
+                  )}
+
+                  {/* Extend button on hover */}
+                  {isHovered && (
+                    <g
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!extending) onExtend(ln.node.id, ln.node.label);
+                      }}
+                      style={{ cursor: extending ? 'not-allowed' : 'pointer' }}
+                    >
+                      <circle cx={ln.x + r + 14} cy={ln.y} r={11} fill={ln.color} opacity={0.9} />
+                      {isExtending ? (
+                        <text x={ln.x + r + 14} y={ln.y + 1} textAnchor="middle" dominantBaseline="middle"
+                          fill="white" fontSize="10" className="pointer-events-none">⟳</text>
+                      ) : (
+                        <text x={ln.x + r + 14} y={ln.y + 1} textAnchor="middle" dominantBaseline="middle"
+                          fill="white" fontSize="14" fontWeight="700" className="pointer-events-none">+</text>
+                      )}
+                    </g>
+                  )}
+
+                  {/* Description tooltip */}
+                  {isHovered && ln.node.description && (
+                    <g>
+                      <rect x={ln.x - 100} y={ln.y + r + 8} width={200} height={30} rx={6}
+                        fill="hsl(var(--popover))" stroke="hsl(var(--border))" strokeWidth={1} />
+                      <text x={ln.x} y={ln.y + r + 27} textAnchor="middle" dominantBaseline="middle"
+                        fill="hsl(var(--popover-foreground))" fontSize="9" className="pointer-events-none">
+                        {ln.node.description && ln.node.description.length > 40
+                          ? ln.node.description.slice(0, 38) + '…'
+                          : ln.node.description}
+                      </text>
+                    </g>
+                  )}
+                </motion.g>
+              );
+            })}
+          </g>
         </svg>
       </div>
     </div>
