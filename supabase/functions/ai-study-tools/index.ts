@@ -732,7 +732,7 @@ YOU ARE UNSTOPPABLE. Every answer should be the BEST explanation that student ha
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model: "google/gemini-2.5-pro",
           messages: chatMessages,
           stream: true,
         }),
