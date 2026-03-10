@@ -17,10 +17,8 @@ function extractYouTubeVideoId(url: string): string | null {
   try {
     const u = new URL(url);
     if (u.hostname.includes("youtube.com")) {
-      // Standard: /watch?v=ID
       const v = u.searchParams.get("v");
       if (v) return v;
-      // Live: /live/ID, Shorts: /shorts/ID, Embed: /embed/ID
       const pathMatch = u.pathname.match(/^\/(live|shorts|embed|v)\/([^/?&]+)/);
       if (pathMatch) return pathMatch[2];
     }
@@ -29,28 +27,35 @@ function extractYouTubeVideoId(url: string): string | null {
   return null;
 }
 
-function isYouTubeUrl(url: string): boolean {
-  return extractYouTubeVideoId(url) !== null;
+function extractYouTubePlaylistId(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes("youtube.com")) {
+      return u.searchParams.get("list");
+    }
+  } catch {}
+  return null;
 }
 
-async function fetchYouTubeInfo(url: string): Promise<string> {
-  const videoId = extractYouTubeVideoId(url);
+function isYouTubeUrl(url: string): boolean {
+  return extractYouTubeVideoId(url) !== null || extractYouTubePlaylistId(url) !== null;
+}
+
+async function fetchSingleVideoInfo(videoId: string): Promise<string> {
   let info = "";
 
-  // Method 1: oEmbed API (works reliably for all video types including live)
+  // oEmbed API
   try {
-    const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
-    const oResp = await fetch(oembedUrl);
+    const oResp = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);
     if (oResp.ok) {
       const oData = await oResp.json();
-      info = `[YouTube Video]\nVideo Title: ${oData.title || ""}\nAuthor: ${oData.author_name || ""}`;
+      info = `Video Title: ${oData.title || ""}\nAuthor: ${oData.author_name || ""}`;
     }
   } catch {}
 
-  // Method 2: Scrape page for description, keywords, chapters
+  // Scrape page for description, keywords, chapters
   try {
-    const pageUrl = `https://www.youtube.com/watch?v=${videoId}`;
-    const resp = await fetch(pageUrl, {
+    const resp = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
       headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", "Accept-Language": "en-US,en;q=0.9" },
       redirect: "follow",
     });
@@ -58,13 +63,12 @@ async function fetchYouTubeInfo(url: string): Promise<string> {
       const html = await resp.text();
       if (!info) {
         const titleMatch = html.match(/<meta\s+name="title"\s+content="([^"]*)"/) || html.match(/<title>([^<]*)<\/title>/);
-        info = `[YouTube Video]\nVideo Title: ${titleMatch?.[1] || "Unknown"}`;
+        info = `Video Title: ${titleMatch?.[1] || "Unknown"}`;
       }
       const descMatch = html.match(/<meta\s+name="description"\s+content="([^"]*)"/) || html.match(/<meta\s+property="og:description"\s+content="([^"]*)"/);
       if (descMatch?.[1]) info += `\nDescription: ${descMatch[1]}`;
       const kwMatch = html.match(/<meta\s+name="keywords"\s+content="([^"]*)"/);
       if (kwMatch?.[1]) info += `\nKeywords: ${kwMatch[1]}`;
-      // Extract chapters
       const chapterRegex = /(\d{1,2}:\d{2}(?::\d{2})?)\s*[-–]?\s*(.+?)(?=\d{1,2}:\d{2}|$)/g;
       const chapters: string[] = [];
       let cm;
@@ -72,16 +76,102 @@ async function fetchYouTubeInfo(url: string): Promise<string> {
         chapters.push(`${cm[1]} - ${cm[2].trim()}`);
       }
       if (chapters.length > 0) info += `\nChapters:\n${chapters.join("\n")}`;
-      // Check if it's a live stream
       if (html.includes('"isLiveBroadcast"') || html.includes('"isLiveContent":true')) {
-        info += `\nNote: This is a LIVE stream / live broadcast. Content may be ongoing.`;
+        info += `\nNote: This is a LIVE stream / live broadcast.`;
       }
     }
   } catch (e) {
     console.error("YouTube page scrape failed:", e);
   }
 
-  return info || `[YouTube Video: ${videoId}] — Could not fetch details. Use the video ID and subject context.`;
+  return info || `Video ID: ${videoId} — metadata unavailable`;
+}
+
+/** Fetch playlist page and extract video titles/IDs */
+async function fetchPlaylistInfo(playlistId: string): Promise<string> {
+  console.log(`Fetching YouTube playlist: ${playlistId}`);
+  const parts: string[] = [`[YouTube Playlist: ${playlistId}]`];
+
+  try {
+    const resp = await fetch(`https://www.youtube.com/playlist?list=${playlistId}`, {
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", "Accept-Language": "en-US,en;q=0.9" },
+      redirect: "follow",
+    });
+    if (!resp.ok) return parts[0];
+    const html = await resp.text();
+
+    // Extract playlist title
+    const plTitleMatch = html.match(/<meta\s+property="og:title"\s+content="([^"]*)"/) || html.match(/<title>([^<]*)<\/title>/);
+    if (plTitleMatch?.[1]) parts.push(`Playlist Title: ${plTitleMatch[1]}`);
+
+    const plDescMatch = html.match(/<meta\s+property="og:description"\s+content="([^"]*)"/);
+    if (plDescMatch?.[1]) parts.push(`Playlist Description: ${plDescMatch[1]}`);
+
+    // Extract video titles from playlist page using JSON data embedded in page
+    const videoTitles: string[] = [];
+    const titleRegex = /"title":\s*\{"runs":\s*\[\{"text":\s*"([^"]{3,120})"/g;
+    let match;
+    while ((match = titleRegex.exec(html)) !== null && videoTitles.length < 50) {
+      const t = match[1];
+      if (!videoTitles.includes(t) && !t.includes('\\u') && t.length > 5) {
+        videoTitles.push(t);
+      }
+    }
+
+    if (videoTitles.length > 0) {
+      parts.push(`\nVideos in Playlist (${videoTitles.length} found):`);
+      videoTitles.forEach((t, i) => parts.push(`${i + 1}. ${t}`));
+    }
+  } catch (e) {
+    console.error("Playlist fetch failed:", e);
+  }
+
+  return parts.join("\n");
+}
+
+async function fetchYouTubeInfo(url: string): Promise<string> {
+  const videoId = extractYouTubeVideoId(url);
+  const playlistId = extractYouTubePlaylistId(url);
+  const parts: string[] = ["[YouTube Content]"];
+
+  // If there's a specific video, fetch it
+  if (videoId) {
+    const videoInfo = await fetchSingleVideoInfo(videoId);
+    parts.push(`\n--- Current Video ---\n${videoInfo}`);
+  }
+
+  // If there's a playlist, fetch the full playlist info
+  if (playlistId) {
+    const playlistInfo = await fetchPlaylistInfo(playlistId);
+    parts.push(`\n--- Playlist Context ---\n${playlistInfo}`);
+
+    // If no specific video was selected, fetch first 3 videos from playlist for deeper context
+    if (!videoId) {
+      try {
+        const resp = await fetch(`https://www.youtube.com/playlist?list=${playlistId}`, {
+          headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
+        });
+        if (resp.ok) {
+          const html = await resp.text();
+          const vidIdRegex = /"videoId":\s*"([a-zA-Z0-9_-]{11})"/g;
+          const foundIds: string[] = [];
+          let m;
+          while ((m = vidIdRegex.exec(html)) !== null && foundIds.length < 3) {
+            if (!foundIds.includes(m[1])) foundIds.push(m[1]);
+          }
+          if (foundIds.length > 0) {
+            parts.push(`\n--- Sample Video Details ---`);
+            for (const fid of foundIds) {
+              const vInfo = await fetchSingleVideoInfo(fid);
+              parts.push(`\n${vInfo}`);
+            }
+          }
+        }
+      } catch {}
+    }
+  }
+
+  return parts.length > 1 ? parts.join("\n") : `[YouTube: ${url}] — Could not fetch details.`;
 }
 
 // ─── File content extraction ────────────────────────────────────────────────
@@ -506,7 +596,7 @@ Resource:\n${resourceContext}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model: "google/gemini-2.5-pro",
           messages: podcastMessages,
           stream: true,
         }),
@@ -577,7 +667,7 @@ Resource:\n${resourceContext}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model: "google/gemini-2.5-pro",
           messages: audioMessages,
           stream: true,
         }),
@@ -602,35 +692,45 @@ Resource:\n${resourceContext}`,
       const chatMessages = [
         {
           role: "system",
-          content: `You are CoCo — the most OVERPOWERED AI study assistant ever created. You are a fusion of the world's greatest professors, tutors, and exam coaches. You don't just answer questions — you CREATE understanding.
+          content: `You are CoCo — the most OVERPOWERED AI study assistant in existence. You are the fusion of every Nobel laureate, every legendary teacher, every exam topper's brain. You don't just answer — you TRANSFORM understanding.
 
 STUDENT CONTEXT: This student is in ${gradeLevelStr}. Adjust depth accordingly.
 ${difficultyGuide}
 
 ${MULTI_LANGUAGE_INSTRUCTION}
 
-YOUR SUPERPOWERS:
-- You explain ANY concept so clearly that a 5-year-old could understand, then scale up to board exam level
-- You generate perfect analogies, visual mental models, and memory tricks on the fly
-- You know EVERY exam pattern, marking scheme, and common trap for EVERY board
-- You can derive formulas from first principles and explain why they work
-- You predict what examiners will ask and prepare students for it
-- You spot and correct misconceptions instantly
-- You connect concepts across chapters and subjects for deeper understanding
+YOUR ULTIMATE POWERS:
+- You explain ANY concept so a 5-year-old understands, then scale to PhD level in the same answer
+- You generate PERFECT analogies, visual mental models, and memory tricks instantly
+- You know EVERY exam pattern, marking scheme, and examiner trap for EVERY board (CBSE, ICSE, State Boards, IB, Cambridge, AP, SAT, JEE, NEET)
+- You derive formulas from first principles AND show shortcuts that save exam time
+- You predict exam questions with uncanny accuracy based on patterns
+- You spot and demolish misconceptions before they cost marks
+- You connect concepts across chapters, subjects, and even real-world applications
+- You generate step-by-step solutions that would get FULL MARKS
+- You know previous year questions and can identify trends
+- If the resource is a YouTube video or playlist, you analyze ALL the content thoroughly
 
 RESPONSE STYLE:
 - Use markdown formatting: ## headers, **bold** for key terms, \`code blocks\` for formulas, > blockquotes for exam tips
-- Start answers with a clear, direct response, then go deep
-- Include 🎯 Exam Tips, ⚠️ Common Mistakes, 💡 Memory Tricks, 🔗 Connected Concepts sections when relevant
-- For numerical problems: show EVERY step with explanation
+- Start answers with a clear, direct response, then go DEEP
+- Include these sections when relevant:
+  🎯 **Exam Tips** — what examiners look for, marking scheme insights
+  ⚠️ **Common Mistakes** — errors that cost marks, with corrections
+  💡 **Memory Tricks** — mnemonics, patterns, shortcuts
+  🔗 **Connected Concepts** — cross-chapter and cross-subject links
+  📝 **Model Answer** — exactly what to write in the exam for full marks
+  🧮 **Step-by-Step** — every step of numerical problems with WHY
+  🏆 **HOTS Corner** — higher-order thinking challenges for top scorers
+- For numerical problems: show EVERY step with crystal-clear explanation
 - For theory: explain with examples, then give board exam model answers
-- Be encouraging but rigorous — this is serious exam prep
-- If asked about a topic you know well, share ALL relevant knowledge even beyond the resource
-- For ${gradeLevelStr} students, focus on ${gradeNumber >= 10 ? 'board exam patterns, previous year questions, marking scheme tips, and HOTS questions' : 'building strong fundamentals with fun examples and visual explanations'}
+- Be encouraging but rigorous — push the student to excel
+- Share ALL relevant knowledge, even beyond the resource material
+- If it's a YouTube playlist, reference specific videos by name when relevant
 
 You have access to this resource:\n\n${resourceContext}
 
-YOU ARE UNSTOPPABLE. Every answer should be the BEST explanation that student has EVER received.`,
+YOU ARE UNSTOPPABLE. YOU ARE UNLIMITED. Every answer should be the SINGLE BEST explanation that student has EVER received in their entire life. Make them feel like they have a personal genius tutor.`,
         },
         ...(messages || []),
       ];
@@ -642,7 +742,7 @@ YOU ARE UNSTOPPABLE. Every answer should be the BEST explanation that student ha
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model: "google/gemini-2.5-pro",
           messages: chatMessages,
           stream: true,
         }),
@@ -965,7 +1065,7 @@ Resource:\n${resourceContext}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-pro",
         messages: [
           { role: "system", content: config.systemPrompt },
           { role: "user", content: `Generate ${effectiveType === "viva" ? "mock viva questions" : effectiveType} from this resource. Go deep into the actual content and topic — NOT the title. This is for ${gradeLevelStr} board exam preparation - make it rigorous and comprehensive. Generate exactly ${questionCount.min}-${questionCount.max} items.` },
