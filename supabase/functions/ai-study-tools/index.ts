@@ -34,33 +34,54 @@ function isYouTubeUrl(url: string): boolean {
 }
 
 async function fetchYouTubeInfo(url: string): Promise<string> {
+  const videoId = extractYouTubeVideoId(url);
+  let info = "";
+
+  // Method 1: oEmbed API (works reliably for all video types including live)
   try {
-    const resp = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" },
+    const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+    const oResp = await fetch(oembedUrl);
+    if (oResp.ok) {
+      const oData = await oResp.json();
+      info = `[YouTube Video]\nVideo Title: ${oData.title || ""}\nAuthor: ${oData.author_name || ""}`;
+    }
+  } catch {}
+
+  // Method 2: Scrape page for description, keywords, chapters
+  try {
+    const pageUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    const resp = await fetch(pageUrl, {
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36", "Accept-Language": "en-US,en;q=0.9" },
       redirect: "follow",
     });
-    if (!resp.ok) return "";
-    const html = await resp.text();
-    const titleMatch = html.match(/<meta\s+name="title"\s+content="([^"]*)"/) || html.match(/<title>([^<]*)<\/title>/);
-    const title = titleMatch?.[1] || "";
-    const descMatch = html.match(/<meta\s+name="description"\s+content="([^"]*)"/) || html.match(/<meta\s+property="og:description"\s+content="([^"]*)"/);
-    const description = descMatch?.[1] || "";
-    const kwMatch = html.match(/<meta\s+name="keywords"\s+content="([^"]*)"/);
-    const keywords = kwMatch?.[1] || "";
-    const chapterRegex = /(\d{1,2}:\d{2}(?::\d{2})?)\s*[-–]?\s*(.+?)(?=\d{1,2}:\d{2}|$)/g;
-    const chapters: string[] = [];
-    let cm;
-    while ((cm = chapterRegex.exec(html)) !== null && chapters.length < 30) {
-      chapters.push(`${cm[1]} - ${cm[2].trim()}`);
+    if (resp.ok) {
+      const html = await resp.text();
+      if (!info) {
+        const titleMatch = html.match(/<meta\s+name="title"\s+content="([^"]*)"/) || html.match(/<title>([^<]*)<\/title>/);
+        info = `[YouTube Video]\nVideo Title: ${titleMatch?.[1] || "Unknown"}`;
+      }
+      const descMatch = html.match(/<meta\s+name="description"\s+content="([^"]*)"/) || html.match(/<meta\s+property="og:description"\s+content="([^"]*)"/);
+      if (descMatch?.[1]) info += `\nDescription: ${descMatch[1]}`;
+      const kwMatch = html.match(/<meta\s+name="keywords"\s+content="([^"]*)"/);
+      if (kwMatch?.[1]) info += `\nKeywords: ${kwMatch[1]}`;
+      // Extract chapters
+      const chapterRegex = /(\d{1,2}:\d{2}(?::\d{2})?)\s*[-–]?\s*(.+?)(?=\d{1,2}:\d{2}|$)/g;
+      const chapters: string[] = [];
+      let cm;
+      while ((cm = chapterRegex.exec(html)) !== null && chapters.length < 30) {
+        chapters.push(`${cm[1]} - ${cm[2].trim()}`);
+      }
+      if (chapters.length > 0) info += `\nChapters:\n${chapters.join("\n")}`;
+      // Check if it's a live stream
+      if (html.includes('"isLiveBroadcast"') || html.includes('"isLiveContent":true')) {
+        info += `\nNote: This is a LIVE stream / live broadcast. Content may be ongoing.`;
+      }
     }
-    let info = `[YouTube Video]\nVideo Title: ${title}\nDescription: ${description}`;
-    if (keywords) info += `\nKeywords: ${keywords}`;
-    if (chapters.length > 0) info += `\nChapters:\n${chapters.join("\n")}`;
-    return info;
   } catch (e) {
-    console.error("YouTube fetch failed:", e);
-    return "";
+    console.error("YouTube page scrape failed:", e);
   }
+
+  return info || `[YouTube Video: ${videoId}] — Could not fetch details. Use the video ID and subject context.`;
 }
 
 // ─── File content extraction ────────────────────────────────────────────────
