@@ -325,33 +325,26 @@ async function extractBinaryDocumentContent(
 
     console.log(`Extracting content from ${ext} file (${(fileBytes.length / 1024).toFixed(0)}KB) using AI vision...`);
 
-    const resp = await fetch(GATEWAY_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gemini-2.5-flash",
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: `Extract ALL the text content from this document file (${fileName}). Preserve the structure including headings, paragraphs, lists, tables, formulas, and any important formatting. Output ONLY the extracted text content — no commentary, no preamble. If there are images with text, describe what they show. If there are diagrams, describe them. If there are formulas, write them out clearly. Be thorough — extract EVERYTHING.`,
+    const resp = await resilientAIFetch(apiKey, {
+      model: "gemini-2.5-flash",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: `Extract ALL the text content from this document file (${fileName}). Preserve the structure including headings, paragraphs, lists, tables, formulas, and any important formatting. Output ONLY the extracted text content — no commentary, no preamble. If there are images with text, describe what they show. If there are diagrams, describe them. If there are formulas, write them out clearly. Be thorough — extract EVERYTHING.`,
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:${mimeType};base64,${base64}`,
               },
-              {
-                type: "image_url",
-                image_url: {
-                  url: `data:${mimeType};base64,${base64}`,
-                },
-              },
-            ],
-          },
-        ],
-      }),
-    });
+            },
+          ],
+        },
+      ],
+    }, 3, FLASH_FALLBACK_CHAIN);
 
     if (!resp.ok) {
       console.error("AI extraction failed:", resp.status);
