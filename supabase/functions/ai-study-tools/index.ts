@@ -7,7 +7,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const GATEWAY_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "https://gkkeysrfmgmxoypnjkdl.supabase.co";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
@@ -248,7 +248,7 @@ async function extractBinaryDocumentContent(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "gemini-2.5-flash",
         messages: [
           {
             role: "user",
@@ -415,7 +415,7 @@ async function searchWebForSubject(subject: string, title: string, apiKey: strin
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
+        model: "gemini-2.5-flash-lite",
         messages: [
           {
             role: "system",
@@ -485,8 +485,8 @@ serve(async (req) => {
   try {
     const { type, tool, content, title, subject, messages, resourceUrl, resourceType, gradeLevel, language, fileName } = await req.json();
     const effectiveType = type || tool;
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GOOGLE_API_KEY) throw new Error("GOOGLE_AI_API_KEY is not configured");
 
     const gradeNumber = getGradeNumber(gradeLevel);
     const gradeLevelStr = gradeLevel || `Grade ${gradeNumber}`;
@@ -499,7 +499,7 @@ serve(async (req) => {
     const isUploadedFile = resourceType === 'pdf' || resourceType === 'document' || resourceType === 'file';
     if (fileName && resourceUrl && (isUploadedFile || isBinaryDocument(getFileExtension(fileName)) || isTextFile(getFileExtension(fileName)))) {
       console.log(`Extracting content from uploaded file: ${fileName}`);
-      const fileContent = await extractFileContent(resourceUrl, fileName, LOVABLE_API_KEY);
+      const fileContent = await extractFileContent(resourceUrl, fileName, GOOGLE_API_KEY);
       if (fileContent && fileContent.length > 50) {
         enrichedContent = fileContent + (enrichedContent ? `\n\n--- User Notes ---\n${enrichedContent}` : "");
       }
@@ -517,7 +517,7 @@ serve(async (req) => {
     if (!enrichedContent || enrichedContent.length < 200) {
       console.log("Content thin, searching for subject knowledge...");
       const searchTitle = title && title.length > 3 ? title : `${subject || "General"} study material`;
-      const webContent = await searchWebForSubject(subject || "General", searchTitle, LOVABLE_API_KEY);
+      const webContent = await searchWebForSubject(subject || "General", searchTitle, GOOGLE_API_KEY);
       if (webContent) {
         enrichedContent = enrichedContent
           ? `${enrichedContent}\n\n--- Subject Knowledge ---\n${webContent}`
@@ -592,11 +592,11 @@ Resource:\n${resourceContext}`,
       const response = await fetch(GATEWAY_URL, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          Authorization: `Bearer ${GOOGLE_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
+          model: "gemini-2.5-pro",
           messages: podcastMessages,
           stream: true,
         }),
@@ -663,11 +663,11 @@ Resource:\n${resourceContext}`,
       const response = await fetch(GATEWAY_URL, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          Authorization: `Bearer ${GOOGLE_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
+          model: "gemini-2.5-pro",
           messages: audioMessages,
           stream: true,
         }),
@@ -738,11 +738,11 @@ YOU ARE UNSTOPPABLE. YOU ARE UNLIMITED. Every answer should be the SINGLE BEST e
       const response = await fetch(GATEWAY_URL, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          Authorization: `Bearer ${GOOGLE_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
+          model: "gemini-2.5-pro",
           messages: chatMessages,
           stream: true,
         }),
@@ -1061,11 +1061,11 @@ Resource:\n${resourceContext}`,
     const response = await fetch(GATEWAY_URL, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${GOOGLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        model: "gemini-2.5-pro",
         messages: [
           { role: "system", content: config.systemPrompt },
           { role: "user", content: `Generate ${effectiveType === "viva" ? "mock viva questions" : effectiveType} from this resource. Go deep into the actual content and topic — NOT the title. This is for ${gradeLevelStr} board exam preparation - make it rigorous and comprehensive. Generate exactly ${questionCount.min}-${questionCount.max} items.` },
