@@ -596,7 +596,7 @@ Resource:\n${resourceContext}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
+          model: "gemini-2.5-pro",
           messages: podcastMessages,
           stream: true,
         }),
