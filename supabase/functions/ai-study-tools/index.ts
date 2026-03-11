@@ -485,8 +485,8 @@ serve(async (req) => {
   try {
     const { type, tool, content, title, subject, messages, resourceUrl, resourceType, gradeLevel, language, fileName } = await req.json();
     const effectiveType = type || tool;
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+    if (!GOOGLE_API_KEY) throw new Error("GOOGLE_AI_API_KEY is not configured");
 
     const gradeNumber = getGradeNumber(gradeLevel);
     const gradeLevelStr = gradeLevel || `Grade ${gradeNumber}`;
