@@ -1065,7 +1065,7 @@ Resource:\n${resourceContext}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        model: "gemini-2.5-pro",
         messages: [
           { role: "system", content: config.systemPrompt },
           { role: "user", content: `Generate ${effectiveType === "viva" ? "mock viva questions" : effectiveType} from this resource. Go deep into the actual content and topic — NOT the title. This is for ${gradeLevelStr} board exam preparation - make it rigorous and comprehensive. Generate exactly ${questionCount.min}-${questionCount.max} items.` },
