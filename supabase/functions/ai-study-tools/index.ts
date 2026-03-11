@@ -11,6 +11,90 @@ const GATEWAY_URL = "https://generativelanguage.googleapis.com/v1beta/openai/cha
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "https://gkkeysrfmgmxoypnjkdl.supabase.co";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
+// ─── Model fallback chain & retry logic ────────────────────────────────────
+const MODEL_FALLBACK_CHAIN = [
+  "gemini-2.5-pro",
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
+];
+
+const FLASH_FALLBACK_CHAIN = [
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
+];
+
+/**
+ * Resilient fetch with exponential backoff, Retry-After support, and model fallback.
+ * On 429, retries with increasing delays and falls back to cheaper models.
+ */
+async function resilientAIFetch(
+  apiKey: string,
+  body: Record<string, unknown>,
+  maxRetries = 5,
+  modelChain?: string[],
+): Promise<Response> {
+  const models = modelChain || (body.model === "gemini-2.5-pro" ? MODEL_FALLBACK_CHAIN : FLASH_FALLBACK_CHAIN);
+  let lastError: Response | null = null;
+
+  for (const model of models) {
+    const requestBody = { ...body, model };
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        console.log(`AI request: model=${model}, attempt=${attempt + 1}/${maxRetries}`);
+        const response = await fetch(GATEWAY_URL, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        });
+
+        if (response.ok) return response;
+
+        if (response.status === 429) {
+          lastError = response;
+          // Respect Retry-After header if present
+          const retryAfter = response.headers.get("Retry-After");
+          let waitMs: number;
+          if (retryAfter) {
+            const parsed = parseInt(retryAfter, 10);
+            waitMs = !isNaN(parsed) ? parsed * 1000 : Math.pow(2, attempt) * 1500;
+          } else {
+            // Exponential backoff with jitter: 2s, 4s, 8s, 16s, 32s
+            waitMs = Math.pow(2, attempt + 1) * 1000 + Math.random() * 1000;
+          }
+          console.log(`Rate limited (429) on ${model}. Waiting ${(waitMs / 1000).toFixed(1)}s before retry...`);
+          await new Promise(r => setTimeout(r, waitMs));
+          continue;
+        }
+
+        if (response.status === 503 || response.status === 500) {
+          lastError = response;
+          const waitMs = Math.pow(2, attempt) * 1000 + Math.random() * 500;
+          console.log(`Server error (${response.status}) on ${model}. Waiting ${(waitMs / 1000).toFixed(1)}s...`);
+          await new Promise(r => setTimeout(r, waitMs));
+          continue;
+        }
+
+        // Non-retryable error (400, 401, 403, etc.)
+        return response;
+      } catch (e) {
+        console.error(`Network error on ${model} attempt ${attempt + 1}:`, e);
+        if (attempt < maxRetries - 1) {
+          await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
+        }
+      }
+    }
+    console.log(`All retries exhausted for model ${model}, trying next fallback...`);
+  }
+
+  // All models and retries exhausted
+  if (lastError) return lastError;
+  throw new Error("All AI models and retries exhausted");
+}
+
 // ─── YouTube helpers ───────────────────────────────────────────────────────
 
 function extractYouTubeVideoId(url: string): string | null {
