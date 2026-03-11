@@ -1098,30 +1098,20 @@ Resource:\n${resourceContext}`,
       });
     }
 
-    const response = await fetch(GATEWAY_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${GOOGLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gemini-2.5-pro",
-        messages: [
-          { role: "system", content: config.systemPrompt },
-          { role: "user", content: `Generate ${effectiveType === "viva" ? "mock viva questions" : effectiveType} from this resource. Go deep into the actual content and topic — NOT the title. This is for ${gradeLevelStr} board exam preparation - make it rigorous and comprehensive. Generate exactly ${questionCount.min}-${questionCount.max} items.` },
-        ],
-        tools: [config.tool],
-        tool_choice: { type: "function", function: { name: config.tool.function.name } },
-      }),
+    const response = await resilientAIFetch(GOOGLE_API_KEY, {
+      model: "gemini-2.5-pro",
+      messages: [
+        { role: "system", content: config.systemPrompt },
+        { role: "user", content: `Generate ${effectiveType === "viva" ? "mock viva questions" : effectiveType} from this resource. Go deep into the actual content and topic — NOT the title. This is for ${gradeLevelStr} board exam preparation - make it rigorous and comprehensive. Generate exactly ${questionCount.min}-${questionCount.max} items.` },
+      ],
+      tools: [config.tool],
+      tool_choice: { type: "function", function: { name: config.tool.function.name } },
     });
 
     if (!response.ok) {
-      const status = response.status;
-      if (status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted. Please add credits to continue." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const t = await response.text();
-      console.error("AI gateway error:", status, t);
-      return new Response(JSON.stringify({ error: "AI service error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      console.error("AI error after all retries:", response.status, t);
+      return new Response(JSON.stringify({ error: "AI service temporarily unavailable. Please try again." }), { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const result = await response.json();
