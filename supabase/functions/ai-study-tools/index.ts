@@ -11,6 +11,90 @@ const GATEWAY_URL = "https://generativelanguage.googleapis.com/v1beta/openai/cha
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "https://gkkeysrfmgmxoypnjkdl.supabase.co";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
+// ─── Model fallback chain & retry logic ────────────────────────────────────
+const MODEL_FALLBACK_CHAIN = [
+  "gemini-2.5-pro",
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
+];
+
+const FLASH_FALLBACK_CHAIN = [
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
+];
+
+/**
+ * Resilient fetch with exponential backoff, Retry-After support, and model fallback.
+ * On 429, retries with increasing delays and falls back to cheaper models.
+ */
+async function resilientAIFetch(
+  apiKey: string,
+  body: Record<string, unknown>,
+  maxRetries = 5,
+  modelChain?: string[],
+): Promise<Response> {
+  const models = modelChain || (body.model === "gemini-2.5-pro" ? MODEL_FALLBACK_CHAIN : FLASH_FALLBACK_CHAIN);
+  let lastError: Response | null = null;
+
+  for (const model of models) {
+    const requestBody = { ...body, model };
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        console.log(`AI request: model=${model}, attempt=${attempt + 1}/${maxRetries}`);
+        const response = await fetch(GATEWAY_URL, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        });
+
+        if (response.ok) return response;
+
+        if (response.status === 429) {
+          lastError = response;
+          // Respect Retry-After header if present
+          const retryAfter = response.headers.get("Retry-After");
+          let waitMs: number;
+          if (retryAfter) {
+            const parsed = parseInt(retryAfter, 10);
+            waitMs = !isNaN(parsed) ? parsed * 1000 : Math.pow(2, attempt) * 1500;
+          } else {
+            // Exponential backoff with jitter: 2s, 4s, 8s, 16s, 32s
+            waitMs = Math.pow(2, attempt + 1) * 1000 + Math.random() * 1000;
+          }
+          console.log(`Rate limited (429) on ${model}. Waiting ${(waitMs / 1000).toFixed(1)}s before retry...`);
+          await new Promise(r => setTimeout(r, waitMs));
+          continue;
+        }
+
+        if (response.status === 503 || response.status === 500) {
+          lastError = response;
+          const waitMs = Math.pow(2, attempt) * 1000 + Math.random() * 500;
+          console.log(`Server error (${response.status}) on ${model}. Waiting ${(waitMs / 1000).toFixed(1)}s...`);
+          await new Promise(r => setTimeout(r, waitMs));
+          continue;
+        }
+
+        // Non-retryable error (400, 401, 403, etc.)
+        return response;
+      } catch (e) {
+        console.error(`Network error on ${model} attempt ${attempt + 1}:`, e);
+        if (attempt < maxRetries - 1) {
+          await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
+        }
+      }
+    }
+    console.log(`All retries exhausted for model ${model}, trying next fallback...`);
+  }
+
+  // All models and retries exhausted
+  if (lastError) return lastError;
+  throw new Error("All AI models and retries exhausted");
+}
+
 // ─── YouTube helpers ───────────────────────────────────────────────────────
 
 function extractYouTubeVideoId(url: string): string | null {
@@ -241,33 +325,26 @@ async function extractBinaryDocumentContent(
 
     console.log(`Extracting content from ${ext} file (${(fileBytes.length / 1024).toFixed(0)}KB) using AI vision...`);
 
-    const resp = await fetch(GATEWAY_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gemini-2.5-flash",
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: `Extract ALL the text content from this document file (${fileName}). Preserve the structure including headings, paragraphs, lists, tables, formulas, and any important formatting. Output ONLY the extracted text content — no commentary, no preamble. If there are images with text, describe what they show. If there are diagrams, describe them. If there are formulas, write them out clearly. Be thorough — extract EVERYTHING.`,
+    const resp = await resilientAIFetch(apiKey, {
+      model: "gemini-2.5-flash",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: `Extract ALL the text content from this document file (${fileName}). Preserve the structure including headings, paragraphs, lists, tables, formulas, and any important formatting. Output ONLY the extracted text content — no commentary, no preamble. If there are images with text, describe what they show. If there are diagrams, describe them. If there are formulas, write them out clearly. Be thorough — extract EVERYTHING.`,
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:${mimeType};base64,${base64}`,
               },
-              {
-                type: "image_url",
-                image_url: {
-                  url: `data:${mimeType};base64,${base64}`,
-                },
-              },
-            ],
-          },
-        ],
-      }),
-    });
+            },
+          ],
+        },
+      ],
+    }, 3, FLASH_FALLBACK_CHAIN);
 
     if (!resp.ok) {
       console.error("AI extraction failed:", resp.status);
@@ -408,26 +485,19 @@ async function fetchUrlContent(url: string): Promise<string> {
 
 async function searchWebForSubject(subject: string, title: string, apiKey: string): Promise<string> {
   try {
-    const resp = await fetch(GATEWAY_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gemini-2.5-flash-lite",
-        messages: [
-          {
-            role: "system",
-            content: "You are a subject matter expert. Provide comprehensive study notes on the given topic. Include key concepts, formulas, definitions, important dates/events, and common exam questions. Be thorough and detailed. This is for board exam preparation. You can respond in English, Hindi, Odia, Sanskrit, or any language the topic is typically taught in.",
-          },
-          {
-            role: "user",
-            content: `Provide detailed study notes for: "${title}" in the subject "${subject}". Include all important concepts, formulas, definitions, examples, and potential exam questions. Focus on what a student preparing for board exams needs to know.`,
-          },
-        ],
-      }),
-    });
+    const resp = await resilientAIFetch(apiKey, {
+      model: "gemini-2.5-flash-lite",
+      messages: [
+        {
+          role: "system",
+          content: "You are a subject matter expert. Provide comprehensive study notes on the given topic. Include key concepts, formulas, definitions, important dates/events, and common exam questions. Be thorough and detailed. This is for board exam preparation. You can respond in English, Hindi, Odia, Sanskrit, or any language the topic is typically taught in.",
+        },
+        {
+          role: "user",
+          content: `Provide detailed study notes for: "${title}" in the subject "${subject}". Include all important concepts, formulas, definitions, examples, and potential exam questions. Focus on what a student preparing for board exams needs to know.`,
+        },
+      ],
+    }, 3, FLASH_FALLBACK_CHAIN);
     if (!resp.ok) return "";
     const data = await resp.json();
     return data.choices?.[0]?.message?.content || "";
@@ -589,26 +659,16 @@ Resource:\n${resourceContext}`,
         },
       ];
 
-      const response = await fetch(GATEWAY_URL, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${GOOGLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "gemini-2.5-pro",
-          messages: podcastMessages,
-          stream: true,
-        }),
+      const response = await resilientAIFetch(GOOGLE_API_KEY, {
+        model: "gemini-2.5-pro",
+        messages: podcastMessages,
+        stream: true,
       });
 
       if (!response.ok) {
-        const status = response.status;
-        if (status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        if (status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         const t = await response.text();
-        console.error("AI gateway error:", status, t);
-        return new Response(JSON.stringify({ error: "AI service error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        console.error("AI error after all retries:", response.status, t);
+        return new Response(JSON.stringify({ error: "AI service temporarily unavailable. Please try again." }), { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
       return new Response(response.body, {
@@ -660,26 +720,16 @@ Resource:\n${resourceContext}`,
         },
       ];
 
-      const response = await fetch(GATEWAY_URL, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${GOOGLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "gemini-2.5-pro",
-          messages: audioMessages,
-          stream: true,
-        }),
+      const response = await resilientAIFetch(GOOGLE_API_KEY, {
+        model: "gemini-2.5-pro",
+        messages: audioMessages,
+        stream: true,
       });
 
       if (!response.ok) {
-        const status = response.status;
-        if (status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        if (status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         const t = await response.text();
-        console.error("AI gateway error:", status, t);
-        return new Response(JSON.stringify({ error: "AI service error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        console.error("AI error after all retries:", response.status, t);
+        return new Response(JSON.stringify({ error: "AI service temporarily unavailable. Please try again." }), { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
       return new Response(response.body, {
@@ -735,26 +785,16 @@ YOU ARE UNSTOPPABLE. YOU ARE UNLIMITED. Every answer should be the SINGLE BEST e
         ...(messages || []),
       ];
 
-      const response = await fetch(GATEWAY_URL, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${GOOGLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "gemini-2.5-pro",
-          messages: chatMessages,
-          stream: true,
-        }),
+      const response = await resilientAIFetch(GOOGLE_API_KEY, {
+        model: "gemini-2.5-pro",
+        messages: chatMessages,
+        stream: true,
       });
 
       if (!response.ok) {
-        const status = response.status;
-        if (status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        if (status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted. Please add credits to continue." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         const t = await response.text();
-        console.error("AI gateway error:", status, t);
-        return new Response(JSON.stringify({ error: "AI service error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        console.error("AI error after all retries:", response.status, t);
+        return new Response(JSON.stringify({ error: "AI service temporarily unavailable. Please try again." }), { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
       return new Response(response.body, {
@@ -1058,30 +1098,20 @@ Resource:\n${resourceContext}`,
       });
     }
 
-    const response = await fetch(GATEWAY_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${GOOGLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gemini-2.5-pro",
-        messages: [
-          { role: "system", content: config.systemPrompt },
-          { role: "user", content: `Generate ${effectiveType === "viva" ? "mock viva questions" : effectiveType} from this resource. Go deep into the actual content and topic — NOT the title. This is for ${gradeLevelStr} board exam preparation - make it rigorous and comprehensive. Generate exactly ${questionCount.min}-${questionCount.max} items.` },
-        ],
-        tools: [config.tool],
-        tool_choice: { type: "function", function: { name: config.tool.function.name } },
-      }),
+    const response = await resilientAIFetch(GOOGLE_API_KEY, {
+      model: "gemini-2.5-pro",
+      messages: [
+        { role: "system", content: config.systemPrompt },
+        { role: "user", content: `Generate ${effectiveType === "viva" ? "mock viva questions" : effectiveType} from this resource. Go deep into the actual content and topic — NOT the title. This is for ${gradeLevelStr} board exam preparation - make it rigorous and comprehensive. Generate exactly ${questionCount.min}-${questionCount.max} items.` },
+      ],
+      tools: [config.tool],
+      tool_choice: { type: "function", function: { name: config.tool.function.name } },
     });
 
     if (!response.ok) {
-      const status = response.status;
-      if (status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted. Please add credits to continue." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const t = await response.text();
-      console.error("AI gateway error:", status, t);
-      return new Response(JSON.stringify({ error: "AI service error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      console.error("AI error after all retries:", response.status, t);
+      return new Response(JSON.stringify({ error: "AI service temporarily unavailable. Please try again." }), { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const result = await response.json();
