@@ -485,26 +485,19 @@ async function fetchUrlContent(url: string): Promise<string> {
 
 async function searchWebForSubject(subject: string, title: string, apiKey: string): Promise<string> {
   try {
-    const resp = await fetch(GATEWAY_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gemini-2.5-flash-lite",
-        messages: [
-          {
-            role: "system",
-            content: "You are a subject matter expert. Provide comprehensive study notes on the given topic. Include key concepts, formulas, definitions, important dates/events, and common exam questions. Be thorough and detailed. This is for board exam preparation. You can respond in English, Hindi, Odia, Sanskrit, or any language the topic is typically taught in.",
-          },
-          {
-            role: "user",
-            content: `Provide detailed study notes for: "${title}" in the subject "${subject}". Include all important concepts, formulas, definitions, examples, and potential exam questions. Focus on what a student preparing for board exams needs to know.`,
-          },
-        ],
-      }),
-    });
+    const resp = await resilientAIFetch(apiKey, {
+      model: "gemini-2.5-flash-lite",
+      messages: [
+        {
+          role: "system",
+          content: "You are a subject matter expert. Provide comprehensive study notes on the given topic. Include key concepts, formulas, definitions, important dates/events, and common exam questions. Be thorough and detailed. This is for board exam preparation. You can respond in English, Hindi, Odia, Sanskrit, or any language the topic is typically taught in.",
+        },
+        {
+          role: "user",
+          content: `Provide detailed study notes for: "${title}" in the subject "${subject}". Include all important concepts, formulas, definitions, examples, and potential exam questions. Focus on what a student preparing for board exams needs to know.`,
+        },
+      ],
+    }, 3, FLASH_FALLBACK_CHAIN);
     if (!resp.ok) return "";
     const data = await resp.json();
     return data.choices?.[0]?.message?.content || "";
