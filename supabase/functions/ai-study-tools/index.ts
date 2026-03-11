@@ -785,26 +785,16 @@ YOU ARE UNSTOPPABLE. YOU ARE UNLIMITED. Every answer should be the SINGLE BEST e
         ...(messages || []),
       ];
 
-      const response = await fetch(GATEWAY_URL, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${GOOGLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "gemini-2.5-pro",
-          messages: chatMessages,
-          stream: true,
-        }),
+      const response = await resilientAIFetch(GOOGLE_API_KEY, {
+        model: "gemini-2.5-pro",
+        messages: chatMessages,
+        stream: true,
       });
 
       if (!response.ok) {
-        const status = response.status;
-        if (status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        if (status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted. Please add credits to continue." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         const t = await response.text();
-        console.error("AI gateway error:", status, t);
-        return new Response(JSON.stringify({ error: "AI service error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        console.error("AI error after all retries:", response.status, t);
+        return new Response(JSON.stringify({ error: "AI service temporarily unavailable. Please try again." }), { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
       return new Response(response.body, {
