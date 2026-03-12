@@ -475,7 +475,7 @@ async function extractFileContent(
         console.log("File too large for AI extraction, truncating...");
         return `[File ${fileName} is too large for full extraction. Using metadata only.]`;
       }
-      const extracted = await extractBinaryDocumentContent(fileBytes, fileName, ext, apiKey);
+      const extracted = await extractBinaryDocumentContent(fileBytes, fileName, ext);
       if (extracted) return `[Extracted from ${fileName}]\n\n${extracted}`;
     }
   }
