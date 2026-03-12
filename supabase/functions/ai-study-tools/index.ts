@@ -766,7 +766,7 @@ Resource:\n${resourceContext}`,
         },
       ];
 
-      const response = await resilientAIFetch(GOOGLE_API_KEY, {
+      const response = await resilientAIFetch({
         model: "gemini-2.5-pro",
         messages: audioMessages,
         stream: true,
