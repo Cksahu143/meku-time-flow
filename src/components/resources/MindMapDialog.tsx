@@ -53,6 +53,29 @@ interface LayoutNode {
   angle: number;
 }
 
+// Break label into lines that fit within a given max character width
+function wrapText(text: string, maxChars: number): string[] {
+  if (text.length <= maxChars) return [text];
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let current = '';
+  for (const word of words) {
+    if (current && (current + ' ' + word).length > maxChars) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = current ? current + ' ' + word : word;
+    }
+  }
+  if (current) lines.push(current);
+  // Max 3 lines, truncate last if needed
+  if (lines.length > 3) {
+    lines.length = 3;
+    lines[2] = lines[2].slice(0, maxChars - 1) + '…';
+  }
+  return lines;
+}
+
 function layoutTree(data: MindMapData, centerX: number, centerY: number): LayoutNode[] {
   const result: LayoutNode[] = [];
   const mainNodes = data.nodes;
@@ -60,7 +83,8 @@ function layoutTree(data: MindMapData, centerX: number, centerY: number): Layout
 
   mainNodes.forEach((node, i) => {
     const angle = (i / count) * Math.PI * 2 - Math.PI / 2;
-    const radius = 220;
+    // More space between center and main branches
+    const radius = 300;
     const x = centerX + Math.cos(angle) * radius;
     const y = centerY + Math.sin(angle) * radius;
     const color = BRANCH_COLORS[i % BRANCH_COLORS.length];
@@ -68,11 +92,12 @@ function layoutTree(data: MindMapData, centerX: number, centerY: number): Layout
     result.push({ node, x, y, color, depth: 1, parentX: centerX, parentY: centerY, branchIndex: i, angle });
 
     if (node.children) {
-      const childSpread = Math.min(0.6, Math.PI / Math.max(count, 4));
+      // More angular spread for children
+      const childSpread = Math.min(0.8, Math.PI / Math.max(count, 3));
       node.children.forEach((child, ci) => {
         const childCount = node.children!.length;
         const childAngle = angle + (ci - (childCount - 1) / 2) * (childSpread / Math.max(childCount - 1, 1));
-        const childRadius = 150;
+        const childRadius = 200;
         const cx = x + Math.cos(childAngle) * childRadius;
         const cy = y + Math.sin(childAngle) * childRadius;
 
@@ -81,8 +106,8 @@ function layoutTree(data: MindMapData, centerX: number, centerY: number): Layout
         if (child.children) {
           child.children.forEach((grandchild, gi) => {
             const gcCount = child.children!.length;
-            const gcAngle = childAngle + (gi - (gcCount - 1) / 2) * (0.3 / Math.max(gcCount - 1, 1));
-            const gcRadius = 120;
+            const gcAngle = childAngle + (gi - (gcCount - 1) / 2) * (0.4 / Math.max(gcCount - 1, 1));
+            const gcRadius = 160;
             const gx = cx + Math.cos(gcAngle) * gcRadius;
             const gy = cy + Math.sin(gcAngle) * gcRadius;
             result.push({ node: grandchild, x: gx, y: gy, color, depth: 3, parentX: cx, parentY: cy, branchIndex: i, angle: gcAngle });
@@ -210,7 +235,7 @@ const MindMapCanvas = ({
 
   const handleMouseUp = useCallback(() => setDragging(false), []);
 
-  const nodeRadius = (depth: number) => depth === 0 ? 50 : depth === 1 ? 40 : depth === 2 ? 32 : 26;
+  const nodeRadius = (depth: number) => depth === 0 ? 58 : depth === 1 ? 52 : depth === 2 ? 42 : 34;
 
   return (
     <div className="relative w-full h-full">
@@ -262,14 +287,21 @@ const MindMapCanvas = ({
 
             {/* Central node */}
             <motion.g initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 200 }}>
-              <circle cx={centerX} cy={centerY} r={54} fill="hsl(var(--primary))" opacity={0.15} />
-              <circle cx={centerX} cy={centerY} r={46} fill="hsl(var(--primary))" opacity={0.25} />
-              <circle cx={centerX} cy={centerY} r={38} fill="hsl(var(--primary))" />
-              <text x={centerX} y={centerY} textAnchor="middle" dominantBaseline="middle"
-                fill="hsl(var(--primary-foreground))" fontWeight="700" fontSize="13"
-                className="pointer-events-none">
-                {mindMap.centralTopic.length > 24 ? mindMap.centralTopic.slice(0, 22) + '…' : mindMap.centralTopic}
-              </text>
+              <circle cx={centerX} cy={centerY} r={62} fill="hsl(var(--primary))" opacity={0.15} />
+              <circle cx={centerX} cy={centerY} r={54} fill="hsl(var(--primary))" opacity={0.25} />
+              <circle cx={centerX} cy={centerY} r={46} fill="hsl(var(--primary))" />
+              {(() => {
+                const lines = wrapText(mindMap.centralTopic, 18);
+                const lineHeight = 15;
+                const startY = centerY - ((lines.length - 1) * lineHeight) / 2;
+                return lines.map((line, i) => (
+                  <text key={i} x={centerX} y={startY + i * lineHeight} textAnchor="middle" dominantBaseline="middle"
+                    fill="hsl(var(--primary-foreground))" fontWeight="700" fontSize="12"
+                    className="pointer-events-none">
+                    {line}
+                  </text>
+                ));
+              })()}
             </motion.g>
 
             {/* Branch nodes */}
@@ -278,9 +310,10 @@ const MindMapCanvas = ({
               const isHovered = hoveredNode === ln.node.id;
               const isExtending = extending === ln.node.id;
               const hasChildren = ln.node.children && ln.node.children.length > 0;
-              const labelMax = ln.depth === 1 ? 20 : ln.depth === 2 ? 16 : 14;
-              const label = ln.node.label.length > labelMax ? ln.node.label.slice(0, labelMax - 1) + '…' : ln.node.label;
+              const maxChars = ln.depth === 1 ? 14 : ln.depth === 2 ? 12 : 10;
+              const lines = wrapText(ln.node.label, maxChars);
               const fontSize = ln.depth === 1 ? 11 : ln.depth === 2 ? 10 : 9;
+              const lineHeight = fontSize + 3;
 
               return (
                 <motion.g
@@ -306,18 +339,24 @@ const MindMapCanvas = ({
                     opacity={ln.depth === 1 ? 0.9 : 1}
                   />
 
-                  {/* Label */}
-                  <text
-                    x={ln.x} y={ln.depth === 1 ? ln.y - 2 : ln.y}
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    fill={ln.depth === 1 ? 'white' : 'hsl(var(--foreground))'}
-                    fontWeight={ln.depth === 1 ? '700' : '500'}
-                    fontSize={fontSize}
-                    className="pointer-events-none"
-                  >
-                    {label}
-                  </text>
+                  {/* Label - multi-line */}
+                  {(() => {
+                    const startY = ln.y - ((lines.length - 1) * lineHeight) / 2;
+                    return lines.map((line, li) => (
+                      <text
+                        key={li}
+                        x={ln.x} y={startY + li * lineHeight}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        fill={ln.depth === 1 ? 'white' : 'hsl(var(--foreground))'}
+                        fontWeight={ln.depth === 1 ? '700' : '500'}
+                        fontSize={fontSize}
+                        className="pointer-events-none"
+                      >
+                        {line}
+                      </text>
+                    ));
+                  })()}
 
                   {/* Child count badge */}
                   {hasChildren && ln.depth >= 2 && (

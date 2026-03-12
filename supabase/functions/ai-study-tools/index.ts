@@ -7,7 +7,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const GATEWAY_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+const GOOGLE_GATEWAY_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+const LOVABLE_GATEWAY_URL = "https://ai-gateway.lovable.dev/v1/chat/completions";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "https://gkkeysrfmgmxoypnjkdl.supabase.co";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
@@ -23,76 +24,123 @@ const FLASH_FALLBACK_CHAIN = [
   "gemini-2.5-flash-lite",
 ];
 
+// Lovable model names use provider prefix
+const LOVABLE_MODEL_MAP: Record<string, string> = {
+  "gemini-2.5-pro": "google/gemini-2.5-pro",
+  "gemini-2.5-flash": "google/gemini-2.5-flash",
+  "gemini-2.5-flash-lite": "google/gemini-2.5-flash-lite",
+};
+
+interface GatewayConfig {
+  url: string;
+  apiKey: string;
+  modelTransform: (model: string) => string;
+  name: string;
+}
+
 /**
- * Resilient fetch with exponential backoff, Retry-After support, and model fallback.
- * On 429, retries with increasing delays and falls back to cheaper models.
+ * Resilient fetch: tries Google API first with retries + model fallback,
+ * then falls back to Lovable gateway if Google completely fails.
  */
 async function resilientAIFetch(
-  apiKey: string,
   body: Record<string, unknown>,
-  maxRetries = 5,
+  maxRetries = 4,
   modelChain?: string[],
 ): Promise<Response> {
+  const GOOGLE_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+
+  const gateways: GatewayConfig[] = [];
+
+  if (GOOGLE_API_KEY) {
+    gateways.push({
+      url: GOOGLE_GATEWAY_URL,
+      apiKey: GOOGLE_API_KEY,
+      modelTransform: (m) => m, // Native names
+      name: "Google",
+    });
+  }
+
+  if (LOVABLE_API_KEY) {
+    gateways.push({
+      url: LOVABLE_GATEWAY_URL,
+      apiKey: LOVABLE_API_KEY,
+      modelTransform: (m) => LOVABLE_MODEL_MAP[m] || `google/${m}`,
+      name: "Lovable",
+    });
+  }
+
+  if (gateways.length === 0) {
+    throw new Error("No AI API keys configured");
+  }
+
   const models = modelChain || (body.model === "gemini-2.5-pro" ? MODEL_FALLBACK_CHAIN : FLASH_FALLBACK_CHAIN);
   let lastError: Response | null = null;
 
-  for (const model of models) {
-    const requestBody = { ...body, model };
+  for (const gateway of gateways) {
+    console.log(`🔄 Trying ${gateway.name} gateway...`);
 
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      try {
-        console.log(`AI request: model=${model}, attempt=${attempt + 1}/${maxRetries}`);
-        const response = await fetch(GATEWAY_URL, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(requestBody),
-        });
+    for (const model of models) {
+      const transformedModel = gateway.modelTransform(model);
+      const requestBody = { ...body, model: transformedModel };
 
-        if (response.ok) return response;
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+          console.log(`  → ${gateway.name}/${transformedModel} attempt ${attempt + 1}/${maxRetries}`);
+          const response = await fetch(gateway.url, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${gateway.apiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(requestBody),
+          });
 
-        if (response.status === 429) {
-          lastError = response;
-          // Respect Retry-After header if present
-          const retryAfter = response.headers.get("Retry-After");
-          let waitMs: number;
-          if (retryAfter) {
-            const parsed = parseInt(retryAfter, 10);
-            waitMs = !isNaN(parsed) ? parsed * 1000 : Math.pow(2, attempt) * 1500;
-          } else {
-            // Exponential backoff with jitter: 2s, 4s, 8s, 16s, 32s
-            waitMs = Math.pow(2, attempt + 1) * 1000 + Math.random() * 1000;
+          if (response.ok) {
+            console.log(`  ✅ Success via ${gateway.name}/${transformedModel}`);
+            return response;
           }
-          console.log(`Rate limited (429) on ${model}. Waiting ${(waitMs / 1000).toFixed(1)}s before retry...`);
-          await new Promise(r => setTimeout(r, waitMs));
-          continue;
-        }
 
-        if (response.status === 503 || response.status === 500) {
+          if (response.status === 429) {
+            lastError = response;
+            const retryAfter = response.headers.get("Retry-After");
+            let waitMs: number;
+            if (retryAfter) {
+              const parsed = parseInt(retryAfter, 10);
+              waitMs = !isNaN(parsed) ? parsed * 1000 : Math.pow(2, attempt) * 1500;
+            } else {
+              waitMs = Math.pow(2, attempt + 1) * 1000 + Math.random() * 1000;
+            }
+            console.log(`  ⏳ Rate limited (429). Waiting ${(waitMs / 1000).toFixed(1)}s...`);
+            await new Promise(r => setTimeout(r, waitMs));
+            continue;
+          }
+
+          if (response.status === 503 || response.status === 500) {
+            lastError = response;
+            const waitMs = Math.pow(2, attempt) * 1000 + Math.random() * 500;
+            console.log(`  ⚠️ Server error (${response.status}). Waiting ${(waitMs / 1000).toFixed(1)}s...`);
+            await new Promise(r => setTimeout(r, waitMs));
+            continue;
+          }
+
+          // Non-retryable error — try next gateway
+          console.log(`  ❌ Non-retryable error ${response.status} on ${gateway.name}`);
           lastError = response;
-          const waitMs = Math.pow(2, attempt) * 1000 + Math.random() * 500;
-          console.log(`Server error (${response.status}) on ${model}. Waiting ${(waitMs / 1000).toFixed(1)}s...`);
-          await new Promise(r => setTimeout(r, waitMs));
-          continue;
-        }
-
-        // Non-retryable error (400, 401, 403, etc.)
-        return response;
-      } catch (e) {
-        console.error(`Network error on ${model} attempt ${attempt + 1}:`, e);
-        if (attempt < maxRetries - 1) {
-          await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
+          break;
+        } catch (e) {
+          console.error(`  ❌ Network error on ${gateway.name}/${transformedModel}:`, e);
+          if (attempt < maxRetries - 1) {
+            await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
+          }
         }
       }
     }
-    console.log(`All retries exhausted for model ${model}, trying next fallback...`);
+    console.log(`❌ All models exhausted on ${gateway.name}, trying next gateway...`);
   }
 
-  // All models and retries exhausted
   if (lastError) return lastError;
-  throw new Error("All AI models and retries exhausted");
+  throw new Error("All AI gateways, models, and retries exhausted");
 }
 
 // ─── YouTube helpers ───────────────────────────────────────────────────────
@@ -305,7 +353,6 @@ async function extractBinaryDocumentContent(
   fileBytes: Uint8Array,
   fileName: string,
   ext: string,
-  apiKey: string
 ): Promise<string> {
   try {
     const base64 = btoa(String.fromCharCode(...fileBytes));
@@ -325,7 +372,7 @@ async function extractBinaryDocumentContent(
 
     console.log(`Extracting content from ${ext} file (${(fileBytes.length / 1024).toFixed(0)}KB) using AI vision...`);
 
-    const resp = await resilientAIFetch(apiKey, {
+    const resp = await resilientAIFetch({
       model: "gemini-2.5-flash",
       messages: [
         {
@@ -400,7 +447,6 @@ async function getFreshFileUrl(resourceUrl: string, fileName: string): Promise<s
 async function extractFileContent(
   resourceUrl: string | undefined,
   fileName: string | undefined,
-  apiKey: string
 ): Promise<string> {
   if (!resourceUrl || !fileName) return "";
   
@@ -429,7 +475,7 @@ async function extractFileContent(
         console.log("File too large for AI extraction, truncating...");
         return `[File ${fileName} is too large for full extraction. Using metadata only.]`;
       }
-      const extracted = await extractBinaryDocumentContent(fileBytes, fileName, ext, apiKey);
+      const extracted = await extractBinaryDocumentContent(fileBytes, fileName, ext);
       if (extracted) return `[Extracted from ${fileName}]\n\n${extracted}`;
     }
   }
@@ -483,9 +529,9 @@ async function fetchUrlContent(url: string): Promise<string> {
 
 // ─── Subject knowledge enrichment ──────────────────────────────────────────
 
-async function searchWebForSubject(subject: string, title: string, apiKey: string): Promise<string> {
+async function searchWebForSubject(subject: string, title: string): Promise<string> {
   try {
-    const resp = await resilientAIFetch(apiKey, {
+    const resp = await resilientAIFetch({
       model: "gemini-2.5-flash-lite",
       messages: [
         {
@@ -555,8 +601,7 @@ serve(async (req) => {
   try {
     const { type, tool, content, title, subject, messages, resourceUrl, resourceType, gradeLevel, language, fileName } = await req.json();
     const effectiveType = type || tool;
-    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
-    if (!GOOGLE_API_KEY) throw new Error("GOOGLE_AI_API_KEY is not configured");
+    // API keys are now handled inside resilientAIFetch
 
     const gradeNumber = getGradeNumber(gradeLevel);
     const gradeLevelStr = gradeLevel || `Grade ${gradeNumber}`;
@@ -569,7 +614,7 @@ serve(async (req) => {
     const isUploadedFile = resourceType === 'pdf' || resourceType === 'document' || resourceType === 'file';
     if (fileName && resourceUrl && (isUploadedFile || isBinaryDocument(getFileExtension(fileName)) || isTextFile(getFileExtension(fileName)))) {
       console.log(`Extracting content from uploaded file: ${fileName}`);
-      const fileContent = await extractFileContent(resourceUrl, fileName, GOOGLE_API_KEY);
+      const fileContent = await extractFileContent(resourceUrl, fileName);
       if (fileContent && fileContent.length > 50) {
         enrichedContent = fileContent + (enrichedContent ? `\n\n--- User Notes ---\n${enrichedContent}` : "");
       }
@@ -587,7 +632,7 @@ serve(async (req) => {
     if (!enrichedContent || enrichedContent.length < 200) {
       console.log("Content thin, searching for subject knowledge...");
       const searchTitle = title && title.length > 3 ? title : `${subject || "General"} study material`;
-      const webContent = await searchWebForSubject(subject || "General", searchTitle, GOOGLE_API_KEY);
+      const webContent = await searchWebForSubject(subject || "General", searchTitle);
       if (webContent) {
         enrichedContent = enrichedContent
           ? `${enrichedContent}\n\n--- Subject Knowledge ---\n${webContent}`
@@ -659,7 +704,7 @@ Resource:\n${resourceContext}`,
         },
       ];
 
-      const response = await resilientAIFetch(GOOGLE_API_KEY, {
+      const response = await resilientAIFetch({
         model: "gemini-2.5-pro",
         messages: podcastMessages,
         stream: true,
@@ -720,7 +765,7 @@ Resource:\n${resourceContext}`,
         },
       ];
 
-      const response = await resilientAIFetch(GOOGLE_API_KEY, {
+      const response = await resilientAIFetch({
         model: "gemini-2.5-pro",
         messages: audioMessages,
         stream: true,
@@ -785,7 +830,7 @@ YOU ARE UNSTOPPABLE. YOU ARE UNLIMITED. Every answer should be the SINGLE BEST e
         ...(messages || []),
       ];
 
-      const response = await resilientAIFetch(GOOGLE_API_KEY, {
+      const response = await resilientAIFetch({
         model: "gemini-2.5-pro",
         messages: chatMessages,
         stream: true,
@@ -1098,7 +1143,7 @@ Resource:\n${resourceContext}`,
       });
     }
 
-    const response = await resilientAIFetch(GOOGLE_API_KEY, {
+    const response = await resilientAIFetch({
       model: "gemini-2.5-pro",
       messages: [
         { role: "system", content: config.systemPrompt },
