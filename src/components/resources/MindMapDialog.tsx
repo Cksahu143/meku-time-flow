@@ -339,18 +339,24 @@ const MindMapCanvas = ({
                     opacity={ln.depth === 1 ? 0.9 : 1}
                   />
 
-                  {/* Label */}
-                  <text
-                    x={ln.x} y={ln.depth === 1 ? ln.y - 2 : ln.y}
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    fill={ln.depth === 1 ? 'white' : 'hsl(var(--foreground))'}
-                    fontWeight={ln.depth === 1 ? '700' : '500'}
-                    fontSize={fontSize}
-                    className="pointer-events-none"
-                  >
-                    {label}
-                  </text>
+                  {/* Label - multi-line */}
+                  {(() => {
+                    const startY = ln.y - ((lines.length - 1) * lineHeight) / 2;
+                    return lines.map((line, li) => (
+                      <text
+                        key={li}
+                        x={ln.x} y={startY + li * lineHeight}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        fill={ln.depth === 1 ? 'white' : 'hsl(var(--foreground))'}
+                        fontWeight={ln.depth === 1 ? '700' : '500'}
+                        fontSize={fontSize}
+                        className="pointer-events-none"
+                      >
+                        {line}
+                      </text>
+                    ));
+                  })()}
 
                   {/* Child count badge */}
                   {hasChildren && ln.depth >= 2 && (
