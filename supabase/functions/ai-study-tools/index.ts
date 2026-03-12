@@ -372,7 +372,7 @@ async function extractBinaryDocumentContent(
 
     console.log(`Extracting content from ${ext} file (${(fileBytes.length / 1024).toFixed(0)}KB) using AI vision...`);
 
-    const resp = await resilientAIFetch(apiKey, {
+    const resp = await resilientAIFetch({
       model: "gemini-2.5-flash",
       messages: [
         {
