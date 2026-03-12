@@ -602,8 +602,7 @@ serve(async (req) => {
   try {
     const { type, tool, content, title, subject, messages, resourceUrl, resourceType, gradeLevel, language, fileName } = await req.json();
     const effectiveType = type || tool;
-    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
-    if (!GOOGLE_API_KEY) throw new Error("GOOGLE_AI_API_KEY is not configured");
+    // API keys are now handled inside resilientAIFetch
 
     const gradeNumber = getGradeNumber(gradeLevel);
     const gradeLevelStr = gradeLevel || `Grade ${gradeNumber}`;
