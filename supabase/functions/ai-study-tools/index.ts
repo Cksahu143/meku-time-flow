@@ -353,7 +353,6 @@ async function extractBinaryDocumentContent(
   fileBytes: Uint8Array,
   fileName: string,
   ext: string,
-  apiKey: string
 ): Promise<string> {
   try {
     const base64 = btoa(String.fromCharCode(...fileBytes));
