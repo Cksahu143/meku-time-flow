@@ -53,6 +53,29 @@ interface LayoutNode {
   angle: number;
 }
 
+// Break label into lines that fit within a given max character width
+function wrapText(text: string, maxChars: number): string[] {
+  if (text.length <= maxChars) return [text];
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let current = '';
+  for (const word of words) {
+    if (current && (current + ' ' + word).length > maxChars) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = current ? current + ' ' + word : word;
+    }
+  }
+  if (current) lines.push(current);
+  // Max 3 lines, truncate last if needed
+  if (lines.length > 3) {
+    lines.length = 3;
+    lines[2] = lines[2].slice(0, maxChars - 1) + '…';
+  }
+  return lines;
+}
+
 function layoutTree(data: MindMapData, centerX: number, centerY: number): LayoutNode[] {
   const result: LayoutNode[] = [];
   const mainNodes = data.nodes;
@@ -60,7 +83,8 @@ function layoutTree(data: MindMapData, centerX: number, centerY: number): Layout
 
   mainNodes.forEach((node, i) => {
     const angle = (i / count) * Math.PI * 2 - Math.PI / 2;
-    const radius = 220;
+    // More space between center and main branches
+    const radius = 300;
     const x = centerX + Math.cos(angle) * radius;
     const y = centerY + Math.sin(angle) * radius;
     const color = BRANCH_COLORS[i % BRANCH_COLORS.length];
@@ -68,11 +92,12 @@ function layoutTree(data: MindMapData, centerX: number, centerY: number): Layout
     result.push({ node, x, y, color, depth: 1, parentX: centerX, parentY: centerY, branchIndex: i, angle });
 
     if (node.children) {
-      const childSpread = Math.min(0.6, Math.PI / Math.max(count, 4));
+      // More angular spread for children
+      const childSpread = Math.min(0.8, Math.PI / Math.max(count, 3));
       node.children.forEach((child, ci) => {
         const childCount = node.children!.length;
         const childAngle = angle + (ci - (childCount - 1) / 2) * (childSpread / Math.max(childCount - 1, 1));
-        const childRadius = 150;
+        const childRadius = 200;
         const cx = x + Math.cos(childAngle) * childRadius;
         const cy = y + Math.sin(childAngle) * childRadius;
 
@@ -81,8 +106,8 @@ function layoutTree(data: MindMapData, centerX: number, centerY: number): Layout
         if (child.children) {
           child.children.forEach((grandchild, gi) => {
             const gcCount = child.children!.length;
-            const gcAngle = childAngle + (gi - (gcCount - 1) / 2) * (0.3 / Math.max(gcCount - 1, 1));
-            const gcRadius = 120;
+            const gcAngle = childAngle + (gi - (gcCount - 1) / 2) * (0.4 / Math.max(gcCount - 1, 1));
+            const gcRadius = 160;
             const gx = cx + Math.cos(gcAngle) * gcRadius;
             const gy = cy + Math.sin(gcAngle) * gcRadius;
             result.push({ node: grandchild, x: gx, y: gy, color, depth: 3, parentX: cx, parentY: cy, branchIndex: i, angle: gcAngle });
