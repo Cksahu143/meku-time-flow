@@ -831,7 +831,7 @@ YOU ARE UNSTOPPABLE. YOU ARE UNLIMITED. Every answer should be the SINGLE BEST e
         ...(messages || []),
       ];
 
-      const response = await resilientAIFetch(GOOGLE_API_KEY, {
+      const response = await resilientAIFetch({
         model: "gemini-2.5-pro",
         messages: chatMessages,
         stream: true,
