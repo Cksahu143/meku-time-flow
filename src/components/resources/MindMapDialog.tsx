@@ -235,7 +235,7 @@ const MindMapCanvas = ({
 
   const handleMouseUp = useCallback(() => setDragging(false), []);
 
-  const nodeRadius = (depth: number) => depth === 0 ? 50 : depth === 1 ? 40 : depth === 2 ? 32 : 26;
+  const nodeRadius = (depth: number) => depth === 0 ? 58 : depth === 1 ? 52 : depth === 2 ? 42 : 34;
 
   return (
     <div className="relative w-full h-full">
