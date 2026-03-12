@@ -530,9 +530,9 @@ async function fetchUrlContent(url: string): Promise<string> {
 
 // ─── Subject knowledge enrichment ──────────────────────────────────────────
 
-async function searchWebForSubject(subject: string, title: string, apiKey: string): Promise<string> {
+async function searchWebForSubject(subject: string, title: string): Promise<string> {
   try {
-    const resp = await resilientAIFetch(apiKey, {
+    const resp = await resilientAIFetch({
       model: "gemini-2.5-flash-lite",
       messages: [
         {
