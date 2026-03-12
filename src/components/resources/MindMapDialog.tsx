@@ -287,14 +287,21 @@ const MindMapCanvas = ({
 
             {/* Central node */}
             <motion.g initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 200 }}>
-              <circle cx={centerX} cy={centerY} r={54} fill="hsl(var(--primary))" opacity={0.15} />
-              <circle cx={centerX} cy={centerY} r={46} fill="hsl(var(--primary))" opacity={0.25} />
-              <circle cx={centerX} cy={centerY} r={38} fill="hsl(var(--primary))" />
-              <text x={centerX} y={centerY} textAnchor="middle" dominantBaseline="middle"
-                fill="hsl(var(--primary-foreground))" fontWeight="700" fontSize="13"
-                className="pointer-events-none">
-                {mindMap.centralTopic.length > 24 ? mindMap.centralTopic.slice(0, 22) + '…' : mindMap.centralTopic}
-              </text>
+              <circle cx={centerX} cy={centerY} r={62} fill="hsl(var(--primary))" opacity={0.15} />
+              <circle cx={centerX} cy={centerY} r={54} fill="hsl(var(--primary))" opacity={0.25} />
+              <circle cx={centerX} cy={centerY} r={46} fill="hsl(var(--primary))" />
+              {(() => {
+                const lines = wrapText(mindMap.centralTopic, 18);
+                const lineHeight = 15;
+                const startY = centerY - ((lines.length - 1) * lineHeight) / 2;
+                return lines.map((line, i) => (
+                  <text key={i} x={centerX} y={startY + i * lineHeight} textAnchor="middle" dominantBaseline="middle"
+                    fill="hsl(var(--primary-foreground))" fontWeight="700" fontSize="12"
+                    className="pointer-events-none">
+                    {line}
+                  </text>
+                ));
+              })()}
             </motion.g>
 
             {/* Branch nodes */}
