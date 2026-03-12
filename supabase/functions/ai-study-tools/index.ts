@@ -614,7 +614,7 @@ serve(async (req) => {
     const isUploadedFile = resourceType === 'pdf' || resourceType === 'document' || resourceType === 'file';
     if (fileName && resourceUrl && (isUploadedFile || isBinaryDocument(getFileExtension(fileName)) || isTextFile(getFileExtension(fileName)))) {
       console.log(`Extracting content from uploaded file: ${fileName}`);
-      const fileContent = await extractFileContent(resourceUrl, fileName, GOOGLE_API_KEY);
+      const fileContent = await extractFileContent(resourceUrl, fileName);
       if (fileContent && fileContent.length > 50) {
         enrichedContent = fileContent + (enrichedContent ? `\n\n--- User Notes ---\n${enrichedContent}` : "");
       }
