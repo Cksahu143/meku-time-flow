@@ -632,7 +632,7 @@ serve(async (req) => {
     if (!enrichedContent || enrichedContent.length < 200) {
       console.log("Content thin, searching for subject knowledge...");
       const searchTitle = title && title.length > 3 ? title : `${subject || "General"} study material`;
-      const webContent = await searchWebForSubject(subject || "General", searchTitle, GOOGLE_API_KEY);
+      const webContent = await searchWebForSubject(subject || "General", searchTitle);
       if (webContent) {
         enrichedContent = enrichedContent
           ? `${enrichedContent}\n\n--- Subject Knowledge ---\n${webContent}`
