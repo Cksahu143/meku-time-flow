@@ -310,9 +310,10 @@ const MindMapCanvas = ({
               const isHovered = hoveredNode === ln.node.id;
               const isExtending = extending === ln.node.id;
               const hasChildren = ln.node.children && ln.node.children.length > 0;
-              const labelMax = ln.depth === 1 ? 20 : ln.depth === 2 ? 16 : 14;
-              const label = ln.node.label.length > labelMax ? ln.node.label.slice(0, labelMax - 1) + '…' : ln.node.label;
+              const maxChars = ln.depth === 1 ? 14 : ln.depth === 2 ? 12 : 10;
+              const lines = wrapText(ln.node.label, maxChars);
               const fontSize = ln.depth === 1 ? 11 : ln.depth === 2 ? 10 : 9;
+              const lineHeight = fontSize + 3;
 
               return (
                 <motion.g
