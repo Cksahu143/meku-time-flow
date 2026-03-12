@@ -447,7 +447,6 @@ async function getFreshFileUrl(resourceUrl: string, fileName: string): Promise<s
 async function extractFileContent(
   resourceUrl: string | undefined,
   fileName: string | undefined,
-  apiKey: string
 ): Promise<string> {
   if (!resourceUrl || !fileName) return "";
   
