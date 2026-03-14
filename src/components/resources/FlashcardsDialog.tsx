@@ -80,7 +80,7 @@ export const FlashcardsDialog = ({ open, onOpenChange, resource, content, gradeL
             <p className="text-xs text-center text-muted-foreground">{currentIndex + 1} / {cards.length}</p>
 
             <div
-              className="relative h-64 cursor-pointer perspective-1000"
+              className="relative min-h-[16rem] cursor-pointer perspective-1000"
               onClick={() => setFlipped(f => !f)}
             >
               <AnimatePresence mode="wait">
@@ -90,17 +90,28 @@ export const FlashcardsDialog = ({ open, onOpenChange, resource, content, gradeL
                   animate={{ rotateY: 0, opacity: 1 }}
                   exit={{ rotateY: flipped ? 90 : -90, opacity: 0 }}
                   transition={{ duration: 0.3 }}
-                  className={`absolute inset-0 rounded-xl border p-6 flex flex-col items-center justify-center text-center ${
+                  className={`rounded-xl border p-6 flex flex-col items-center justify-center text-center overflow-hidden ${
                     flipped
                       ? 'bg-primary/5 border-primary/30'
                       : 'bg-card border-border'
                   }`}
+                  style={{ minHeight: '16rem' }}
                 >
-                  <p className="text-xs text-muted-foreground mb-2">{flipped ? 'Answer' : 'Question'}</p>
-                  <p className={`text-lg font-medium leading-relaxed ${flipped ? 'text-primary' : 'text-foreground'}`}>
-                    {flipped ? cards[currentIndex].back : cards[currentIndex].front}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-4">Click to flip</p>
+                  <p className="text-xs text-muted-foreground mb-2 shrink-0">{flipped ? 'Answer' : 'Question'}</p>
+                  <div className="flex-1 flex items-center justify-center overflow-y-auto w-full px-2 max-h-48">
+                    <p className={`font-medium leading-relaxed break-words overflow-wrap-anywhere ${
+                      (flipped ? cards[currentIndex].back : cards[currentIndex].front).length > 120
+                        ? 'text-sm'
+                        : (flipped ? cards[currentIndex].back : cards[currentIndex].front).length > 60
+                        ? 'text-base'
+                        : 'text-lg'
+                    } ${flipped ? 'text-primary' : 'text-foreground'}`}
+                      style={{ overflowWrap: 'anywhere', wordBreak: 'break-word', whiteSpace: 'normal' }}
+                    >
+                      {flipped ? cards[currentIndex].back : cards[currentIndex].front}
+                    </p>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2 shrink-0">Click to flip</p>
                 </motion.div>
               </AnimatePresence>
             </div>
