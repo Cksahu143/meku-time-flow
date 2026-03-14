@@ -102,7 +102,9 @@ const Index = () => {
   };
 
   return (
-    <div className="flex h-screen w-full bg-background overflow-hidden">
+    <div className="flex h-screen w-full bg-background overflow-hidden relative">
+      <FloatingBackground />
+      <CursorSparkle />
       <NotificationListener />
       {/* Desktop Sidebar */}
       <div className="hidden md:block flex-shrink-0">
