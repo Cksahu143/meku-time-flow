@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AnimatePresence, motion, type TargetAndTransition } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
+import { CursorSparkle } from '@/components/motion/CursorSparkle';
+import { FloatingBackground } from '@/components/motion/FloatingBackground';
 import { Sidebar } from '@/components/Sidebar';
 import { MobileSidebar } from '@/components/MobileSidebar';
 import { TopHeader } from '@/components/TopHeader';

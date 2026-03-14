@@ -183,6 +183,36 @@ export default {
   			'gradient-shift': {
   				'0%, 100%': { backgroundPosition: '0% 50%' },
   				'50%': { backgroundPosition: '100% 50%' }
+  			},
+  			'aurora-drift': {
+  				'0%, 100%': { transform: 'translateX(-10%) translateY(0) rotate(-2deg)', opacity: '0.4' },
+  				'33%': { transform: 'translateX(5%) translateY(-5%) rotate(1deg)', opacity: '0.7' },
+  				'66%': { transform: 'translateX(-3%) translateY(3%) rotate(-1deg)', opacity: '0.5' }
+  			},
+  			'shimmer-slide': {
+  				'0%': { transform: 'translateX(-100%) skewX(-15deg)' },
+  				'100%': { transform: 'translateX(200%) skewX(-15deg)' }
+  			},
+  			'breathe': {
+  				'0%, 100%': { transform: 'scale(1)', opacity: '0.7' },
+  				'50%': { transform: 'scale(1.05)', opacity: '1' }
+  			},
+  			'levitate': {
+  				'0%, 100%': { transform: 'translateY(0) rotate(0deg)' },
+  				'25%': { transform: 'translateY(-8px) rotate(0.5deg)' },
+  				'75%': { transform: 'translateY(-8px) rotate(-0.5deg)' }
+  			},
+  			'depth-pulse': {
+  				'0%, 100%': { transform: 'perspective(600px) translateZ(0)', boxShadow: 'var(--shadow-md)' },
+  				'50%': { transform: 'perspective(600px) translateZ(10px)', boxShadow: 'var(--shadow-xl)' }
+  			},
+  			'flip-card': {
+  				'0%': { transform: 'perspective(600px) rotateY(0deg)' },
+  				'100%': { transform: 'perspective(600px) rotateY(180deg)' }
+  			},
+  			'glow-ring': {
+  				'0%, 100%': { boxShadow: '0 0 0 0 hsl(var(--primary) / 0.4)' },
+  				'50%': { boxShadow: '0 0 0 8px hsl(var(--primary) / 0)' }
   			}
   		},
   		animation: {
@@ -208,7 +238,14 @@ export default {
   			'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
   			'zoom-in': 'zoom-in 0.3s ease-out',
   			'bounce-subtle': 'bounce-subtle 2s ease-in-out infinite',
-  			'gradient-shift': 'gradient-shift 8s ease infinite'
+  			'gradient-shift': 'gradient-shift 8s ease infinite',
+  			'aurora-drift': 'aurora-drift 12s ease-in-out infinite',
+  			'shimmer-slide': 'shimmer-slide 3s ease-in-out infinite',
+  			'breathe': 'breathe 4s ease-in-out infinite',
+  			'levitate': 'levitate 5s ease-in-out infinite',
+  			'depth-pulse': 'depth-pulse 4s ease-in-out infinite',
+  			'flip-card': 'flip-card 0.6s ease-in-out',
+  			'glow-ring': 'glow-ring 2s ease-in-out infinite'
   		},
   		transitionTimingFunction: {
   			smooth: 'cubic-bezier(0.4, 0, 0.2, 1)',
