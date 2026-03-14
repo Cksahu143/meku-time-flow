@@ -13,29 +13,46 @@ import {
 const TypewriterText = ({ texts, className }: { texts: string[]; className?: string }) => {
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
   const [displayText, setDisplayText] = useState('');
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [phase, setPhase] = useState<'typing' | 'pausing' | 'deleting' | 'waiting'>('typing');
 
   useEffect(() => {
     const currentFullText = texts[currentTextIndex];
-    const speed = isDeleting ? 40 : 80;
 
-    const timer = setTimeout(() => {
-      if (!isDeleting) {
-        setDisplayText(currentFullText.slice(0, displayText.length + 1));
-        if (displayText.length === currentFullText.length) {
-          setTimeout(() => setIsDeleting(true), 2000);
-        }
+    if (phase === 'typing') {
+      if (displayText.length < currentFullText.length) {
+        const timer = setTimeout(() => {
+          setDisplayText(currentFullText.slice(0, displayText.length + 1));
+        }, 80);
+        return () => clearTimeout(timer);
       } else {
-        setDisplayText(currentFullText.slice(0, displayText.length - 1));
-        if (displayText.length === 0) {
-          setIsDeleting(false);
-          setCurrentTextIndex((prev) => (prev + 1) % texts.length);
-        }
+        setPhase('pausing');
       }
-    }, speed);
+    }
 
-    return () => clearTimeout(timer);
-  }, [displayText, isDeleting, currentTextIndex, texts]);
+    if (phase === 'pausing') {
+      const timer = setTimeout(() => setPhase('deleting'), 2000);
+      return () => clearTimeout(timer);
+    }
+
+    if (phase === 'deleting') {
+      if (displayText.length > 0) {
+        const timer = setTimeout(() => {
+          setDisplayText(displayText.slice(0, -1));
+        }, 40);
+        return () => clearTimeout(timer);
+      } else {
+        setPhase('waiting');
+      }
+    }
+
+    if (phase === 'waiting') {
+      const timer = setTimeout(() => {
+        setCurrentTextIndex((prev) => (prev + 1) % texts.length);
+        setPhase('typing');
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [displayText, phase, currentTextIndex, texts]);
 
   return (
     <span className={className}>
