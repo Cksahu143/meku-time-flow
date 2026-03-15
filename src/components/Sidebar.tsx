@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Calendar, Clock, ListTodo, Timer, Moon, Sun, Palette, LogOut,
   MessageSquare, BookOpen, LayoutDashboard, Mic, Lock, Shield,
   Building, Megaphone, UserCheck, BarChart3, Settings2, GraduationCap,
-  BookOpenCheck, ChevronLeft, AlertCircle, Smartphone
+  BookOpenCheck, ChevronLeft, AlertCircle, Smartphone, ChevronDown
 } from 'lucide-react';
 import { ViewType } from '@/types';
 import { cn } from '@/lib/utils';
@@ -22,11 +22,25 @@ interface SidebarProps {
   onToggleCollapse?: () => void;
 }
 
+interface NavSection {
+  id: string;
+  label: string;
+  icon: React.ElementType;
+  items: { id: ViewType; label: string; icon: React.ElementType }[];
+}
+
 export function Sidebar({ currentView, onViewChange, collapsed = false, onToggleCollapse }: SidebarProps) {
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
   const navigate = useNavigate();
   const { canAccessView, hasPermission, userRole, canManageUsers, schoolId } = useRBACContext();
+
+  // Section collapse state
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+
+  const toggleSection = (id: string) => {
+    setCollapsedSections(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   const showRoleManagement = canManageUsers() || hasPermission('can_change_any_role') || userRole === 'platform_admin' || userRole === 'school_admin';
   const showSchoolsManagement = userRole === 'platform_admin' || hasPermission('can_manage_schools') || (userRole === 'school_admin' && schoolId);
@@ -37,16 +51,37 @@ export function Sidebar({ currentView, onViewChange, collapsed = false, onToggle
   const showClassesManagement = userRole === 'platform_admin' || userRole === 'school_admin' || hasPermission('can_manage_classes');
   const schoolsLabel = userRole === 'school_admin' ? 'My School' : 'Schools';
 
-  const coreItems = [
-    { id: 'dashboard' as ViewType, label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'about' as ViewType, label: 'About', icon: AlertCircle },
-    { id: 'timetable' as ViewType, label: 'Timetable', icon: Clock },
-    { id: 'calendar' as ViewType, label: 'Calendar', icon: Calendar },
-    { id: 'todo' as ViewType, label: 'To-Do List', icon: ListTodo },
-    { id: 'pomodoro' as ViewType, label: 'Pomodoro', icon: Timer },
-    { id: 'groups' as ViewType, label: 'Study Chat', icon: MessageSquare },
-    { id: 'resources' as ViewType, label: 'Resources', icon: BookOpen },
-    { id: 'transcribe' as ViewType, label: 'Transcribe', icon: Mic },
+  const sections: NavSection[] = [
+    {
+      id: 'main',
+      label: 'Main',
+      icon: LayoutDashboard,
+      items: [
+        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { id: 'about', label: 'About', icon: AlertCircle },
+      ],
+    },
+    {
+      id: 'productivity',
+      label: 'Productivity',
+      icon: Clock,
+      items: [
+        { id: 'timetable', label: 'Timetable', icon: Clock },
+        { id: 'calendar', label: 'Calendar', icon: Calendar },
+        { id: 'todo', label: 'To-Do List', icon: ListTodo },
+        { id: 'pomodoro', label: 'Pomodoro', icon: Timer },
+      ],
+    },
+    {
+      id: 'collaborate',
+      label: 'Collaborate',
+      icon: MessageSquare,
+      items: [
+        { id: 'groups', label: 'Study Chat', icon: MessageSquare },
+        { id: 'resources', label: 'Resources', icon: BookOpen },
+        { id: 'transcribe', label: 'Transcribe', icon: Mic },
+      ],
+    },
   ];
 
   const adminItems = [
@@ -59,6 +94,15 @@ export function Sidebar({ currentView, onViewChange, collapsed = false, onToggle
     ...(showFeatureToggles ? [{ id: 'feature-toggles' as ViewType, label: 'Features', icon: Settings2 }] : []),
   ];
 
+  if (adminItems.length > 0) {
+    sections.push({
+      id: 'admin',
+      label: 'Administration',
+      icon: Shield,
+      items: adminItems,
+    });
+  }
+
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
@@ -68,7 +112,7 @@ export function Sidebar({ currentView, onViewChange, collapsed = false, onToggle
     }
   };
 
-  const NavItem = ({ item, index }: { item: typeof coreItems[0]; index: number }) => {
+  const NavItem = ({ item, index }: { item: { id: ViewType; label: string; icon: React.ElementType }; index: number }) => {
     const Icon = item.icon;
     const isActive = currentView === item.id;
     const hasAccess = canAccessView(item.id);
@@ -80,14 +124,12 @@ export function Sidebar({ currentView, onViewChange, collapsed = false, onToggle
         className={cn(
           'w-full flex items-center gap-3 rounded-xl transition-all duration-200 relative group',
           collapsed ? 'px-3 py-2.5 justify-center' : 'px-3.5 py-2.5',
-          isActive
-            ? 'text-sidebar-primary-foreground'
-            : 'text-sidebar-muted hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground',
+          isActive ? 'text-sidebar-primary-foreground' : 'text-sidebar-muted hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground',
           !hasAccess && 'opacity-30 cursor-not-allowed'
         )}
         initial={{ opacity: 0, x: -12 }}
         animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: index * 0.025 }}
+        transition={{ delay: index * 0.02 }}
         whileHover={hasAccess && !isActive ? { x: collapsed ? 0 : 4 } : undefined}
         whileTap={hasAccess ? { scale: 0.96 } : undefined}
       >
@@ -108,11 +150,8 @@ export function Sidebar({ currentView, onViewChange, collapsed = false, onToggle
             <Icon className="w-[18px] h-[18px]" />
             {!hasAccess && <Lock className="absolute -top-1 -right-1 h-2.5 w-2.5" />}
           </motion.div>
-          {!collapsed && (
-            <span className="text-sm font-medium truncate">{item.label}</span>
-          )}
+          {!collapsed && <span className="text-sm font-medium truncate">{item.label}</span>}
         </div>
-        {/* Active glow dot */}
         {isActive && !collapsed && (
           <motion.div
             className="absolute right-3 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-sidebar-primary-foreground/80"
@@ -129,9 +168,7 @@ export function Sidebar({ currentView, onViewChange, collapsed = false, onToggle
         <Tooltip key={item.id}>
           <TooltipTrigger asChild>{btn}</TooltipTrigger>
           <TooltipContent side="right" className="text-xs font-medium">
-            {!hasAccess ? (
-              <span className="flex items-center gap-1.5"><Lock className="h-3 w-3" /> No permission</span>
-            ) : item.label}
+            {!hasAccess ? <span className="flex items-center gap-1.5"><Lock className="h-3 w-3" /> No permission</span> : item.label}
           </TooltipContent>
         </Tooltip>
       );
@@ -139,6 +176,8 @@ export function Sidebar({ currentView, onViewChange, collapsed = false, onToggle
 
     return <React.Fragment key={item.id}>{btn}</React.Fragment>;
   };
+
+  let globalIndex = 0;
 
   return (
     <aside className={cn(
@@ -152,10 +191,7 @@ export function Sidebar({ currentView, onViewChange, collapsed = false, onToggle
 
       {/* Logo */}
       <motion.div
-        className={cn(
-          'flex items-center gap-3 flex-shrink-0 h-16 relative z-10',
-          collapsed ? 'px-3 justify-center' : 'px-5'
-        )}
+        className={cn('flex items-center gap-3 flex-shrink-0 h-16 relative z-10', collapsed ? 'px-3 justify-center' : 'px-5')}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       >
@@ -166,11 +202,7 @@ export function Sidebar({ currentView, onViewChange, collapsed = false, onToggle
           whileTap={{ scale: 0.95 }}
         >
           <BookOpenCheck className="h-5 w-5 text-primary-foreground" />
-          {/* Shimmer on logo */}
-          <motion.div
-            className="absolute inset-0 rounded-xl overflow-hidden"
-            initial={false}
-          >
+          <motion.div className="absolute inset-0 rounded-xl overflow-hidden" initial={false}>
             <motion.div
               className="absolute inset-0"
               style={{ background: 'linear-gradient(135deg, transparent 40%, hsl(0 0% 100% / 0.2) 50%, transparent 60%)' }}
@@ -181,15 +213,8 @@ export function Sidebar({ currentView, onViewChange, collapsed = false, onToggle
         </motion.div>
         <AnimatePresence>
           {!collapsed && (
-            <motion.div
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: 'auto' }}
-              exit={{ opacity: 0, width: 0 }}
-              className="overflow-hidden"
-            >
-              <h1 className="font-display text-lg font-bold text-sidebar-foreground whitespace-nowrap tracking-tight">
-                EDAS
-              </h1>
+            <motion.div initial={{ opacity: 0, width: 0 }} animate={{ opacity: 1, width: 'auto' }} exit={{ opacity: 0, width: 0 }} className="overflow-hidden">
+              <h1 className="font-display text-lg font-bold text-sidebar-foreground whitespace-nowrap tracking-tight">EDAS</h1>
               <p className="text-[10px] text-sidebar-muted font-medium -mt-0.5 tracking-wider uppercase">Education Assist</p>
             </motion.div>
           )}
@@ -199,27 +224,60 @@ export function Sidebar({ currentView, onViewChange, collapsed = false, onToggle
       {/* Divider */}
       <div className="mx-4 h-px bg-gradient-to-r from-transparent via-sidebar-border/60 to-transparent" />
 
-      {/* Navigation */}
-      <nav className={cn('flex-1 py-3 space-y-0.5 overflow-y-auto scrollbar-none relative z-10', collapsed ? 'px-2' : 'px-3')}>
-        {coreItems.map((item, index) => (
-          <NavItem key={item.id} item={item} index={index} />
-        ))}
-        
-        {adminItems.length > 0 && (
-          <>
-            <div className={cn('pt-3 pb-1', collapsed ? 'px-1' : 'px-1')}>
-              <div className="h-px bg-gradient-to-r from-transparent via-sidebar-border/60 to-transparent" />
-              {!collapsed && (
-                <p className="text-[9px] uppercase tracking-[0.15em] text-sidebar-muted font-semibold mt-3 mb-1 px-2">
-                  Administration
-                </p>
+      {/* Navigation with collapsible sections */}
+      <nav className={cn('flex-1 py-3 overflow-y-auto scrollbar-none relative z-10', collapsed ? 'px-2' : 'px-3')}>
+        {sections.map((section) => {
+          const isSectionCollapsed = collapsedSections[section.id] ?? false;
+          const sectionHasActive = section.items.some(item => currentView === item.id);
+          const startIndex = globalIndex;
+          globalIndex += section.items.length;
+
+          return (
+            <div key={section.id} className="mb-1">
+              {/* Section header button */}
+              {!collapsed ? (
+                <motion.button
+                  onClick={() => toggleSection(section.id)}
+                  className={cn(
+                    'w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-[10px] uppercase tracking-[0.15em] font-semibold transition-colors group/section',
+                    sectionHasActive ? 'text-sidebar-foreground/80' : 'text-sidebar-muted hover:text-sidebar-foreground/70',
+                  )}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <span className="flex items-center gap-2">
+                    <section.icon className="w-3 h-3" />
+                    {section.label}
+                  </span>
+                  <motion.div
+                    animate={{ rotate: isSectionCollapsed ? -90 : 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <ChevronDown className="w-3 h-3 opacity-50 group-hover/section:opacity-100 transition-opacity" />
+                  </motion.div>
+                </motion.button>
+              ) : (
+                <div className="h-px bg-gradient-to-r from-transparent via-sidebar-border/40 to-transparent my-2" />
               )}
+
+              {/* Section items */}
+              <AnimatePresence initial={false}>
+                {(!isSectionCollapsed || collapsed) && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
+                    className="overflow-hidden space-y-0.5"
+                  >
+                    {section.items.map((item, i) => (
+                      <NavItem key={item.id} item={item} index={startIndex + i} />
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-            {adminItems.map((item, index) => (
-              <NavItem key={item.id} item={item} index={coreItems.length + index} />
-            ))}
-          </>
-        )}
+          );
+        })}
       </nav>
 
       {/* Footer */}
@@ -228,7 +286,7 @@ export function Sidebar({ currentView, onViewChange, collapsed = false, onToggle
         
         {/* Theme toggles */}
         {!collapsed && (
-        <div className="grid grid-cols-4 gap-0.5 p-1 bg-sidebar-accent/40 rounded-xl mb-3 backdrop-blur-sm">
+          <div className="grid grid-cols-4 gap-0.5 p-1 bg-sidebar-accent/40 rounded-xl mb-3 backdrop-blur-sm">
             {[
               { theme: 'light' as const, icon: Sun, label: 'Light' },
               { theme: 'dark' as const, icon: Moon, label: 'Dark' },
@@ -240,9 +298,7 @@ export function Sidebar({ currentView, onViewChange, collapsed = false, onToggle
                 onClick={() => setTheme(t)}
                 className={cn(
                   'flex items-center justify-center gap-1 h-7 rounded-lg text-[10px] font-medium transition-all relative',
-                  theme === t 
-                    ? 'text-sidebar-primary-foreground' 
-                    : 'text-sidebar-muted hover:text-sidebar-foreground'
+                  theme === t ? 'text-sidebar-primary-foreground' : 'text-sidebar-muted hover:text-sidebar-foreground'
                 )}
                 whileTap={{ scale: 0.95 }}
               >
