@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { RoleBadge } from '@/components/RoleBadge';
 import { useRBACContext } from '@/contexts/RBACContext';
 import { MyPermissionsPanel } from '@/components/MyPermissionsPanel';
+import { GlowOrb } from '@/components/motion/GlowOrb';
 
 interface StatCardProps {
   title: string;
