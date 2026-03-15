@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { RoleBadge } from '@/components/RoleBadge';
 import { useRBACContext } from '@/contexts/RBACContext';
 import { MyPermissionsPanel } from '@/components/MyPermissionsPanel';
+import { GlowOrb } from '@/components/motion/GlowOrb';
 
 interface StatCardProps {
   title: string;
@@ -34,11 +35,44 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, gradient,
       initial={{ opacity: 0, y: 20, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ delay, duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
-      whileHover={{ y: -4, transition: { duration: 0.2 } }}
+      whileHover={{ y: -6, transition: { duration: 0.2 } }}
+      className="relative"
     >
-      <Card className="card-premium overflow-hidden group">
-        <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-[0.04] transition-opacity duration-700`} />
-        
+      {/* Animated gradient border */}
+      <div className="absolute -inset-[1px] rounded-2xl overflow-hidden opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+        <motion.div
+          className="absolute inset-0"
+          style={{
+            background: `conic-gradient(from 0deg, hsl(var(--primary)), hsl(var(--accent)), hsl(var(--success)), hsl(var(--primary)))`,
+          }}
+          animate={{ rotate: 360 }}
+          transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
+        />
+      </div>
+
+      <Card className="card-premium overflow-hidden group relative">
+        {/* Glow orb ambient effect */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <GlowOrb color="var(--primary)" size={120} x="80%" y="20%" delay={delay} blur={40} />
+          <GlowOrb color="var(--accent)" size={80} x="10%" y="80%" delay={delay + 1} blur={30} />
+        </div>
+
+        {/* Hover gradient fill */}
+        <motion.div
+          className={`absolute inset-0 bg-gradient-to-br ${gradient}`}
+          initial={{ opacity: 0 }}
+          whileHover={{ opacity: 0.06 }}
+          transition={{ duration: 0.5 }}
+        />
+
+        {/* Corner shimmer accent */}
+        <motion.div
+          className="absolute -top-12 -right-12 w-32 h-32 rounded-full pointer-events-none"
+          style={{ background: `radial-gradient(circle, hsl(var(--primary) / 0.08) 0%, transparent 70%)` }}
+          animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0.6, 0.3] }}
+          transition={{ duration: 4, repeat: Infinity, delay }}
+        />
+
         <CardContent className="p-5 relative z-10">
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
@@ -68,11 +102,18 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, gradient,
               )}
             </div>
             <motion.div 
-              className={`p-2.5 rounded-xl bg-gradient-to-br ${gradient} shadow-md`}
+              className={`p-2.5 rounded-xl bg-gradient-to-br ${gradient} shadow-md relative overflow-hidden`}
               whileHover={{ scale: 1.15, rotate: 8 }}
               transition={{ type: 'spring', stiffness: 300 }}
             >
-              <Icon className="h-5 w-5 text-primary-foreground" />
+              <Icon className="h-5 w-5 text-primary-foreground relative z-10" />
+              {/* Icon shimmer */}
+              <motion.div
+                className="absolute inset-0"
+                style={{ background: 'linear-gradient(135deg, transparent 30%, hsl(0 0% 100% / 0.25) 50%, transparent 70%)' }}
+                animate={{ x: ['-100%', '200%'] }}
+                transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 3, delay }}
+              />
             </motion.div>
           </div>
           
@@ -101,6 +142,16 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, gradient,
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: (delay || 0) + 0.8, duration: 0.6 }}
+              />
+              {/* Animated dot at end of sparkline */}
+              <motion.circle
+                cx="100"
+                cy="6"
+                r="3"
+                fill="hsl(var(--primary))"
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: [0.5, 1, 0.5], scale: [0.8, 1.2, 0.8] }}
+                transition={{ delay: (delay || 0) + 1.2, duration: 2, repeat: Infinity }}
               />
             </svg>
           </div>
