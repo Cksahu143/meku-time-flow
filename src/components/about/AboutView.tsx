@@ -9,6 +9,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { QATestingSection } from './QATestingSection';
 
 interface AboutViewProps {
   onNavigate?: (view: string) => void;
@@ -443,6 +444,9 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
           </div>
         </div>
       </motion.div>
+
+      {/* QA Testing Document — Platform Admin Only */}
+      <QATestingSection />
 
       {/* CTA */}
       {onNavigate && (
