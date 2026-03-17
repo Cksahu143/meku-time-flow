@@ -34,6 +34,76 @@ const VOICE_LANGUAGES = [
 
 type AudioMode = 'solo' | 'podcast';
 
+// ─── Voice scoring system for natural-sounding voice selection ──────────────
+// Rank voices by how natural they sound, preferring premium/enhanced voices
+
+const FEMALE_INDICATORS = [
+  'female', 'woman', 'samantha', 'karen', 'victoria', 'fiona', 'moira',
+  'tessa', 'alex', 'allison', 'ava', 'susan', 'zira', 'hazel', 'linda',
+  'catherine', 'kate', 'serena', 'veena', 'lekha', 'meijia', 'tingting',
+  'yuna', 'kyoko', 'ellen', 'nora', 'sara', 'monica', 'paulina', 'joana',
+  'luciana', 'helena', 'amelie', 'alice', 'anna', 'milena', 'carmit',
+  'damayanti', 'kanya', 'lana', 'laura', 'lesya', 'linh', 'mariska',
+  'miren', 'montserrat', 'reed', 'rishi', 'sandy', 'shelley', 'sinji',
+  'satu', 'sin-ji', 'yelda', 'zosia',
+];
+
+const MALE_INDICATORS = [
+  'male', 'man', 'daniel', 'james', 'david', 'tom', 'thomas', 'aaron',
+  'albert', 'arthur', 'bruce', 'fred', 'junior', 'jorge', 'juan', 'diego',
+  'luca', 'oliver', 'oskar', 'ralph', 'eddy', 'evan', 'grandpa', 'grandma',
+  'lee', 'gordon', 'mark', 'neel', 'rishi', 'trinoids', 'rocko', 'reed',
+];
+
+// Premium/natural voice keywords (score higher)
+const PREMIUM_INDICATORS = [
+  'premium', 'enhanced', 'natural', 'neural', 'wavenet', 'online',
+  'compact', 'eloquence',
+];
+
+function scoreVoice(voice: SpeechSynthesisVoice, preferGender: 'female' | 'male' | 'any'): number {
+  const name = voice.name.toLowerCase();
+  let score = 0;
+
+  // Prefer non-local / premium voices
+  if (!voice.localService) score += 20;
+  for (const kw of PREMIUM_INDICATORS) {
+    if (name.includes(kw)) { score += 15; break; }
+  }
+
+  // Gender preference
+  if (preferGender === 'female') {
+    if (FEMALE_INDICATORS.some(k => name.includes(k))) score += 30;
+    if (MALE_INDICATORS.some(k => name.includes(k))) score -= 20;
+  } else if (preferGender === 'male') {
+    if (MALE_INDICATORS.some(k => name.includes(k))) score += 30;
+    if (FEMALE_INDICATORS.some(k => name.includes(k))) score -= 20;
+  }
+
+  // Prefer Google / Microsoft voices (generally higher quality)
+  if (name.includes('google')) score += 10;
+  if (name.includes('microsoft')) score += 8;
+
+  return score;
+}
+
+function pickBestVoice(
+  voices: SpeechSynthesisVoice[],
+  lang: string,
+  gender: 'female' | 'male' | 'any',
+  exclude?: SpeechSynthesisVoice | null,
+): SpeechSynthesisVoice | null {
+  const langCode = lang === 'or' ? 'od' : lang;
+  const langVoices = voices.filter(v => v.lang.startsWith(lang) || v.lang.startsWith(langCode));
+  const pool = langVoices.length > 0 ? langVoices : voices.filter(v => v.lang.startsWith('en'));
+
+  const candidates = exclude ? pool.filter(v => v !== exclude) : pool;
+  if (candidates.length === 0) return pool[0] || voices[0] || null;
+
+  candidates.sort((a, b) => scoreVoice(b, gender) - scoreVoice(a, gender));
+  return candidates[0];
+}
+
 export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gradeLevel, fileName }: AudioOverviewDialogProps) => {
   const [summary, setSummary] = useState('');
   const [loading, setLoading] = useState(false);
@@ -47,12 +117,15 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
   const [totalChunks, setTotalChunks] = useState(0);
   const [mode, setMode] = useState<AudioMode>('podcast');
   const [activeHost, setActiveHost] = useState<'A' | 'B' | null>(null);
-  const chunksRef = useRef<string[]>([]);
-  const currentChunkRef = useRef(0);
+  const utteranceQueue = useRef<SpeechSynthesisUtterance[]>([]);
+  const currentUtteranceIndex = useRef(0);
   const isPlayingRef = useRef(false);
 
   useEffect(() => {
-    const loadVoices = () => setAvailableVoices(speechSynthesis.getVoices());
+    const loadVoices = () => {
+      const v = speechSynthesis.getVoices();
+      if (v.length > 0) setAvailableVoices(v);
+    };
     loadVoices();
     speechSynthesis.onvoiceschanged = loadVoices;
     return () => { speechSynthesis.onvoiceschanged = null; };
@@ -131,57 +204,33 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
     setLoading(false);
   };
 
-  // Find two distinct voices for podcast mode
-  const findVoices = useCallback((): { voiceA: SpeechSynthesisVoice | null; voiceB: SpeechSynthesisVoice | null } => {
-    const langCode = lang === 'or' ? 'od' : lang;
-    const langVoices = availableVoices.filter(v => v.lang.startsWith(lang) || v.lang.startsWith(langCode));
-    const enVoices = availableVoices.filter(v => v.lang.startsWith('en'));
-    const pool = langVoices.length >= 2 ? langVoices : enVoices.length >= 2 ? enVoices : availableVoices;
-
-    // Try to find male/female pair or at least two different voices
-    const voiceA = pool.find(v => v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('samantha') || v.name.toLowerCase().includes('karen') || v.name.toLowerCase().includes('google')) || pool[0] || null;
-    const voiceB = pool.find(v => v !== voiceA && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('daniel') || v.name.toLowerCase().includes('james') || v.name.toLowerCase().includes('google'))) || pool.find(v => v !== voiceA) || voiceA;
-    return { voiceA, voiceB };
-  }, [lang, availableVoices]);
-
-  const findSoloVoice = useCallback(() => {
-    const langCode = lang === 'or' ? 'od' : lang;
-    const match = availableVoices.find(v => v.lang.startsWith(lang) || v.lang.startsWith(langCode));
-    return match || availableVoices.find(v => v.lang.startsWith('en')) || availableVoices[0];
-  }, [lang, availableVoices]);
-
   // Parse podcast script into segments with host labels
   const parsePodcastSegments = (text: string): Array<{ host: 'A' | 'B'; text: string }> => {
     const segments: Array<{ host: 'A' | 'B'; text: string }> = [];
-    // Match patterns like [Host A], [Host B], **Host A:**, Host A:, etc.
     const regex = /(?:\[Host\s*(A|B)\]|\*\*Host\s*(A|B):\*\*|^Host\s*(A|B):)/gmi;
-    let lastIndex = 0;
-    let currentHost: 'A' | 'B' = 'A';
+    const rawSegments: Array<{ host: 'A' | 'B'; start: number; matchEnd: number }> = [];
     let match;
 
-    const rawSegments: Array<{ host: 'A' | 'B'; start: number }> = [];
     while ((match = regex.exec(text)) !== null) {
       const host = (match[1] || match[2] || match[3]).toUpperCase() as 'A' | 'B';
-      rawSegments.push({ host, start: match.index + match[0].length });
+      rawSegments.push({ host, start: match.index, matchEnd: match.index + match[0].length });
     }
 
     if (rawSegments.length === 0) {
-      // No host markers found — split by sentences, alternating hosts
+      // No host markers — alternate by sentence pairs
       const sentences = text.match(/[^.!?।]+[.!?।]+[\s]*/g) || [text];
-      let groupSize = 2;
       let host: 'A' | 'B' = 'A';
-      for (let i = 0; i < sentences.length; i += groupSize) {
-        const chunk = sentences.slice(i, i + groupSize).join('').trim();
+      for (let i = 0; i < sentences.length; i += 2) {
+        const chunk = sentences.slice(i, i + 2).join('').trim();
         if (chunk) segments.push({ host, text: chunk });
         host = host === 'A' ? 'B' : 'A';
       }
       return segments;
     }
 
-    // Extract text between host markers
     for (let i = 0; i < rawSegments.length; i++) {
-      const start = rawSegments[i].start;
-      const end = i + 1 < rawSegments.length ? text.lastIndexOf('[', rawSegments[i + 1].start) !== -1 ? text.lastIndexOf('[', rawSegments[i + 1].start) : rawSegments[i + 1].start - 20 : text.length;
+      const start = rawSegments[i].matchEnd;
+      const end = i + 1 < rawSegments.length ? rawSegments[i + 1].start : text.length;
       const segText = text.slice(start, end).replace(/^\s*[:—\-]\s*/, '').trim();
       if (segText) segments.push({ host: rawSegments[i].host, text: segText });
     }
@@ -189,21 +238,41 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
     return segments.length > 0 ? segments : [{ host: 'A', text }];
   };
 
-  const splitIntoChunks = (text: string): string[] => {
-    const sentences = text.match(/[^.!?।]+[.!?।]+[\s]*/g) || [text];
-    const chunks: string[] = [];
+  // Split text into natural sentence-based chunks (not too long, not too short)
+  const splitIntoSentences = (text: string): string[] => {
+    // Split on sentence boundaries, keeping the punctuation
+    const raw = text.match(/[^.!?।]+[.!?।]+[\s]*/g) || [text];
+    // Merge very short sentences together for smoother speech
+    const merged: string[] = [];
     let current = '';
-    for (const sentence of sentences) {
-      if ((current + sentence).length > 200) {
-        if (current) chunks.push(current.trim());
-        current = sentence;
+    for (const s of raw) {
+      if ((current + s).length > 250) {
+        if (current) merged.push(current.trim());
+        current = s;
       } else {
-        current += sentence;
+        current += s;
       }
     }
-    if (current.trim()) chunks.push(current.trim());
-    return chunks;
+    if (current.trim()) merged.push(current.trim());
+    return merged;
   };
+
+  // ─── Sequential utterance playback (one at a time for better quality) ─────
+  const playNextUtterance = useCallback(() => {
+    if (!isPlayingRef.current) return;
+    const idx = currentUtteranceIndex.current;
+    const queue = utteranceQueue.current;
+    if (idx >= queue.length) {
+      // Finished
+      isPlayingRef.current = false;
+      setPlaying(false);
+      setPaused(false);
+      setProgress(100);
+      setActiveHost(null);
+      return;
+    }
+    speechSynthesis.speak(queue[idx]);
+  }, []);
 
   const speak = () => {
     if (paused) {
@@ -219,92 +288,112 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
     setPlaying(true);
     setPaused(false);
     setProgress(0);
+    currentUtteranceIndex.current = 0;
 
     if (mode === 'podcast') {
-      speakPodcast();
+      buildPodcastQueue();
     } else {
-      speakSolo();
+      buildSoloQueue();
     }
+
+    // Start playing first utterance
+    playNextUtterance();
   };
 
-  const speakSolo = () => {
-    const chunks = splitIntoChunks(summary);
-    chunksRef.current = chunks;
-    setTotalChunks(chunks.length);
-    const voice = findSoloVoice();
+  const buildSoloQueue = () => {
+    const sentences = splitIntoSentences(summary);
+    const voice = pickBestVoice(availableVoices, lang, 'female');
+    const queue: SpeechSynthesisUtterance[] = [];
 
-    requestAnimationFrame(() => {
-      chunks.forEach((text, index) => {
-        const utterance = new SpeechSynthesisUtterance(text);
-        if (voice) utterance.voice = voice;
-        utterance.rate = rate[0];
-        utterance.pitch = 1;
-        utterance.onstart = () => {
-          setCurrentChunk(index);
-          setProgress((index / chunks.length) * 100);
-          setActiveHost(null);
-        };
-        utterance.onend = () => {
-          if (!isPlayingRef.current) return;
-          if (index === chunks.length - 1) {
-            isPlayingRef.current = false;
-            setPlaying(false);
-            setPaused(false);
-            setProgress(100);
-          }
-        };
-        utterance.onerror = (e) => {
-          if (e.error === 'interrupted' || e.error === 'canceled') return;
-        };
-        speechSynthesis.speak(utterance);
-      });
+    sentences.forEach((text, index) => {
+      const utt = new SpeechSynthesisUtterance(text);
+      if (voice) utt.voice = voice;
+      utt.rate = Math.max(0.8, rate[0] * 0.95); // Slightly slower for naturalness
+      utt.pitch = 1.0;
+      utt.volume = 1.0;
+
+      utt.onstart = () => {
+        setCurrentChunk(index);
+        setProgress((index / sentences.length) * 100);
+        setActiveHost(null);
+      };
+      utt.onend = () => {
+        if (!isPlayingRef.current) return;
+        currentUtteranceIndex.current = index + 1;
+        // Small pause between sentences for naturalness
+        setTimeout(() => playNextUtterance(), 120);
+      };
+      utt.onerror = (e) => {
+        if (e.error === 'interrupted' || e.error === 'canceled') return;
+        // Try next
+        currentUtteranceIndex.current = index + 1;
+        playNextUtterance();
+      };
+
+      queue.push(utt);
     });
+
+    utteranceQueue.current = queue;
+    setTotalChunks(sentences.length);
   };
 
-  const speakPodcast = () => {
+  const buildPodcastQueue = () => {
     const segments = parsePodcastSegments(summary);
     const allChunks: Array<{ host: 'A' | 'B'; text: string }> = [];
 
-    // Break each segment into smaller chunks for smooth playback
     segments.forEach(seg => {
-      const chunks = splitIntoChunks(seg.text);
-      chunks.forEach(c => allChunks.push({ host: seg.host, text: c }));
+      const sentences = splitIntoSentences(seg.text);
+      sentences.forEach(s => allChunks.push({ host: seg.host, text: s }));
     });
 
-    chunksRef.current = allChunks.map(c => c.text);
+    // Pick distinct male + female voices
+    const femaleVoice = pickBestVoice(availableVoices, lang, 'female');
+    const maleVoice = pickBestVoice(availableVoices, lang, 'male', femaleVoice);
+
+    const queue: SpeechSynthesisUtterance[] = [];
+
+    allChunks.forEach((chunk, index) => {
+      const utt = new SpeechSynthesisUtterance(chunk.text);
+      const voice = chunk.host === 'A' ? femaleVoice : maleVoice;
+      if (voice) utt.voice = voice;
+
+      // Distinct but natural pitch differentiation
+      if (chunk.host === 'A') {
+        utt.pitch = 1.08; // Slightly higher for female host
+        utt.rate = Math.max(0.8, rate[0] * 0.93);
+      } else {
+        utt.pitch = 0.88; // Noticeably lower for male host
+        utt.rate = Math.max(0.8, rate[0] * 0.97);
+      }
+      utt.volume = 1.0;
+
+      utt.onstart = () => {
+        setCurrentChunk(index);
+        setProgress((index / allChunks.length) * 100);
+        setActiveHost(chunk.host);
+      };
+      utt.onend = () => {
+        if (!isPlayingRef.current) return;
+        currentUtteranceIndex.current = index + 1;
+
+        // Determine pause duration: longer between host switches, shorter within same host
+        const nextChunk = allChunks[index + 1];
+        const isSwitching = nextChunk && nextChunk.host !== chunk.host;
+        const pauseMs = isSwitching ? 350 : 100;
+
+        setTimeout(() => playNextUtterance(), pauseMs);
+      };
+      utt.onerror = (e) => {
+        if (e.error === 'interrupted' || e.error === 'canceled') return;
+        currentUtteranceIndex.current = index + 1;
+        playNextUtterance();
+      };
+
+      queue.push(utt);
+    });
+
+    utteranceQueue.current = queue;
     setTotalChunks(allChunks.length);
-
-    const { voiceA, voiceB } = findVoices();
-
-    requestAnimationFrame(() => {
-      allChunks.forEach((chunk, index) => {
-        const utterance = new SpeechSynthesisUtterance(chunk.text);
-        const voice = chunk.host === 'A' ? voiceA : voiceB;
-        if (voice) utterance.voice = voice;
-        utterance.rate = rate[0];
-        utterance.pitch = chunk.host === 'A' ? 1.05 : 0.92;
-
-        utterance.onstart = () => {
-          setCurrentChunk(index);
-          setProgress((index / allChunks.length) * 100);
-          setActiveHost(chunk.host);
-        };
-        utterance.onend = () => {
-          if (!isPlayingRef.current) return;
-          if (index === allChunks.length - 1) {
-            isPlayingRef.current = false;
-            setPlaying(false);
-            setPaused(false);
-            setProgress(100);
-            setActiveHost(null);
-          }
-        };
-        utterance.onerror = (e) => {
-          if (e.error === 'interrupted' || e.error === 'canceled') return;
-        };
-        speechSynthesis.speak(utterance);
-      });
-    });
   };
 
   const pause = () => {
@@ -317,6 +406,8 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
   const stopPlayback = () => {
     speechSynthesis.cancel();
     isPlayingRef.current = false;
+    utteranceQueue.current = [];
+    currentUtteranceIndex.current = 0;
     setPlaying(false);
     setPaused(false);
     setProgress(0);
@@ -334,11 +425,14 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
     stopPlayback();
     setSummary('');
     setMode(newMode);
-    // Will regenerate on next effect cycle
     setTimeout(() => generateSummary(), 100);
   };
 
   const estimatedMinutes = summary ? Math.max(1, Math.round((summary.length / 15 / 60) / rate[0])) : 0;
+
+  // Show which voices are selected for debugging / user info
+  const femaleVoice = pickBestVoice(availableVoices, lang, 'female');
+  const maleVoice = pickBestVoice(availableVoices, lang, 'male', femaleVoice);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -408,16 +502,28 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
             </div>
           </div>
 
+          {/* Voice info badge */}
+          {mode === 'podcast' && femaleVoice && maleVoice && (
+            <div className="flex gap-2 flex-wrap">
+              <Badge variant="secondary" className="text-[10px] gap-1">
+                🎙️ Host A: {femaleVoice.name.split(' ').slice(0, 2).join(' ')}
+              </Badge>
+              <Badge variant="outline" className="text-[10px] gap-1">
+                🎤 Host B: {maleVoice.name.split(' ').slice(0, 2).join(' ')}
+              </Badge>
+            </div>
+          )}
+
           {/* Host indicators for podcast mode */}
           {mode === 'podcast' && (playing || paused) && (
             <div className="flex gap-3 justify-center">
               <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${activeHost === 'A' ? 'bg-primary text-primary-foreground scale-105 shadow-md' : 'bg-muted text-muted-foreground'}`}>
                 <div className={`h-2 w-2 rounded-full ${activeHost === 'A' ? 'bg-primary-foreground animate-pulse' : 'bg-muted-foreground/50'}`} />
-                Host A
+                Host A (♀)
               </div>
               <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${activeHost === 'B' ? 'bg-accent text-accent-foreground scale-105 shadow-md' : 'bg-muted text-muted-foreground'}`}>
                 <div className={`h-2 w-2 rounded-full ${activeHost === 'B' ? 'bg-accent-foreground animate-pulse' : 'bg-muted-foreground/50'}`} />
-                Host B
+                Host B (♂)
               </div>
             </div>
           )}
