@@ -445,6 +445,9 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
         </div>
       </motion.div>
 
+      {/* QA Testing Document — Platform Admin Only */}
+      <QATestingSection />
+
       {/* CTA */}
       {onNavigate && (
         <motion.div
