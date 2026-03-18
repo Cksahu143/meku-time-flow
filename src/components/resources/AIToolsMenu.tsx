@@ -147,6 +147,9 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
           <DropdownMenuItem onClick={() => openTool('mindmap')} className="gap-2">
             <GitBranch className="h-4 w-4" /> Mind Map
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => openTool('report')} className="gap-2">
+            <BarChart3 className="h-4 w-4" /> 📊 AI Report
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => openTool('audio')} className="gap-2">
             <Volume2 className="h-4 w-4" /> 🎙️ Deep Dive Podcast
