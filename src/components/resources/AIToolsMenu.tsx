@@ -89,7 +89,7 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
     fetchGrade();
   }, []);
 
-  const openTool = (tool: 'coco' | 'flashcards' | 'slides' | 'quiz' | 'audio' | 'mindmap') => {
+  const openTool = (tool: 'coco' | 'flashcards' | 'slides' | 'quiz' | 'audio' | 'mindmap' | 'report') => {
     if (!gradeLoaded) return;
     if (!gradeLevel) {
       setPendingTool(tool);
@@ -107,6 +107,7 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
       case 'quiz': setShowQuiz(true); break;
       case 'audio': setShowAudio(true); break;
       case 'mindmap': setShowMindMap(true); break;
+      case 'report': setShowReport(true); break;
     }
   };
 
