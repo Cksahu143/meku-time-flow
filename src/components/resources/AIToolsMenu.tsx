@@ -230,6 +230,14 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
         gradeLevel={gradeLevel || undefined}
         fileName={resource.file_name || undefined}
       />
+      <ReportDialog
+        open={showReport}
+        onOpenChange={setShowReport}
+        resource={resource}
+        content={resourceContent}
+        gradeLevel={gradeLevel || undefined}
+        fileName={resource.file_name || undefined}
+      />
     </>
   );
 };

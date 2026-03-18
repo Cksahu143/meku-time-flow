@@ -338,9 +338,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Students" value={stats.students} icon={Users} gradient="from-primary to-primary-glow" trend="↑ 12% this week" trendUp delay={0.1} />
-        <StatCard title="Assignments" value={stats.tasks} icon={CheckSquare} gradient="from-success to-success/80" trend="↑ 8% this month" trendUp delay={0.15} />
-        <StatCard title="Attendance Rate" value={stats.attendance} icon={GraduationCap} gradient="from-accent to-accent-glow" suffix="%" delay={0.2} />
+        <StatCard title="Resources" value={stats.students} icon={BookOpen} gradient="from-primary to-primary-glow" delay={0.1} />
+        <StatCard title="Exams" value={stats.tasks} icon={CheckSquare} gradient="from-success to-success/80" delay={0.15} />
+        <StatCard title="Timetables" value={stats.attendance} icon={GraduationCap} gradient="from-accent to-accent-glow" delay={0.2} />
         <StatCard title="Active Groups" value={stats.groups} icon={MessageSquare} gradient="from-primary-glow to-primary" delay={0.25} />
       </div>
 

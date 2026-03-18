@@ -1133,6 +1133,100 @@ Resource:\n${resourceContext}`,
           },
         },
       },
+      report: {
+        systemPrompt: `You are an expert educational analyst creating a comprehensive AI-powered study performance report for a ${gradeLevelStr} student.
+
+${MULTI_LANGUAGE_INSTRUCTION}
+
+STUDENT LEVEL: ${gradeLevelStr}
+${difficultyGuide}
+
+Analyze the resource content thoroughly and generate a detailed performance assessment report. Evaluate the content's complexity, coverage, and exam-relevance. Generate realistic scores based on what a typical ${gradeLevelStr} student would need to master.
+
+RULES:
+- Generate a comprehensive report with numeric scores and metrics
+- Break down the content into 5-8 distinct topics/concepts
+- For each topic, assess difficulty and assign realistic scores
+- Generate 5-7 readiness metrics (Conceptual Understanding, Formula Mastery, Application Skills, Problem-Solving, Exam Technique, Time Management, Critical Thinking)
+- Each readiness metric value should be 0-100
+- Provide actionable strengths, weaknesses, and recommendations
+- Create a prioritized study plan with time estimates
+- Overall score should reflect realistic preparedness (40-95 range)
+- Status for each topic must be one of: "mastered", "progressing", "needs_work"
+- Priority for study plan items must be one of: "high", "medium", "low"
+- Be specific and actionable — no generic advice
+
+Resource:\n${resourceContext}`,
+        tool: {
+          type: "function",
+          function: {
+            name: "generate_report",
+            description: "Generate a comprehensive study performance report with metrics and analysis",
+            parameters: {
+              type: "object",
+              properties: {
+                title: { type: "string", description: "Report title" },
+                summary: { type: "string", description: "2-3 sentence executive summary" },
+                overallScore: { type: "number", description: "Overall score 0-100" },
+                overallGrade: { type: "string", description: "Letter grade (A+, A, B+, B, C+, C, D, F)" },
+                topicBreakdown: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      topic: { type: "string" },
+                      score: { type: "number" },
+                      maxScore: { type: "number" },
+                      difficulty: { type: "string", enum: ["easy", "medium", "hard"] },
+                      status: { type: "string", enum: ["mastered", "progressing", "needs_work"] },
+                    },
+                    required: ["topic", "score", "maxScore", "difficulty", "status"],
+                    additionalProperties: false,
+                  },
+                },
+                strengthsWeaknesses: {
+                  type: "object",
+                  properties: {
+                    strengths: { type: "array", items: { type: "string" } },
+                    weaknesses: { type: "array", items: { type: "string" } },
+                    recommendations: { type: "array", items: { type: "string" } },
+                  },
+                  required: ["strengths", "weaknesses", "recommendations"],
+                  additionalProperties: false,
+                },
+                readinessMetrics: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      metric: { type: "string" },
+                      value: { type: "number" },
+                    },
+                    required: ["metric", "value"],
+                    additionalProperties: false,
+                  },
+                },
+                studyPlan: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      priority: { type: "string", enum: ["high", "medium", "low"] },
+                      topic: { type: "string" },
+                      action: { type: "string" },
+                      timeEstimate: { type: "string" },
+                    },
+                    required: ["priority", "topic", "action", "timeEstimate"],
+                    additionalProperties: false,
+                  },
+                },
+              },
+              required: ["title", "summary", "overallScore", "overallGrade", "topicBreakdown", "strengthsWeaknesses", "readinessMetrics", "studyPlan"],
+              additionalProperties: false,
+            },
+          },
+        },
+      },
     };
 
     const config = toolConfigs[effectiveType];
