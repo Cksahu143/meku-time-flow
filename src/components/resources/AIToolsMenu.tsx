@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bot, Layers, MessageSquareText, BrainCircuit, Sparkles, Volume2, GitBranch } from 'lucide-react';
+import { Bot, Layers, MessageSquareText, BrainCircuit, Sparkles, Volume2, GitBranch, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
