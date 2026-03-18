@@ -189,17 +189,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
       if (profile) setUserName(profile.display_name || profile.username || 'Student');
 
-      const [examsResult, groupsResult, resourcesResult, todoTasks] = await Promise.all([
+      const [examsResult, groupsResult, resourcesResult, timetablesResult] = await Promise.all([
         supabase.from('exams').select('id', { count: 'exact' }).eq('user_id', session.user.id),
         supabase.from('group_members').select('id', { count: 'exact' }).eq('user_id', session.user.id),
         supabase.from('resources').select('id', { count: 'exact' }).eq('user_id', session.user.id),
-        supabase.from('resources').select('is_favorite').eq('user_id', session.user.id),
+        supabase.from('timetables').select('id', { count: 'exact' }).eq('user_id', session.user.id),
       ]);
 
       setStats({
         students: resourcesResult.count || 0,
         tasks: examsResult.count || 0,
-        attendance: 0,
+        attendance: timetablesResult.count || 0,
         groups: groupsResult.count || 0,
       });
 
