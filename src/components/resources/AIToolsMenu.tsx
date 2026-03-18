@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bot, Layers, MessageSquareText, BrainCircuit, Sparkles, Volume2, GitBranch } from 'lucide-react';
+import { Bot, Layers, MessageSquareText, BrainCircuit, Sparkles, Volume2, GitBranch, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -30,6 +30,7 @@ import { SlideDeckDialog } from './SlideDeckDialog';
 import { QuizDialog } from './QuizDialog';
 import { AudioOverviewDialog } from './AudioOverviewDialog';
 import { MindMapDialog } from './MindMapDialog';
+import { ReportDialog } from './ReportDialog';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AIToolsMenuProps {
@@ -49,10 +50,11 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
   const [showQuiz, setShowQuiz] = useState(false);
   const [showAudio, setShowAudio] = useState(false);
   const [showMindMap, setShowMindMap] = useState(false);
+  const [showReport, setShowReport] = useState(false);
   const [gradeLevel, setGradeLevel] = useState<string | null>(null);
   const [gradeLoaded, setGradeLoaded] = useState(false);
   const [showGradePicker, setShowGradePicker] = useState(false);
-  const [pendingTool, setPendingTool] = useState<'coco' | 'flashcards' | 'slides' | 'quiz' | 'audio' | 'mindmap' | null>(null);
+  const [pendingTool, setPendingTool] = useState<'coco' | 'flashcards' | 'slides' | 'quiz' | 'audio' | 'mindmap' | 'report' | null>(null);
 
   const resourceContent = resource.content || resource.description || '';
 
@@ -87,7 +89,7 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
     fetchGrade();
   }, []);
 
-  const openTool = (tool: 'coco' | 'flashcards' | 'slides' | 'quiz' | 'audio' | 'mindmap') => {
+  const openTool = (tool: 'coco' | 'flashcards' | 'slides' | 'quiz' | 'audio' | 'mindmap' | 'report') => {
     if (!gradeLoaded) return;
     if (!gradeLevel) {
       setPendingTool(tool);
@@ -105,6 +107,7 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
       case 'quiz': setShowQuiz(true); break;
       case 'audio': setShowAudio(true); break;
       case 'mindmap': setShowMindMap(true); break;
+      case 'report': setShowReport(true); break;
     }
   };
 
@@ -143,6 +146,9 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => openTool('mindmap')} className="gap-2">
             <GitBranch className="h-4 w-4" /> Mind Map
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => openTool('report')} className="gap-2">
+            <BarChart3 className="h-4 w-4" /> 📊 AI Report
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => openTool('audio')} className="gap-2">
@@ -219,6 +225,14 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
       <MindMapDialog
         open={showMindMap}
         onOpenChange={setShowMindMap}
+        resource={resource}
+        content={resourceContent}
+        gradeLevel={gradeLevel || undefined}
+        fileName={resource.file_name || undefined}
+      />
+      <ReportDialog
+        open={showReport}
+        onOpenChange={setShowReport}
         resource={resource}
         content={resourceContent}
         gradeLevel={gradeLevel || undefined}
