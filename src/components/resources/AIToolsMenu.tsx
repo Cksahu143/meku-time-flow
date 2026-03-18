@@ -30,6 +30,7 @@ import { SlideDeckDialog } from './SlideDeckDialog';
 import { QuizDialog } from './QuizDialog';
 import { AudioOverviewDialog } from './AudioOverviewDialog';
 import { MindMapDialog } from './MindMapDialog';
+import { ReportDialog } from './ReportDialog';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AIToolsMenuProps {
