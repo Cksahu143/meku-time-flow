@@ -266,10 +266,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     { title: 'Transcribe', icon: Mic, view: 'transcribe', color: 'from-success to-success/60' },
   ];
 
+  // Get real task data from localStorage
+  const storedTasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+  const pendingCount = storedTasks.filter((t: any) => !t.completed).length;
+  const completedCount = storedTasks.filter((t: any) => t.completed).length;
+
   const taskSummary = [
-    { label: 'Pending', count: 18, color: 'bg-accent' },
-    { label: 'In Progress', count: 32, color: 'bg-primary' },
-    { label: 'Completed', count: 215, color: 'bg-success' },
+    { label: 'Pending', count: pendingCount, color: 'bg-accent' },
+    { label: 'Completed', count: completedCount, color: 'bg-success' },
   ];
 
   return (
