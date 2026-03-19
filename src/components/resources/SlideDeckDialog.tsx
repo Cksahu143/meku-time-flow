@@ -146,6 +146,14 @@ export const SlideDeckDialog = ({ open, onOpenChange, resource, content, gradeLe
                   {showNotes ? <Minimize className="h-4 w-4 mr-1" /> : <Maximize className="h-4 w-4 mr-1" />}
                   Notes
                 </Button>
+                <SaveResultButton
+                  toolType="slides"
+                  aiOutput={{ slides }}
+                  subject={resource.subject}
+                  resourceId={resource.id}
+                  resourceTitle={resource.title}
+                  inputContext={resource.title}
+                />
                 <Button variant="ghost" size="sm" onClick={generate}>
                   <RotateCcw className="h-4 w-4 mr-1" /> Regenerate
                 </Button>

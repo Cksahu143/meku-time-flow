@@ -378,6 +378,14 @@ export const ReportDialog = ({ open, onOpenChange, resource, content, gradeLevel
             <Button onClick={downloadReport} variant="outline" className="gap-2">
               <Download className="h-4 w-4" /> Download Report
             </Button>
+            <SaveResultButton
+              toolType="report"
+              aiOutput={report}
+              subject={resource.subject}
+              resourceId={resource.id}
+              resourceTitle={resource.title}
+              inputContext={resource.title}
+            />
             <Button onClick={generateReport} variant="secondary" className="gap-2">
               <BarChart3 className="h-4 w-4" /> Regenerate
             </Button>
