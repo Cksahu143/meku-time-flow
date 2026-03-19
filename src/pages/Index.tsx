@@ -160,6 +160,7 @@ const Index = () => {
                   {currentView === 'pomodoro' && <PomodoroView />}
                   {currentView === 'groups' && <GroupsView />}
                   {currentView === 'resources' && <ResourcesView />}
+                  {currentView === 'saved-results' && <SavedResultsView />}
                   {currentView === 'transcribe' && <TranscribeView />}
                   {currentView === 'announcements' && <AnnouncementsView />}
                   {currentView === 'attendance' && <AttendanceView />}
