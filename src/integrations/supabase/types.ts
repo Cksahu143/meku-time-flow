@@ -1098,6 +1098,50 @@ export type Database = {
           },
         ]
       }
+      saved_ai_results: {
+        Row: {
+          ai_output: Json
+          created_at: string
+          id: string
+          input_context: string
+          resource_id: string | null
+          resource_title: string | null
+          subject: string
+          tool_type: string
+          user_id: string
+        }
+        Insert: {
+          ai_output?: Json
+          created_at?: string
+          id?: string
+          input_context?: string
+          resource_id?: string | null
+          resource_title?: string | null
+          subject?: string
+          tool_type: string
+          user_id: string
+        }
+        Update: {
+          ai_output?: Json
+          created_at?: string
+          id?: string
+          input_context?: string
+          resource_id?: string | null
+          resource_title?: string | null
+          subject?: string
+          tool_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_ai_results_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       schools: {
         Row: {
           address: string | null
