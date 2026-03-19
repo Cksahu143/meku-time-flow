@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { DbResource } from '@/hooks/useResources';
+import { SaveResultButton } from './SaveResultButton';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -120,9 +121,19 @@ export const FlashcardsDialog = ({ open, onOpenChange, resource, content, gradeL
               <Button variant="outline" size="sm" onClick={prev} disabled={currentIndex === 0}>
                 <ChevronLeft className="h-4 w-4 mr-1" /> Previous
               </Button>
-              <Button variant="ghost" size="sm" onClick={generate}>
-                <RotateCcw className="h-4 w-4 mr-1" /> Regenerate
-              </Button>
+              <div className="flex gap-1">
+                <SaveResultButton
+                  toolType="flashcards"
+                  aiOutput={{ flashcards: cards }}
+                  subject={resource.subject}
+                  resourceId={resource.id}
+                  resourceTitle={resource.title}
+                  inputContext={resource.title}
+                />
+                <Button variant="ghost" size="sm" onClick={generate}>
+                  <RotateCcw className="h-4 w-4 mr-1" /> Regenerate
+                </Button>
+              </div>
               <Button variant="outline" size="sm" onClick={next} disabled={currentIndex === cards.length - 1}>
                 Next <ChevronRight className="h-4 w-4 ml-1" />
               </Button>

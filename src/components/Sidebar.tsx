@@ -79,6 +79,7 @@ export function Sidebar({ currentView, onViewChange, collapsed = false, onToggle
       items: [
         { id: 'groups', label: 'Study Chat', icon: MessageSquare },
         { id: 'resources', label: 'Resources', icon: BookOpen },
+        { id: 'saved-results' as ViewType, label: 'Saved AI', icon: BookOpenCheck },
         { id: 'transcribe', label: 'Transcribe', icon: Mic },
       ],
     },

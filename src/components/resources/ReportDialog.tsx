@@ -8,6 +8,7 @@ import { DbResource } from '@/hooks/useResources';
 import { toast } from 'sonner';
 import { Loader2, BarChart3, Download, TrendingUp, Target, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Legend } from 'recharts';
+import { SaveResultButton } from './SaveResultButton';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || `https://gkkeysrfmgmxoypnjkdl.supabase.co`;
 
@@ -377,6 +378,14 @@ export const ReportDialog = ({ open, onOpenChange, resource, content, gradeLevel
             <Button onClick={downloadReport} variant="outline" className="gap-2">
               <Download className="h-4 w-4" /> Download Report
             </Button>
+            <SaveResultButton
+              toolType="report"
+              aiOutput={report}
+              subject={resource.subject}
+              resourceId={resource.id}
+              resourceTitle={resource.title}
+              inputContext={resource.title}
+            />
             <Button onClick={generateReport} variant="secondary" className="gap-2">
               <BarChart3 className="h-4 w-4" /> Regenerate
             </Button>

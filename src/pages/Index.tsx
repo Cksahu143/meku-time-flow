@@ -25,6 +25,7 @@ import { AnalyticsView } from '@/components/admin/AnalyticsView';
 import { FeatureTogglesView } from '@/components/admin/FeatureTogglesView';
 import { ClassesManagementView } from '@/components/admin/ClassesManagementView';
 import { AboutView } from '@/components/about/AboutView';
+import { SavedResultsView } from '@/components/resources/SavedResultsView';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { PageTransition } from '@/components/motion/PageTransition';
 import { NotificationListener } from '@/components/NotificationListener';
@@ -159,6 +160,7 @@ const Index = () => {
                   {currentView === 'pomodoro' && <PomodoroView />}
                   {currentView === 'groups' && <GroupsView />}
                   {currentView === 'resources' && <ResourcesView />}
+                  {currentView === 'saved-results' && <SavedResultsView />}
                   {currentView === 'transcribe' && <TranscribeView />}
                   {currentView === 'announcements' && <AnnouncementsView />}
                   {currentView === 'attendance' && <AttendanceView />}
