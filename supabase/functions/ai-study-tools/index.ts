@@ -593,6 +593,71 @@ LANGUAGE SUPPORT:
 - You understand: English, Hindi (हिन्दी), Odia (ଓଡ଼ିଆ), Sanskrit (संस्कृत), Bengali (বাংলা), Tamil (தமிழ்), Telugu (తెలుగు), Marathi (मराठी), Gujarati (ગુજરાતી), Kannada (ಕನ್ನಡ), Malayalam (മലയാളം), Punjabi (ਪੰਜਾਬੀ), Urdu (اردو), and many more.
 `;
 
+// ─── Subject-aware formatting rules ──────────────────────────────────────────
+
+function getSubjectFormatRules(subject: string): string {
+  const s = subject.toLowerCase();
+  if (s.includes('math') || s.includes('calculus') || s.includes('algebra') || s.includes('geometry') || s.includes('statistics'))
+    return `SUBJECT-SPECIFIC FORMATTING (Mathematics):
+- Use LaTeX notation for equations: $...$ for inline, $$...$$ for block equations
+- Use tables for formulas and their applications
+- Show step-by-step numbered working for all problems
+- Include formula derivations where applicable`;
+  if (s.includes('physics'))
+    return `SUBJECT-SPECIFIC FORMATTING (Physics):
+- Use LaTeX notation for equations: $...$ for inline, $$...$$ for block
+- Use tables for comparing physical quantities, units, and dimensions
+- Show step-by-step numerical solutions with units at every step
+- Include free body diagrams described textually when relevant`;
+  if (s.includes('chemistry'))
+    return `SUBJECT-SPECIFIC FORMATTING (Chemistry):
+- Use proper chemical notation and equations
+- Use tables to compare elements, compounds, reactions
+- Use labelled lists for reaction mechanisms and processes
+- Use correct scientific notation for measurements`;
+  if (s.includes('biology'))
+    return `SUBJECT-SPECIFIC FORMATTING (Biology):
+- Use labelled lists for biological processes (e.g., stages of mitosis)
+- Use tables to compare structures, organisms, or functions
+- Use correct scientific terminology and classification
+- Describe diagrams textually when visual not possible`;
+  if (s.includes('economics') || s.includes('business'))
+    return `SUBJECT-SPECIFIC FORMATTING (Economics):
+- Use tables for data comparison and supply/demand analysis
+- Use structured frameworks (PESTLE, SWOT, cost-benefit)
+- Bold key economic terms on first use
+- Use numerical examples with currency values`;
+  if (s.includes('english') || s.includes('literature'))
+    return `SUBJECT-SPECIFIC FORMATTING (English/Literature):
+- Use blockquotes (> ) for textual evidence and citations
+- Identify literary devices explicitly with examples
+- Structure essays with thesis → evidence → analysis
+- Use proper MLA/academic citation style`;
+  if (s.includes('history') || s.includes('political') || s.includes('civics'))
+    return `SUBJECT-SPECIFIC FORMATTING (History):
+- Use chronological structure with clear timelines
+- Use tables for comparing causes vs effects, events, or periods
+- Cite key dates and historical figures in bold
+- Use > blockquotes for primary source quotes`;
+  if (s.includes('computer') || s.includes('programming') || s.includes('informatics'))
+    return `SUBJECT-SPECIFIC FORMATTING (Computer Science):
+- Use code blocks with syntax highlighting for all code
+- Use Big-O notation where relevant
+- Describe algorithms with numbered steps
+- Use tables for comparing data structures or complexity`;
+  if (s.includes('geography'))
+    return `SUBJECT-SPECIFIC FORMATTING (Geography):
+- Use tables for comparing regions, climates, or geological features
+- Include coordinates and measurements where relevant
+- Use structured lists for geographical processes
+- Bold key geographical terms`;
+  return `FORMATTING RULES:
+- Use tables when comparing items or presenting structured data
+- Use headers (##), bullet points, and bold for key terms
+- Use numbered lists for sequential processes
+- Never produce a wall of unformatted text`;
+}
+
 // ─── Main handler ──────────────────────────────────────────────────────────
 
 serve(async (req) => {
