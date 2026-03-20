@@ -972,6 +972,8 @@ ${MULTI_LANGUAGE_INSTRUCTION}
 STUDENT LEVEL: ${gradeLevelStr}
 ${difficultyGuide}
 
+${getSubjectFormatRules(subject || 'General')}
+
 RULES:
 - Create ${questionCount.min}-${questionCount.max} comprehensive slides covering the topic thoroughly
 - Each slide should be a complete revision unit
