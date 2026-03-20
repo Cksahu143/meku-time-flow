@@ -1296,9 +1296,10 @@ Resource:\n${resourceContext}`,
 
     // ── Enhanced Quiz with multi-question types ──
     if (effectiveType === "enhanced_quiz") {
-      const { questionTypes = ['mcq', 'true_false'], questionCount: qCount = 10, difficulty: diff = 'Medium' } = await req.json().catch(() => ({}));
-      const requestedTypes = (Array.isArray(questionTypes) ? questionTypes : ['mcq', 'true_false']).join(', ');
-      const numQ = typeof qCount === 'number' ? qCount : questionCount.max;
+      const reqTypes = questionTypes || ['mcq', 'true_false'];
+      const requestedTypes = (Array.isArray(reqTypes) ? reqTypes : ['mcq', 'true_false']).join(', ');
+      const numQ = typeof userQuestionCount === 'number' ? userQuestionCount : questionCount.max;
+      const diff = userDifficulty || 'Medium';
 
       const subjectFormatRules = getSubjectFormatRules(subject || 'General');
 
