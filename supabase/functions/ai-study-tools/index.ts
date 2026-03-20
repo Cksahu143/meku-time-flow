@@ -1229,6 +1229,109 @@ Resource:\n${resourceContext}`,
       },
     };
 
+    // ── Enhanced Quiz with multi-question types ──
+    if (effectiveType === "enhanced_quiz") {
+      const { questionTypes = ['mcq', 'true_false'], questionCount: qCount = 10, difficulty: diff = 'Medium' } = await req.json().catch(() => ({}));
+      const requestedTypes = (Array.isArray(questionTypes) ? questionTypes : ['mcq', 'true_false']).join(', ');
+      const numQ = typeof qCount === 'number' ? qCount : questionCount.max;
+
+      const subjectFormatRules = getSubjectFormatRules(subject || 'General');
+
+      const enhancedQuizConfig = {
+        systemPrompt: `You are a strict board exam paper setter for ${gradeLevelStr}. Create a challenging quiz with MULTIPLE question types.
+
+${MULTI_LANGUAGE_INSTRUCTION}
+
+STUDENT LEVEL: ${gradeLevelStr}
+${difficultyGuide}
+Difficulty: ${diff}
+
+${subjectFormatRules}
+
+QUESTION TYPES TO INCLUDE: ${requestedTypes}
+TOTAL QUESTIONS: ${numQ}
+
+FORMAT RULES FOR EACH TYPE:
+- mcq: 4 options labeled A-D, one correct answer via correctIndex (0-3)
+- true_false: statement + boolean answer
+- short_answer: question + expectedAnswer (1-3 sentences)
+- fill_blank: sentence with "___" as blank + answer
+- essay: question + rubric (3-4 criteria) + sampleAnswer
+- match: question + leftColumn + rightColumn + correctPairs (array of indices mapping left to right)
+
+CRITICAL RULES:
+- NEVER use negative questions ("Which is NOT...", "All EXCEPT...")
+- ALWAYS phrase questions POSITIVELY
+- Mix the requested types roughly equally
+- Every question MUST have an explanation field
+- VERIFY correctness of ALL answers before returning
+- Questions must test DEEP understanding, not surface-level recall
+
+Resource:\n${resourceContext}`,
+        tool: {
+          type: "function",
+          function: {
+            name: "generate_enhanced_quiz",
+            description: "Generate a multi-type quiz",
+            parameters: {
+              type: "object",
+              properties: {
+                questions: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      type: { type: "string", enum: ["mcq", "true_false", "short_answer", "fill_blank", "essay", "match"] },
+                      question: { type: "string" },
+                      options: { type: "array", items: { type: "string" }, description: "For MCQ only" },
+                      correctIndex: { type: "number", description: "For MCQ only (0-3)" },
+                      answer: { type: "boolean", description: "For true_false only" },
+                      expectedAnswer: { type: "string", description: "For short_answer only" },
+                      sampleAnswer: { type: "string", description: "For essay only" },
+                      rubric: { type: "array", items: { type: "string" }, description: "For essay only" },
+                      leftColumn: { type: "array", items: { type: "string" }, description: "For match only" },
+                      rightColumn: { type: "array", items: { type: "string" }, description: "For match only" },
+                      correctPairs: { type: "array", items: { type: "number" }, description: "For match only" },
+                      explanation: { type: "string" },
+                    },
+                    required: ["type", "question", "explanation"],
+                    additionalProperties: false,
+                  },
+                },
+              },
+              required: ["questions"],
+              additionalProperties: false,
+            },
+          },
+        },
+      };
+
+      const response = await resilientAIFetch({
+        model: "gemini-2.5-pro",
+        messages: [
+          { role: "system", content: enhancedQuizConfig.systemPrompt },
+          { role: "user", content: `Generate a ${diff} difficulty quiz with exactly ${numQ} questions using these types: ${requestedTypes}. Go deep into the actual content. This is for ${gradeLevelStr} board exam preparation.` },
+        ],
+        tools: [enhancedQuizConfig.tool],
+        tool_choice: { type: "function", function: { name: "generate_enhanced_quiz" } },
+      });
+
+      if (!response.ok) {
+        const t = await response.text();
+        console.error("AI error:", response.status, t);
+        return new Response(JSON.stringify({ error: "AI service temporarily unavailable." }), { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const result = await response.json();
+      const toolCall = result.choices?.[0]?.message?.tool_calls?.[0];
+      if (!toolCall) {
+        return new Response(JSON.stringify({ error: "AI did not return structured data" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const parsed = JSON.parse(toolCall.function.arguments);
+      return new Response(JSON.stringify(parsed), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     const config = toolConfigs[effectiveType];
     if (!config) {
       return new Response(JSON.stringify({ error: `Invalid type: ${effectiveType}` }), {
