@@ -1138,6 +1138,8 @@ ${MULTI_LANGUAGE_INSTRUCTION}
 STUDENT LEVEL: ${gradeLevelStr}
 ${difficultyGuide}
 
+${getSubjectFormatRules(subject || 'General')}
+
 RULES:
 - Create a mind map with a central topic and branching subtopics
 - Each node should have a clear, concise label (1-6 words)
