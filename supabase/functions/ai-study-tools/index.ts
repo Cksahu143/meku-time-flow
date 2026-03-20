@@ -857,6 +857,8 @@ Resource:\n${resourceContext}`,
 STUDENT CONTEXT: This student is in ${gradeLevelStr}. Adjust depth accordingly.
 ${difficultyGuide}
 
+${getSubjectFormatRules(subject || 'General')}
+
 ${MULTI_LANGUAGE_INSTRUCTION}
 
 YOUR ULTIMATE POWERS:
