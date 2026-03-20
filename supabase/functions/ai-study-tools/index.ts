@@ -1083,6 +1083,8 @@ ${MULTI_LANGUAGE_INSTRUCTION}
 STUDENT LEVEL: ${gradeLevelStr}
 ${difficultyGuide}
 
+${getSubjectFormatRules(subject || 'General')}
+
 RULES:
 - Generate ${questionCount.min}-${questionCount.max} viva-style questions appropriate for ${gradeLevelStr}
 - Questions should be open-ended, probing, and require detailed verbal answers
