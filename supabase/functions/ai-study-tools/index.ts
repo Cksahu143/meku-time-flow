@@ -664,7 +664,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { type, tool, content, title, subject, messages, resourceUrl, resourceType, gradeLevel, language, fileName } = await req.json();
+    const { type, tool, content, title, subject, messages, resourceUrl, resourceType, gradeLevel, language, fileName, questionTypes, questionCount: userQuestionCount, difficulty: userDifficulty } = await req.json();
     const effectiveType = type || tool;
     // API keys are now handled inside resilientAIFetch
 
