@@ -1023,6 +1023,8 @@ ${MULTI_LANGUAGE_INSTRUCTION}
 STUDENT LEVEL: ${gradeLevelStr}
 ${difficultyGuide}
 
+${getSubjectFormatRules(subject || 'General')}
+
 CRITICAL QUESTION FORMAT RULES:
 - NEVER use negative questions like "Which of the following is NOT correct", "Which is incorrect", "Which is false", "All EXCEPT", or any variation asking students to identify wrong/incorrect/false options. These cause confusion in MCQ format.
 - ALWAYS phrase questions POSITIVELY: "Which of the following is correct?", "What is the correct explanation for...?", "Which statement best describes...?"
