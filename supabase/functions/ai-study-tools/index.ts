@@ -1217,6 +1217,8 @@ ${MULTI_LANGUAGE_INSTRUCTION}
 STUDENT LEVEL: ${gradeLevelStr}
 ${difficultyGuide}
 
+${getSubjectFormatRules(subject || 'General')}
+
 Analyze the resource content thoroughly and generate a detailed performance assessment report. Evaluate the content's complexity, coverage, and exam-relevance. Generate realistic scores based on what a typical ${gradeLevelStr} student would need to master.
 
 RULES:
