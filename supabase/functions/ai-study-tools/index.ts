@@ -922,7 +922,8 @@ ${MULTI_LANGUAGE_INSTRUCTION}
 STUDENT LEVEL: ${gradeLevelStr}
 ${difficultyGuide}
 
-RULES:
+${getSubjectFormatRules(subject || 'General')}
+
 - Generate ${questionCount.min}-${questionCount.max} flashcards covering ALL key concepts from the material
 - Questions should match ${gradeLevelStr} board exam difficulty
 - Include formula-based cards, definition cards, application-based cards, and comparison cards
