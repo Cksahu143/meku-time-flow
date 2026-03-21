@@ -268,11 +268,13 @@ export function Sidebar({ currentView, onViewChange, collapsed = false, onToggle
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
                     transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
-                    className="overflow-hidden space-y-0.5"
+                    style={{ overflow: 'hidden' }}
                   >
-                    {section.items.map((item, i) => (
-                      <NavItem key={item.id} item={item} index={startIndex + i} />
-                    ))}
+                    <div className="space-y-0.5">
+                      {section.items.map((item, i) => (
+                        <NavItem key={item.id} item={item} index={startIndex + i} />
+                      ))}
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
