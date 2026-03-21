@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { PDFViewerDialog } from './PDFViewerDialog';
 import { motion } from 'framer-motion';
-import { FileText, Link, Video, File, Edit, Trash2, Type, Star, Download, Eye, FolderOpen, Loader2 } from 'lucide-react';
+import { FileText, Link, Video, File, Edit, Trash2, Type, Star, Download, Eye, FolderOpen, Loader2, BookOpen } from 'lucide-react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
