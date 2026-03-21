@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Save, X, Upload, Link as LinkIcon, FileText, File, Type, Loader2 } from 'lucide-react';
+import { Save, X, Upload, Link as LinkIcon, FileText, File, Type, Loader2, BookOpen } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -32,6 +32,31 @@ interface EditResourceModalProps {
   subjects: string[];
 }
 
+// Parse book metadata from content string
+const parseBookContent = (content: string | null) => {
+  if (!content) return null;
+  const lines = content.split('\n');
+  const data: Record<string, string> = {};
+  for (const line of lines) {
+    const idx = line.indexOf(':');
+    if (idx > -1) {
+      const key = line.slice(0, idx).trim().toLowerCase();
+      const val = line.slice(idx + 1).trim();
+      data[key] = val;
+    }
+  }
+  if (data['book'] || data['author']) {
+    return {
+      title: data['book'] || '',
+      author: data['author'] || '',
+      publishYear: data['year'] || '',
+      description: data['description'] || '',
+      coverUrl: data['cover'] || '',
+    };
+  }
+  return null;
+};
+
 export const EditResourceModal: React.FC<EditResourceModalProps> = ({
   resource,
   open,
@@ -51,12 +76,14 @@ export const EditResourceModal: React.FC<EditResourceModalProps> = ({
   const [tags, setTags] = useState<string[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const [bookMeta, setBookMeta] = useState<ReturnType<typeof parseBookContent>>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const isFileType = type === 'pdf' || type === 'document';
   const isLinkType = type === 'link' || type === 'video';
   const isTextType = type === 'text';
+  const isBookType = type === 'book';
 
   useEffect(() => {
     if (resource) {
@@ -69,6 +96,12 @@ export const EditResourceModal: React.FC<EditResourceModalProps> = ({
       setCategory(resource.category || '');
       setChapter(resource.chapter || '');
       setTags(resource.tags || []);
+      setSelectedFile(null);
+      if (resource.resource_type === 'book') {
+        setBookMeta(parseBookContent(resource.content));
+      } else {
+        setBookMeta(null);
+      }
     }
   }, [resource]);
 
@@ -109,6 +142,18 @@ export const EditResourceModal: React.FC<EditResourceModalProps> = ({
 
     setSaving(true);
     try {
+      // Preserve content for book and text types; for others keep existing content
+      let contentValue: string | undefined;
+      if (isTextType) {
+        contentValue = content;
+      } else if (isBookType) {
+        // Preserve existing book content metadata
+        contentValue = resource.content || content || undefined;
+      } else {
+        // Don't wipe content for other types either — keep what was there
+        contentValue = resource.content || undefined;
+      }
+
       await onSave(resource.id, {
         title,
         subject,
@@ -117,7 +162,7 @@ export const EditResourceModal: React.FC<EditResourceModalProps> = ({
         file_name: selectedFile?.name || resource.file_name || undefined,
         file_size: selectedFile?.size || resource.file_size || undefined,
         description,
-        content: isTextType ? content : undefined,
+        content: contentValue,
         category: category || undefined,
         chapter: chapter || undefined,
         tags: tags.length > 0 ? tags : [],
@@ -175,12 +220,34 @@ export const EditResourceModal: React.FC<EditResourceModalProps> = ({
                   <SelectItem value="document"><div className="flex items-center gap-2"><File className="h-4 w-4" />Document / File</div></SelectItem>
                   <SelectItem value="video"><div className="flex items-center gap-2"><LinkIcon className="h-4 w-4" />Video Link</div></SelectItem>
                   <SelectItem value="text"><div className="flex items-center gap-2"><Type className="h-4 w-4" />Text Note</div></SelectItem>
+                  <SelectItem value="book"><div className="flex items-center gap-2"><BookOpen className="h-4 w-4" />📚 Book</div></SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <AnimatePresence mode="wait">
-              {isTextType ? (
+              {isBookType && bookMeta ? (
+                <motion.div key="book" className="space-y-2" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                  <Label>Book Details</Label>
+                  <div className="flex items-center gap-3 p-3 rounded-lg border border-primary/30 bg-primary/5">
+                    {bookMeta.coverUrl && (
+                      <img src={bookMeta.coverUrl} alt="" className="h-16 w-12 object-cover rounded" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">📖 {bookMeta.title}</p>
+                      <p className="text-xs text-muted-foreground">{bookMeta.author} {bookMeta.publishYear && `(${bookMeta.publishYear})`}</p>
+                      {bookMeta.description && (
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{bookMeta.description}</p>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              ) : isBookType && !bookMeta ? (
+                <motion.div key="book-info" className="space-y-2" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                  <Label>Book Content</Label>
+                  <Textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Book metadata..." rows={4} className="bg-background/50 resize-none" />
+                </motion.div>
+              ) : isTextType ? (
                 <motion.div key="text" className="space-y-2" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
                   <Label>Content *</Label>
                   <Textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Write your notes here..." rows={6} className="bg-background/50 resize-none" />
