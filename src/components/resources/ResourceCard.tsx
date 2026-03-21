@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { PDFViewerDialog } from './PDFViewerDialog';
 import { motion } from 'framer-motion';
-import { FileText, Link, Video, File, Edit, Trash2, Type, Star, Download, Eye, FolderOpen, Loader2 } from 'lucide-react';
+import { FileText, Link, Video, File, Edit, Trash2, Type, Star, Download, Eye, FolderOpen, Loader2, BookOpen } from 'lucide-react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -44,6 +44,7 @@ const typeIcons: Record<string, any> = {
   video: Video,
   document: File,
   text: Type,
+  book: BookOpen,
 };
 
 const typeColors: Record<string, string> = {
@@ -52,6 +53,7 @@ const typeColors: Record<string, string> = {
   video: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
   document: 'bg-green-500/10 text-green-500 border-green-500/20',
   text: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
+  book: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
 };
 
 export const ResourceCard: React.FC<ResourceCardProps> = ({ 
