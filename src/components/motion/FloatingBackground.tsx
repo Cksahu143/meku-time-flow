@@ -137,7 +137,7 @@ export const FloatingBackground: React.FC<{ disabled?: boolean }> = ({ disabled 
   ];
 
   return (
-    <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+    <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
       {/* Gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-primary/5" />
       
