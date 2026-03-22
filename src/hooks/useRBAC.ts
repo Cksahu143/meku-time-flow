@@ -151,6 +151,7 @@ export function useRBAC() {
       pomodoro: 'can_view_pomodoro',
       groups: 'can_view_groups',
       resources: 'can_view_resources',
+      'saved-results': 'can_view_resources',
       transcribe: 'can_view_transcribe',
       'role-management': 'can_change_any_role',
       'schools-management': 'can_manage_schools',
@@ -163,6 +164,8 @@ export function useRBAC() {
 
     // About page is accessible to all authenticated users
     if (view === 'about') return true;
+    // Saved AI results should be accessible to all authenticated users
+    if (view === 'saved-results') return true;
 
     const permission = viewPermissionMap[view];
     if (!permission) return false;

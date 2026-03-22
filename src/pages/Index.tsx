@@ -103,12 +103,12 @@ const Index = () => {
   };
 
   return (
-    <div className="flex h-screen w-full bg-background overflow-hidden relative">
+    <div className="flex h-screen w-full bg-background overflow-hidden relative isolate">
       <FloatingBackground />
       <CursorSparkle />
       <NotificationListener />
       {/* Desktop Sidebar */}
-      <div className="hidden md:block flex-shrink-0">
+      <div className="hidden md:block flex-shrink-0 relative z-10">
         <Sidebar
           currentView={currentView}
           onViewChange={handleViewChange}
@@ -124,7 +124,7 @@ const Index = () => {
       <MobileTopBar onSelectFeature={handleSelectFeature} />
 
       {/* Main content area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-10">
         {/* Top Header (desktop only) */}
         <div className="hidden md:block">
           <TopHeader onSelectFeature={handleSelectFeature} />
