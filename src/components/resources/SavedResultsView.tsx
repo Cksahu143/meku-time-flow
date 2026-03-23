@@ -90,6 +90,39 @@ export const SavedResultsView: React.FC = () => {
         </div>
       );
     }
+    if (result.tool_type === 'coco_chat' && output?.messages) {
+      return (
+        <div className="space-y-2">
+          {output.messages.map((msg: any, i: number) => (
+            <div key={i} className={`p-2 rounded-lg text-sm ${msg.role === 'user' ? 'bg-primary/10 text-foreground ml-8' : 'bg-muted mr-8'}`}>
+              <span className="text-xs font-medium text-muted-foreground">{msg.role === 'user' ? 'You' : 'CoCo'}:</span>
+              <p className="mt-0.5">{msg.content.length > 200 ? msg.content.slice(0, 200) + '…' : msg.content}</p>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    if ((result.tool_type === 'podcast' || result.tool_type === 'audio_overview') && output?.text) {
+      return (
+        <div className="space-y-2">
+          {output.language && <Badge variant="secondary" className="text-xs">{output.language}</Badge>}
+          <p className="text-sm text-muted-foreground whitespace-pre-wrap">{output.text.length > 500 ? output.text.slice(0, 500) + '…' : output.text}</p>
+        </div>
+      );
+    }
+    if (result.tool_type === 'mindmap' && output?.centralTopic) {
+      return (
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-foreground">Central: {output.centralTopic}</p>
+          <div className="flex flex-wrap gap-1">
+            {output.nodes?.slice(0, 6).map((n: any, i: number) => (
+              <Badge key={i} variant="outline" className="text-xs">{n.label}</Badge>
+            ))}
+            {output.nodes?.length > 6 && <Badge variant="secondary" className="text-xs">+{output.nodes.length - 6} more</Badge>}
+          </div>
+        </div>
+      );
+    }
     if (typeof output === 'string') {
       return <MarkdownRenderer content={output} />;
     }
