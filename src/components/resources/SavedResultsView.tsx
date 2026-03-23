@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Save, Trash2, Layers, Sparkles, BrainCircuit, BarChart3, GitBranch, BookOpen, Loader2, Eye, ChevronDown } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Save, Trash2, Layers, Sparkles, BrainCircuit, BarChart3, GitBranch, BookOpen, Loader2, Eye, MessageSquare, Play, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +10,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { PageTransition } from '@/components/motion/PageTransition';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { useSavedAIResults, SavedAIResult } from '@/hooks/useSavedAIResults';
+import { SavedCoCoChatDialog } from './SavedCoCoChatDialog';
+import { SavedPodcastPlayer } from './SavedPodcastPlayer';
+import { SavedResultExport } from './SavedResultExport';
 
 const TOOL_META: Record<string, { label: string; icon: React.ElementType; color: string }> = {
   flashcards: { label: 'Flashcards', icon: Layers, color: 'bg-blue-500/10 text-blue-500' },
@@ -27,12 +30,24 @@ const TOOL_META: Record<string, { label: string; icon: React.ElementType; color:
 const getMeta = (type: string) => TOOL_META[type] || { label: type, icon: Save, color: 'bg-muted text-muted-foreground' };
 
 export const SavedResultsView: React.FC = () => {
-  const { results, loading, deleteResult } = useSavedAIResults();
+  const { results, loading, deleteResult, refetch } = useSavedAIResults();
   const [selectedResult, setSelectedResult] = useState<SavedAIResult | null>(null);
   const [filter, setFilter] = useState<string>('all');
+  const [cocoChat, setCocoChat] = useState<SavedAIResult | null>(null);
+  const [podcastPlay, setPodcastPlay] = useState<SavedAIResult | null>(null);
 
   const toolTypes = [...new Set(results.map(r => r.tool_type))];
   const filtered = filter === 'all' ? results : results.filter(r => r.tool_type === filter);
+
+  const handleCardClick = (result: SavedAIResult) => {
+    if (result.tool_type === 'coco_chat' && result.ai_output?.messages) {
+      setCocoChat(result);
+    } else if ((result.tool_type === 'podcast' || result.tool_type === 'audio_overview') && result.ai_output?.text) {
+      setPodcastPlay(result);
+    } else {
+      setSelectedResult(result);
+    }
+  };
 
   const renderOutput = (result: SavedAIResult) => {
     const output = result.ai_output;
@@ -96,7 +111,7 @@ export const SavedResultsView: React.FC = () => {
           {output.messages.map((msg: any, i: number) => (
             <div key={i} className={`p-2 rounded-lg text-sm ${msg.role === 'user' ? 'bg-primary/10 text-foreground ml-8' : 'bg-muted mr-8'}`}>
               <span className="text-xs font-medium text-muted-foreground">{msg.role === 'user' ? 'You' : 'CoCo'}:</span>
-              <p className="mt-0.5">{msg.content.length > 200 ? msg.content.slice(0, 200) + '…' : msg.content}</p>
+              <p className="mt-0.5">{msg.content}</p>
             </div>
           ))}
         </div>
@@ -106,7 +121,7 @@ export const SavedResultsView: React.FC = () => {
       return (
         <div className="space-y-2">
           {output.language && <Badge variant="secondary" className="text-xs">{output.language}</Badge>}
-          <p className="text-sm text-muted-foreground whitespace-pre-wrap">{output.text.length > 500 ? output.text.slice(0, 500) + '…' : output.text}</p>
+          <p className="text-sm text-muted-foreground whitespace-pre-wrap">{output.text}</p>
         </div>
       );
     }
@@ -115,10 +130,9 @@ export const SavedResultsView: React.FC = () => {
         <div className="space-y-2">
           <p className="text-sm font-medium text-foreground">Central: {output.centralTopic}</p>
           <div className="flex flex-wrap gap-1">
-            {output.nodes?.slice(0, 6).map((n: any, i: number) => (
+            {output.nodes?.map((n: any, i: number) => (
               <Badge key={i} variant="outline" className="text-xs">{n.label}</Badge>
             ))}
-            {output.nodes?.length > 6 && <Badge variant="secondary" className="text-xs">+{output.nodes.length - 6} more</Badge>}
           </div>
         </div>
       );
@@ -127,6 +141,24 @@ export const SavedResultsView: React.FC = () => {
       return <MarkdownRenderer content={output} />;
     }
     return <pre className="text-xs text-muted-foreground overflow-auto max-h-64">{JSON.stringify(output, null, 2)}</pre>;
+  };
+
+  const getCardAction = (result: SavedAIResult) => {
+    if (result.tool_type === 'coco_chat') {
+      return (
+        <Badge variant="secondary" className="gap-1 text-[10px]">
+          <MessageSquare className="h-2.5 w-2.5" /> Continue
+        </Badge>
+      );
+    }
+    if (result.tool_type === 'podcast' || result.tool_type === 'audio_overview') {
+      return (
+        <Badge variant="secondary" className="gap-1 text-[10px]">
+          <Play className="h-2.5 w-2.5" /> Replay
+        </Badge>
+      );
+    }
+    return null;
   };
 
   if (loading) {
@@ -149,7 +181,6 @@ export const SavedResultsView: React.FC = () => {
         </div>
       </motion.div>
 
-      {/* Filter chips */}
       <div className="flex flex-wrap gap-2 mb-6">
         <Badge variant={filter === 'all' ? 'default' : 'outline'} className="cursor-pointer" onClick={() => setFilter('all')}>
           All ({results.length})
@@ -176,31 +207,35 @@ export const SavedResultsView: React.FC = () => {
           {filtered.map(result => {
             const meta = getMeta(result.tool_type);
             const Icon = meta.icon;
+            const action = getCardAction(result);
             return (
               <motion.div key={result.id} layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-                <Card className="h-full hover:shadow-md transition-shadow cursor-pointer group" onClick={() => setSelectedResult(result)}>
+                <Card className="h-full hover:shadow-md transition-shadow cursor-pointer group" onClick={() => handleCardClick(result)}>
                   <CardHeader className="pb-2">
                     <div className="flex items-start justify-between">
                       <Badge variant="outline" className={`gap-1 text-xs ${meta.color}`}>
                         <Icon className="h-3 w-3" /> {meta.label}
                       </Badge>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent onClick={e => e.stopPropagation()}>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete saved result?</AlertDialogTitle>
-                            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => deleteResult(result.id)} className="bg-destructive text-destructive-foreground">Delete</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <div className="flex items-center gap-1">
+                        {action}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent onClick={e => e.stopPropagation()}>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete saved result?</AlertDialogTitle>
+                              <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => deleteResult(result.id)} className="bg-destructive text-destructive-foreground">Delete</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </div>
                     <CardTitle className="text-sm font-medium line-clamp-2 mt-1">
                       {result.resource_title || result.input_context || 'Untitled'}
@@ -228,6 +263,11 @@ export const SavedResultsView: React.FC = () => {
               {selectedResult?.resource_title || 'Saved Result'}
             </DialogTitle>
           </DialogHeader>
+          {selectedResult && (
+            <div className="flex gap-2 items-center">
+              <SavedResultExport result={selectedResult} />
+            </div>
+          )}
           <ScrollArea className="flex-1">
             <div className="pr-4 pb-4">
               {selectedResult && (
@@ -244,6 +284,25 @@ export const SavedResultsView: React.FC = () => {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+
+      {/* CoCo continuation dialog */}
+      {cocoChat && (
+        <SavedCoCoChatDialog
+          open={!!cocoChat}
+          onOpenChange={v => { if (!v) setCocoChat(null); }}
+          savedResult={cocoChat}
+          onUpdated={refetch}
+        />
+      )}
+
+      {/* Podcast replay dialog */}
+      {podcastPlay && (
+        <SavedPodcastPlayer
+          open={!!podcastPlay}
+          onOpenChange={v => { if (!v) setPodcastPlay(null); }}
+          savedResult={podcastPlay}
+        />
+      )}
     </PageTransition>
   );
 };
