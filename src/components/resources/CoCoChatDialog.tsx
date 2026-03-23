@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Bot, Send, Loader2, X } from 'lucide-react';
+import { Bot, Send, Loader2, X, Save } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { DbResource } from '@/hooks/useResources';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 type Msg = { role: 'user' | 'assistant'; content: string };
 
@@ -127,6 +128,30 @@ export const CoCoChatDialog = ({ open, onOpenChange, resource, content, gradeLev
     setIsLoading(false);
   };
 
+  const [saving, setSaving] = useState(false);
+
+  const saveChat = async () => {
+    if (messages.length < 2) return;
+    setSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error('Please sign in'); setSaving(false); return; }
+      const chatOutput = { messages: messages.map(m => ({ role: m.role, content: m.content })) };
+      const { error } = await (supabase.from('saved_ai_results' as any) as any).insert({
+        user_id: user.id,
+        tool_type: 'coco_chat',
+        input_context: `CoCo Chat: ${resource.title}`,
+        ai_output: chatOutput,
+        subject: resource.subject,
+        resource_id: resource.id || null,
+        resource_title: resource.title || null,
+      });
+      if (error) { toast.error('Failed to save chat'); console.error(error); }
+      else toast.success('Chat saved to your collection!');
+    } catch { toast.error('Failed to save'); }
+    setSaving(false);
+  };
+
   const handleClose = (v: boolean) => {
     if (!v) {
       abortRef.current?.abort();
@@ -144,7 +169,13 @@ export const CoCoChatDialog = ({ open, onOpenChange, resource, content, gradeLev
             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
               <Bot className="h-4 w-4 text-primary" />
             </div>
-            CoCo — {resource.title}
+            <span className="truncate flex-1">CoCo — {resource.title}</span>
+            {messages.length >= 2 && (
+              <Button variant="outline" size="sm" className="gap-1.5 ml-auto shrink-0" onClick={saveChat} disabled={saving}>
+                <Save className="h-3.5 w-3.5" />
+                {saving ? 'Saving...' : 'Save Chat'}
+              </Button>
+            )}
           </DialogTitle>
         </DialogHeader>
 

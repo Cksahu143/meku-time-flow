@@ -6,6 +6,7 @@ import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Play, Pause, Square, RotateCcw, Volume2, Languages, Loader2, Mic2, Users } from 'lucide-react';
 import { DbResource } from '@/hooks/useResources';
+import { SaveResultButton } from './SaveResultButton';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AudioOverviewDialogProps {
@@ -428,6 +429,19 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
     setTimeout(() => generateSummary(), 100);
   };
 
+  // When language changes, regenerate content in the new language
+  const prevLangRef = useRef(lang);
+  useEffect(() => {
+    if (prevLangRef.current !== lang && summary) {
+      prevLangRef.current = lang;
+      stopPlayback();
+      setSummary('');
+      generateSummary();
+    } else {
+      prevLangRef.current = lang;
+    }
+  }, [lang]);
+
   const estimatedMinutes = summary ? Math.max(1, Math.round((summary.length / 15 / 60) / rate[0])) : 0;
 
   // Show which voices are selected for debugging / user info
@@ -564,7 +578,7 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
           )}
 
           {/* Playback controls */}
-          <div className="flex items-center justify-center gap-3">
+          <div className="flex items-center justify-center gap-3 flex-wrap">
             {!playing ? (
               <Button onClick={speak} disabled={loading || !summary} size="sm" className="gap-2">
                 <Play className="h-4 w-4" />
@@ -581,6 +595,16 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
             <Button onClick={regenerate} size="sm" variant="ghost" disabled={loading} className="gap-2">
               <RotateCcw className="h-4 w-4" /> Regenerate
             </Button>
+            {summary && !loading && (
+              <SaveResultButton
+                toolType={mode === 'podcast' ? 'podcast' : 'audio_overview'}
+                aiOutput={{ text: summary, mode, language: lang }}
+                subject={resource.subject}
+                resourceId={resource.id}
+                resourceTitle={resource.title}
+                inputContext={`${mode === 'podcast' ? 'Podcast' : 'Audio Overview'} in ${VOICE_LANGUAGES.find(v => v.code === lang)?.label || 'English'}`}
+              />
+            )}
           </div>
 
           {!availableVoices.some(v => v.lang.startsWith(lang)) && lang !== 'en' && (

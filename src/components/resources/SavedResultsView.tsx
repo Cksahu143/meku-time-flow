@@ -19,6 +19,9 @@ const TOOL_META: Record<string, { label: string; icon: React.ElementType; color:
   report: { label: 'AI Report', icon: BarChart3, color: 'bg-orange-500/10 text-orange-500' },
   mindmap: { label: 'Mind Map', icon: GitBranch, color: 'bg-teal-500/10 text-teal-500' },
   summary: { label: 'Summary', icon: BookOpen, color: 'bg-indigo-500/10 text-indigo-500' },
+  coco_chat: { label: 'CoCo Chat', icon: Eye, color: 'bg-pink-500/10 text-pink-500' },
+  podcast: { label: 'Podcast', icon: Layers, color: 'bg-amber-500/10 text-amber-500' },
+  audio_overview: { label: 'Audio Overview', icon: Layers, color: 'bg-cyan-500/10 text-cyan-500' },
 };
 
 const getMeta = (type: string) => TOOL_META[type] || { label: type, icon: Save, color: 'bg-muted text-muted-foreground' };
@@ -84,6 +87,39 @@ export const SavedResultsView: React.FC = () => {
             <Badge variant="secondary">{output.overallGrade}</Badge>
           </div>
           <p className="text-sm text-muted-foreground">{output.summary}</p>
+        </div>
+      );
+    }
+    if (result.tool_type === 'coco_chat' && output?.messages) {
+      return (
+        <div className="space-y-2">
+          {output.messages.map((msg: any, i: number) => (
+            <div key={i} className={`p-2 rounded-lg text-sm ${msg.role === 'user' ? 'bg-primary/10 text-foreground ml-8' : 'bg-muted mr-8'}`}>
+              <span className="text-xs font-medium text-muted-foreground">{msg.role === 'user' ? 'You' : 'CoCo'}:</span>
+              <p className="mt-0.5">{msg.content.length > 200 ? msg.content.slice(0, 200) + '…' : msg.content}</p>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    if ((result.tool_type === 'podcast' || result.tool_type === 'audio_overview') && output?.text) {
+      return (
+        <div className="space-y-2">
+          {output.language && <Badge variant="secondary" className="text-xs">{output.language}</Badge>}
+          <p className="text-sm text-muted-foreground whitespace-pre-wrap">{output.text.length > 500 ? output.text.slice(0, 500) + '…' : output.text}</p>
+        </div>
+      );
+    }
+    if (result.tool_type === 'mindmap' && output?.centralTopic) {
+      return (
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-foreground">Central: {output.centralTopic}</p>
+          <div className="flex flex-wrap gap-1">
+            {output.nodes?.slice(0, 6).map((n: any, i: number) => (
+              <Badge key={i} variant="outline" className="text-xs">{n.label}</Badge>
+            ))}
+            {output.nodes?.length > 6 && <Badge variant="secondary" className="text-xs">+{output.nodes.length - 6} more</Badge>}
+          </div>
         </div>
       );
     }
