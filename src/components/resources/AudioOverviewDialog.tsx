@@ -6,6 +6,7 @@ import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Play, Pause, Square, RotateCcw, Volume2, Languages, Loader2, Mic2, Users } from 'lucide-react';
 import { DbResource } from '@/hooks/useResources';
+import { SaveResultButton } from './SaveResultButton';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AudioOverviewDialogProps {
