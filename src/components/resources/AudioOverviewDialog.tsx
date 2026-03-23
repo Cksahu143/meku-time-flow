@@ -429,6 +429,19 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
     setTimeout(() => generateSummary(), 100);
   };
 
+  // When language changes, regenerate content in the new language
+  const prevLangRef = useRef(lang);
+  useEffect(() => {
+    if (prevLangRef.current !== lang && summary) {
+      prevLangRef.current = lang;
+      stopPlayback();
+      setSummary('');
+      generateSummary();
+    } else {
+      prevLangRef.current = lang;
+    }
+  }, [lang]);
+
   const estimatedMinutes = summary ? Math.max(1, Math.round((summary.length / 15 / 60) / rate[0])) : 0;
 
   // Show which voices are selected for debugging / user info
