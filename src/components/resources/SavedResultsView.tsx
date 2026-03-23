@@ -19,6 +19,9 @@ const TOOL_META: Record<string, { label: string; icon: React.ElementType; color:
   report: { label: 'AI Report', icon: BarChart3, color: 'bg-orange-500/10 text-orange-500' },
   mindmap: { label: 'Mind Map', icon: GitBranch, color: 'bg-teal-500/10 text-teal-500' },
   summary: { label: 'Summary', icon: BookOpen, color: 'bg-indigo-500/10 text-indigo-500' },
+  coco_chat: { label: 'CoCo Chat', icon: Eye, color: 'bg-pink-500/10 text-pink-500' },
+  podcast: { label: 'Podcast', icon: Layers, color: 'bg-amber-500/10 text-amber-500' },
+  audio_overview: { label: 'Audio Overview', icon: Layers, color: 'bg-cyan-500/10 text-cyan-500' },
 };
 
 const getMeta = (type: string) => TOOL_META[type] || { label: type, icon: Save, color: 'bg-muted text-muted-foreground' };
