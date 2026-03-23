@@ -578,7 +578,7 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
           )}
 
           {/* Playback controls */}
-          <div className="flex items-center justify-center gap-3">
+          <div className="flex items-center justify-center gap-3 flex-wrap">
             {!playing ? (
               <Button onClick={speak} disabled={loading || !summary} size="sm" className="gap-2">
                 <Play className="h-4 w-4" />
@@ -595,6 +595,16 @@ export const AudioOverviewDialog = ({ open, onOpenChange, resource, content, gra
             <Button onClick={regenerate} size="sm" variant="ghost" disabled={loading} className="gap-2">
               <RotateCcw className="h-4 w-4" /> Regenerate
             </Button>
+            {summary && !loading && (
+              <SaveResultButton
+                toolType={mode === 'podcast' ? 'podcast' : 'audio_overview'}
+                aiOutput={{ text: summary, mode, language: lang }}
+                subject={resource.subject}
+                resourceId={resource.id}
+                resourceTitle={resource.title}
+                inputContext={`${mode === 'podcast' ? 'Podcast' : 'Audio Overview'} in ${VOICE_LANGUAGES.find(v => v.code === lang)?.label || 'English'}`}
+              />
+            )}
           </div>
 
           {!availableVoices.some(v => v.lang.startsWith(lang)) && lang !== 'en' && (

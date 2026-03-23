@@ -169,7 +169,13 @@ export const CoCoChatDialog = ({ open, onOpenChange, resource, content, gradeLev
             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
               <Bot className="h-4 w-4 text-primary" />
             </div>
-            CoCo — {resource.title}
+            <span className="truncate flex-1">CoCo — {resource.title}</span>
+            {messages.length >= 2 && (
+              <Button variant="outline" size="sm" className="gap-1.5 ml-auto shrink-0" onClick={saveChat} disabled={saving}>
+                <Save className="h-3.5 w-3.5" />
+                {saving ? 'Saving...' : 'Save Chat'}
+              </Button>
+            )}
           </DialogTitle>
         </DialogHeader>
 

@@ -505,6 +505,16 @@ export const MindMapDialog = ({ open, onOpenChange, resource, content, gradeLeve
             Mind Map — {resource.title}
             {mindMap && (
               <div className="ml-auto flex items-center gap-2">
+                <SaveResultButton
+                  toolType="mindmap"
+                  aiOutput={mindMap}
+                  subject={resource.subject}
+                  resourceId={resource.id}
+                  resourceTitle={resource.title}
+                  inputContext={`Mind Map: ${resource.title}`}
+                  size="sm"
+                  className="h-7 text-xs"
+                />
                 <Button onClick={generate} variant="outline" size="sm" className="gap-1.5 h-7 text-xs">
                   <RotateCcw className="h-3 w-3" /> Regenerate
                 </Button>
