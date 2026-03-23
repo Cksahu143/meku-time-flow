@@ -128,6 +128,30 @@ export const CoCoChatDialog = ({ open, onOpenChange, resource, content, gradeLev
     setIsLoading(false);
   };
 
+  const [saving, setSaving] = useState(false);
+
+  const saveChat = async () => {
+    if (messages.length < 2) return;
+    setSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error('Please sign in'); setSaving(false); return; }
+      const chatOutput = { messages: messages.map(m => ({ role: m.role, content: m.content })) };
+      const { error } = await (supabase.from('saved_ai_results' as any) as any).insert({
+        user_id: user.id,
+        tool_type: 'coco_chat',
+        input_context: `CoCo Chat: ${resource.title}`,
+        ai_output: chatOutput,
+        subject: resource.subject,
+        resource_id: resource.id || null,
+        resource_title: resource.title || null,
+      });
+      if (error) { toast.error('Failed to save chat'); console.error(error); }
+      else toast.success('Chat saved to your collection!');
+    } catch { toast.error('Failed to save'); }
+    setSaving(false);
+  };
+
   const handleClose = (v: boolean) => {
     if (!v) {
       abortRef.current?.abort();
