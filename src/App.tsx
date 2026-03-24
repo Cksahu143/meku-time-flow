@@ -39,6 +39,8 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <PWAInstallPrompt />
+          <PWAUpdatePrompt />
           
           <BrowserRouter>
             <Routes>
