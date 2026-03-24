@@ -15,7 +15,8 @@ import Profile from "./pages/Profile";
 import EditProfile from "./pages/EditProfile";
 import NotificationHub from "./pages/NotificationHub";
 import ResetPassword from "./pages/ResetPassword";
-
+import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
+import { PWAUpdatePrompt } from "@/components/PWAUpdatePrompt";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,6 +40,8 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <PWAInstallPrompt />
+          <PWAUpdatePrompt />
           
           <BrowserRouter>
             <Routes>
