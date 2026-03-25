@@ -443,6 +443,50 @@ export const QuizDialog = ({ open, onOpenChange, resource, content, gradeLevel, 
                     ))}
                   </div>
                 </div>
+
+                {/* Chapter Selection */}
+                {chapters.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold flex items-center gap-1.5">
+                      <BookOpen className="h-3.5 w-3.5" /> Focus on Chapters/Sections
+                    </Label>
+                    <ScrollArea className="max-h-[120px]">
+                      <div className="space-y-1">
+                        {chapters.map((ch, ci) => (
+                          <label key={ci} className="flex items-center gap-2 p-1.5 rounded hover:bg-muted/30 cursor-pointer transition-colors">
+                            <Checkbox
+                              checked={selectedChapters.includes(ch)}
+                              onCheckedChange={() => {
+                                setSelectedChapters(prev =>
+                                  prev.includes(ch) ? prev.filter(c => c !== ch) : [...prev, ch]
+                                );
+                              }}
+                            />
+                            <span className="text-xs">{ch}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                    {selectedChapters.length > 0 && (
+                      <p className="text-[10px] text-muted-foreground">{selectedChapters.length} chapter(s) selected</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Custom chapter input for books without detected chapters */}
+                {chapters.length === 0 && resource.resource_type === 'book' && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold">Chapter/Section (optional)</Label>
+                    <Input
+                      value={customChapter}
+                      onChange={e => setCustomChapter(e.target.value)}
+                      placeholder="e.g. Canto 1, Chapter 5, Unit 3..."
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      Supports: Chapters, Cantos, Adhyayas, Sargas, Parvas, Skandhas, Units, Lessons, Parts
+                    </p>
+                  </div>
+                )
               </div>
             )}
 
