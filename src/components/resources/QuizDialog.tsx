@@ -123,10 +123,16 @@ export const QuizDialog = ({ open, onOpenChange, resource, content, gradeLevel, 
     setVivaAnswers([]);
     setStarted(true);
     try {
+      // Build content with chapter focus
+      let quizContent = content;
+      if (selectedChapters.length > 0) {
+        quizContent = `${content}\n\nFOCUS ON THESE SPECIFIC CHAPTERS/SECTIONS:\n${selectedChapters.join('\n')}\n\nGenerate questions ONLY from these chapters.`;
+      }
+
       const { data, error } = await supabase.functions.invoke('ai-study-tools', {
         body: {
           type: mode === 'quiz' ? 'enhanced_quiz' : 'viva',
-          content,
+          content: quizContent,
           title: resource.title,
           subject: resource.subject,
           resourceUrl: resource.url,
@@ -136,6 +142,7 @@ export const QuizDialog = ({ open, onOpenChange, resource, content, gradeLevel, 
           questionTypes: selectedTypes,
           questionCount,
           difficulty,
+          chapters: selectedChapters.length > 0 ? selectedChapters : undefined,
         },
       });
       if (error) throw error;
