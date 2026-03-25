@@ -56,7 +56,29 @@ export const AIToolsMenu = ({ resource }: AIToolsMenuProps) => {
   const [showGradePicker, setShowGradePicker] = useState(false);
   const [pendingTool, setPendingTool] = useState<'coco' | 'flashcards' | 'slides' | 'quiz' | 'audio' | 'mindmap' | 'report' | null>(null);
 
-  const resourceContent = resource.content || resource.description || '';
+  // Build rich content for AI tools - include book chapters, full description, and metadata
+  const resourceContent = (() => {
+    let content = resource.content || resource.description || '';
+    // For books, parse the stored content JSON to include full metadata
+    if (resource.resource_type === 'book' && resource.content) {
+      try {
+        const bookData = JSON.parse(resource.content);
+        const parts: string[] = [];
+        if (bookData.title) parts.push(`Book Title: ${bookData.title}`);
+        if (bookData.author) parts.push(`Author: ${bookData.author}`);
+        if (bookData.description) parts.push(`Description: ${bookData.description}`);
+        if (bookData.language) parts.push(`Language: ${bookData.language}`);
+        if (bookData.chapters && Array.isArray(bookData.chapters) && bookData.chapters.length > 0) {
+          parts.push(`Table of Contents / Chapters:\n${bookData.chapters.join('\n')}`);
+        }
+        if (bookData.publishYear) parts.push(`Published: ${bookData.publishYear}`);
+        content = parts.join('\n') + (resource.description ? `\n\nUser Notes: ${resource.description}` : '');
+      } catch {
+        // If not valid JSON, use as-is
+      }
+    }
+    return content;
+  })();
 
   // Fetch student's grade from class_students on mount
   useEffect(() => {

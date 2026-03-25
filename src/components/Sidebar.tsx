@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Calendar, Clock, ListTodo, Timer, Moon, Sun, Palette, LogOut,
   MessageSquare, BookOpen, LayoutDashboard, Mic, Lock, Shield,
   Building, Megaphone, UserCheck, BarChart3, Settings2, GraduationCap,
-  BookOpenCheck, ChevronLeft, AlertCircle, Smartphone, ChevronDown
+  BookOpenCheck, ChevronLeft, AlertCircle, Smartphone, ChevronDown,
+  Download, RefreshCw
 } from 'lucide-react';
 import { ViewType } from '@/types';
 import { cn } from '@/lib/utils';
@@ -28,6 +29,96 @@ interface NavSection {
   icon: React.ElementType;
   items: { id: ViewType; label: string; icon: React.ElementType }[];
 }
+
+// PWA Install/Update buttons component
+const PWAButtons = ({ collapsed }: { collapsed: boolean }) => {
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
+
+  useEffect(() => {
+    const handleInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleInstallPrompt);
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistration().then(reg => {
+        if (!reg) return;
+        if (reg.waiting) { setWaitingWorker(reg.waiting); setUpdateAvailable(true); }
+        reg.addEventListener('updatefound', () => {
+          const nw = reg.installing;
+          if (!nw) return;
+          nw.addEventListener('statechange', () => {
+            if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+              setWaitingWorker(nw);
+              setUpdateAvailable(true);
+            }
+          });
+        });
+      });
+    }
+
+    return () => window.removeEventListener('beforeinstallprompt', handleInstallPrompt);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') setInstallPrompt(null);
+  };
+
+  const handleUpdate = () => {
+    if (waitingWorker) waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+  };
+
+  if (!installPrompt && !updateAvailable) return null;
+
+  return (
+    <div className={cn('space-y-1.5 mb-3', collapsed ? 'px-0' : '')}>
+      {updateAvailable && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <motion.button
+              onClick={handleUpdate}
+              className={cn(
+                'w-full flex items-center gap-2 rounded-lg text-xs font-medium transition-colors bg-primary/10 text-primary hover:bg-primary/20',
+                collapsed ? 'justify-center p-2' : 'px-3 py-2'
+              )}
+              whileTap={{ scale: 0.95 }}
+              initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              {!collapsed && 'Update Available'}
+            </motion.button>
+          </TooltipTrigger>
+          {collapsed && <TooltipContent side="right">Update App</TooltipContent>}
+        </Tooltip>
+      )}
+      {installPrompt && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <motion.button
+              onClick={handleInstall}
+              className={cn(
+                'w-full flex items-center gap-2 rounded-lg text-xs font-medium transition-colors bg-accent/10 text-accent-foreground hover:bg-accent/20',
+                collapsed ? 'justify-center p-2' : 'px-3 py-2'
+              )}
+              whileTap={{ scale: 0.95 }}
+              initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
+            >
+              <Download className="h-3.5 w-3.5" />
+              {!collapsed && 'Install App'}
+            </motion.button>
+          </TooltipTrigger>
+          {collapsed && <TooltipContent side="right">Install App</TooltipContent>}
+        </Tooltip>
+      )}
+    </div>
+  );
+};
 
 export function Sidebar({ currentView, onViewChange, collapsed = false, onToggleCollapse }: SidebarProps) {
   const { theme, setTheme } = useTheme();
@@ -286,6 +377,9 @@ export function Sidebar({ currentView, onViewChange, collapsed = false, onToggle
       {/* Footer */}
       <div className={cn('flex-shrink-0 relative z-10', collapsed ? 'p-2' : 'p-3')}>
         <div className="h-px bg-gradient-to-r from-transparent via-sidebar-border/60 to-transparent mb-3" />
+
+        {/* PWA Install/Update buttons */}
+        <PWAButtons collapsed={collapsed} />
         
         {/* Theme toggles */}
         {!collapsed && (

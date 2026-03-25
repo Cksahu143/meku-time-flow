@@ -55,9 +55,10 @@ interface QuizDialogProps {
   content: string;
   gradeLevel?: string;
   fileName?: string;
+  availableChapters?: string[];
 }
 
-export const QuizDialog = ({ open, onOpenChange, resource, content, gradeLevel, fileName }: QuizDialogProps) => {
+export const QuizDialog = ({ open, onOpenChange, resource, content, gradeLevel, fileName, availableChapters }: QuizDialogProps) => {
   const [mode, setMode] = useState<QuizMode>('quiz');
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [vivaQuestions, setVivaQuestions] = useState<VivaQuestion[]>([]);
@@ -71,6 +72,19 @@ export const QuizDialog = ({ open, onOpenChange, resource, content, gradeLevel, 
   const [selectedTypes, setSelectedTypes] = useState<string[]>(['mcq', 'true_false']);
   const [questionCount, setQuestionCount] = useState(10);
   const [difficulty, setDifficulty] = useState<'Easy' | 'Medium' | 'Hard'>('Medium');
+  const [selectedChapters, setSelectedChapters] = useState<string[]>([]);
+  const [customChapter, setCustomChapter] = useState('');
+
+  // Parse chapters from resource content for books
+  const chapters = availableChapters || (() => {
+    try {
+      if (resource.content) {
+        const parsed = JSON.parse(resource.content);
+        if (parsed.chapters && Array.isArray(parsed.chapters)) return parsed.chapters as string[];
+      }
+    } catch {}
+    return [];
+  })();
 
   // Viva state
   const [vivaAnswer, setVivaAnswer] = useState('');
@@ -109,10 +123,16 @@ export const QuizDialog = ({ open, onOpenChange, resource, content, gradeLevel, 
     setVivaAnswers([]);
     setStarted(true);
     try {
+      // Build content with chapter focus
+      let quizContent = content;
+      if (selectedChapters.length > 0) {
+        quizContent = `${content}\n\nFOCUS ON THESE SPECIFIC CHAPTERS/SECTIONS:\n${selectedChapters.join('\n')}\n\nGenerate questions ONLY from these chapters.`;
+      }
+
       const { data, error } = await supabase.functions.invoke('ai-study-tools', {
         body: {
           type: mode === 'quiz' ? 'enhanced_quiz' : 'viva',
-          content,
+          content: quizContent,
           title: resource.title,
           subject: resource.subject,
           resourceUrl: resource.url,
@@ -122,6 +142,7 @@ export const QuizDialog = ({ open, onOpenChange, resource, content, gradeLevel, 
           questionTypes: selectedTypes,
           questionCount,
           difficulty,
+          chapters: selectedChapters.length > 0 ? selectedChapters : undefined,
         },
       });
       if (error) throw error;
@@ -422,6 +443,50 @@ export const QuizDialog = ({ open, onOpenChange, resource, content, gradeLevel, 
                     ))}
                   </div>
                 </div>
+
+                {/* Chapter Selection */}
+                {chapters.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold flex items-center gap-1.5">
+                      <BookOpen className="h-3.5 w-3.5" /> Focus on Chapters/Sections
+                    </Label>
+                    <ScrollArea className="max-h-[120px]">
+                      <div className="space-y-1">
+                        {chapters.map((ch, ci) => (
+                          <label key={ci} className="flex items-center gap-2 p-1.5 rounded hover:bg-muted/30 cursor-pointer transition-colors">
+                            <Checkbox
+                              checked={selectedChapters.includes(ch)}
+                              onCheckedChange={() => {
+                                setSelectedChapters(prev =>
+                                  prev.includes(ch) ? prev.filter(c => c !== ch) : [...prev, ch]
+                                );
+                              }}
+                            />
+                            <span className="text-xs">{ch}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                    {selectedChapters.length > 0 && (
+                      <p className="text-[10px] text-muted-foreground">{selectedChapters.length} chapter(s) selected</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Custom chapter input for books without detected chapters */}
+                {chapters.length === 0 && resource.resource_type === 'book' && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold">Chapter/Section (optional)</Label>
+                    <Input
+                      value={customChapter}
+                      onChange={e => setCustomChapter(e.target.value)}
+                      placeholder="e.g. Canto 1, Chapter 5, Unit 3..."
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      Supports: Chapters, Cantos, Adhyayas, Sargas, Parvas, Skandhas, Units, Lessons, Parts
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 

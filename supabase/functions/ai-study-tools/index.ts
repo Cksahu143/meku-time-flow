@@ -664,7 +664,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { type, tool, content, title, subject, messages, resourceUrl, resourceType, gradeLevel, language, fileName, questionTypes, questionCount: userQuestionCount, difficulty: userDifficulty } = await req.json();
+    const { type, tool, content, title, subject, messages, resourceUrl, resourceType, gradeLevel, language, fileName, questionTypes, questionCount: userQuestionCount, difficulty: userDifficulty, chapters: userChapters } = await req.json();
     const effectiveType = type || tool;
     // API keys are now handled inside resilientAIFetch
 
@@ -710,7 +710,10 @@ serve(async (req) => {
       : "";
 
     const fileNote = fileName ? `\nSource File: ${fileName}` : "";
-    const resourceContext = `Resource Title: ${title || "Untitled"}\nSubject: ${subject || "General"}\nResource Type: ${resourceType || "unknown"}${fileNote}\nStudent Grade Level: ${gradeLevelStr}${titleNote}\n\nContent:\n${enrichedContent || "No content available - use your deep knowledge of this subject to help the student."}`;
+    const chapterContext = userChapters && Array.isArray(userChapters) && userChapters.length > 0
+      ? `\n\nSPECIFIC CHAPTERS/SECTIONS TO FOCUS ON:\n${userChapters.join('\n')}\nFocus questions and content on these specific chapters/cantos/adhyayas/sections.`
+      : "";
+    const resourceContext = `Resource Title: ${title || "Untitled"}\nSubject: ${subject || "General"}\nResource Type: ${resourceType || "unknown"}${fileNote}\nStudent Grade Level: ${gradeLevelStr}${titleNote}${chapterContext}\n\nContent:\n${enrichedContent || "No content available - use your deep knowledge of this subject to help the student."}`;
 
     const difficultyGuide = gradeNumber <= 5
       ? "Keep language simple and age-appropriate. Use fun examples and relatable scenarios. Focus on basic concepts and recall."
