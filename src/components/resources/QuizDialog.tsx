@@ -55,6 +55,7 @@ interface QuizDialogProps {
   content: string;
   gradeLevel?: string;
   fileName?: string;
+  availableChapters?: string[];
 }
 
 export const QuizDialog = ({ open, onOpenChange, resource, content, gradeLevel, fileName }: QuizDialogProps) => {
