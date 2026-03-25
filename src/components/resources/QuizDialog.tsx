@@ -486,7 +486,7 @@ export const QuizDialog = ({ open, onOpenChange, resource, content, gradeLevel, 
                       Supports: Chapters, Cantos, Adhyayas, Sargas, Parvas, Skandhas, Units, Lessons, Parts
                     </p>
                   </div>
-                )
+                )}
               </div>
             )}
 
