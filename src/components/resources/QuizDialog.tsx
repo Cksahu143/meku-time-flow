@@ -72,6 +72,19 @@ export const QuizDialog = ({ open, onOpenChange, resource, content, gradeLevel, 
   const [selectedTypes, setSelectedTypes] = useState<string[]>(['mcq', 'true_false']);
   const [questionCount, setQuestionCount] = useState(10);
   const [difficulty, setDifficulty] = useState<'Easy' | 'Medium' | 'Hard'>('Medium');
+  const [selectedChapters, setSelectedChapters] = useState<string[]>([]);
+  const [customChapter, setCustomChapter] = useState('');
+
+  // Parse chapters from resource content for books
+  const chapters = availableChapters || (() => {
+    try {
+      if (resource.content) {
+        const parsed = JSON.parse(resource.content);
+        if (parsed.chapters && Array.isArray(parsed.chapters)) return parsed.chapters as string[];
+      }
+    } catch {}
+    return [];
+  })();
 
   // Viva state
   const [vivaAnswer, setVivaAnswer] = useState('');
