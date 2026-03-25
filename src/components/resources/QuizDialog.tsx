@@ -58,7 +58,7 @@ interface QuizDialogProps {
   availableChapters?: string[];
 }
 
-export const QuizDialog = ({ open, onOpenChange, resource, content, gradeLevel, fileName }: QuizDialogProps) => {
+export const QuizDialog = ({ open, onOpenChange, resource, content, gradeLevel, fileName, availableChapters }: QuizDialogProps) => {
   const [mode, setMode] = useState<QuizMode>('quiz');
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [vivaQuestions, setVivaQuestions] = useState<VivaQuestion[]>([]);
