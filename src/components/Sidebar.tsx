@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Calendar, Clock, ListTodo, Timer, Moon, Sun, Palette, LogOut,
   MessageSquare, BookOpen, LayoutDashboard, Mic, Lock, Shield,
   Building, Megaphone, UserCheck, BarChart3, Settings2, GraduationCap,
-  BookOpenCheck, ChevronLeft, AlertCircle, Smartphone, ChevronDown
+  BookOpenCheck, ChevronLeft, AlertCircle, Smartphone, ChevronDown,
+  Download, RefreshCw
 } from 'lucide-react';
 import { ViewType } from '@/types';
 import { cn } from '@/lib/utils';
