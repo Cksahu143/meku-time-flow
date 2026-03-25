@@ -287,6 +287,9 @@ export function Sidebar({ currentView, onViewChange, collapsed = false, onToggle
       {/* Footer */}
       <div className={cn('flex-shrink-0 relative z-10', collapsed ? 'p-2' : 'p-3')}>
         <div className="h-px bg-gradient-to-r from-transparent via-sidebar-border/60 to-transparent mb-3" />
+
+        {/* PWA Install/Update buttons */}
+        <PWAButtons collapsed={collapsed} />
         
         {/* Theme toggles */}
         {!collapsed && (
