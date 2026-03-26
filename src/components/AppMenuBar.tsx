@@ -99,9 +99,9 @@ export const AppMenuBar: React.FC<AppMenuBarProps> = ({ onViewChange, currentVie
               {updateState === 'checking' ? (
                 <span className="flex items-center gap-2"><Loader2 className="h-3 w-3 animate-spin" /> Checking…</span>
               ) : updateState === 'up-to-date' ? (
-                <span className="flex items-center gap-2"><CheckCircle2 className="h-3 w-3 text-green-500" /> Up to date ✓</span>
+                <span className="flex items-center gap-2"><CheckCircle2 className="h-3 w-3 text-primary" /> Up to date ✓</span>
               ) : updateState === 'available' ? (
-                <span className="flex items-center gap-2"><AlertCircle className="h-3 w-3 text-orange-500" /> Update available</span>
+                <span className="flex items-center gap-2"><AlertCircle className="h-3 w-3 text-destructive" /> Update available</span>
               ) : (
                 'Check for Updates…'
               )}

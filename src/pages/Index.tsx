@@ -29,6 +29,7 @@ import { SavedResultsView } from '@/components/resources/SavedResultsView';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { PageTransition } from '@/components/motion/PageTransition';
 import { NotificationListener } from '@/components/NotificationListener';
+import { AppMenuBar } from '@/components/AppMenuBar';
 
 // Unique per-view transition variants
 const viewTransitions: Record<string, { initial: TargetAndTransition; animate: TargetAndTransition; exit: TargetAndTransition }> = {
