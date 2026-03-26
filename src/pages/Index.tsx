@@ -29,6 +29,7 @@ import { SavedResultsView } from '@/components/resources/SavedResultsView';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { PageTransition } from '@/components/motion/PageTransition';
 import { NotificationListener } from '@/components/NotificationListener';
+import { AppMenuBar } from '@/components/AppMenuBar';
 
 // Unique per-view transition variants
 const viewTransitions: Record<string, { initial: TargetAndTransition; animate: TargetAndTransition; exit: TargetAndTransition }> = {
@@ -125,6 +126,9 @@ const Index = () => {
 
       {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-10">
+        {/* macOS-style Menu Bar (desktop only) */}
+        <AppMenuBar onViewChange={handleViewChange} currentView={currentView} />
+
         {/* Top Header (desktop only) */}
         <div className="hidden md:block">
           <TopHeader onSelectFeature={handleSelectFeature} />

@@ -445,6 +445,23 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
         </div>
       </motion.div>
 
+      {/* Creator Credit */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.7 }}
+      >
+        <Card className="border-primary/20">
+          <CardContent className="p-6 text-center space-y-2">
+            <h3 className="text-lg font-semibold text-foreground">Created & Developed by</h3>
+            <p className="text-xl font-bold text-primary">Charukrishna Sahu</p>
+            <p className="text-xs text-muted-foreground">
+              © {new Date().getFullYear()} EDAS. All rights reserved.
+            </p>
+          </CardContent>
+        </Card>
+      </motion.div>
+
       {/* QA Testing Document — Platform Admin Only */}
       <QATestingSection />
 
