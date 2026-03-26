@@ -24,7 +24,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(STATIC_CACHE)
       .then(cache => cache.addAll(APP_SHELL))
-      .then(() => self.skipWaiting()) // Force activation without waiting
+      // Do NOT skipWaiting here — let the app control when to activate
   );
 });
 

@@ -41,14 +41,20 @@ export const AppMenuBar: React.FC<AppMenuBarProps> = ({ onViewChange, currentVie
     }
   };
 
-  const handleRelaunch = () => {
-    const reg = navigator.serviceWorker?.controller;
-    if (reg) {
-      navigator.serviceWorker.getRegistration().then(r => {
-        r?.waiting?.postMessage({ type: 'SKIP_WAITING' });
-      });
+  const handleRelaunch = async () => {
+    try {
+      const reg = await navigator.serviceWorker?.getRegistration();
+      if (reg?.waiting) {
+        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        // controllerchange listener in main.tsx/PWAUpdatePrompt will reload
+        // fallback reload after 1s if controllerchange doesn't fire
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        window.location.reload();
+      }
+    } catch {
+      window.location.reload();
     }
-    setTimeout(() => window.location.reload(), 300);
   };
 
   const handleQuit = async () => {
