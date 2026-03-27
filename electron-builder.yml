@@ -2,13 +2,10 @@ appId: com.edas.app
 productName: EDAS
 copyright: Copyright © 2025 Charukrishna Sahu
 npmRebuild: false
+asar: true
 directories:
   buildResources: build
   output: electron-dist
-directories:
-  buildResources: build
-  output: electron-dist
-
 files:
   - dist/**/*
   - electron/**/*
@@ -17,9 +14,10 @@ files:
   - "!public/**/*"
   - "!electron-release/**/*"
   - "!.github/**/*"
-
 mac:
   category: public.app-category.education
+  hardenedRuntime: false
+  gatekeeperAssess: false
   target:
     - target: dmg
       arch:
@@ -27,11 +25,8 @@ mac:
     - target: zip
       arch:
         - universal
-  icon: build/icon.icns
-  
 dmg:
   title: "EDAS"
-  icon: build/icon.icns
   contents:
     - x: 130
       y: 220
@@ -39,25 +34,17 @@ dmg:
       y: 220
       type: link
       path: /Applications
-
 win:
   target:
     - target: nsis
       arch:
         - x64
-  icon: build/icon.ico
-
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
-  installerIcon: build/icon.ico
-  uninstallerIcon: build/icon.ico
-  installerHeaderIcon: build/icon.ico
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: EDAS
-  license: LICENSE
-
 publish:
   provider: github
   owner: Cksahu143
