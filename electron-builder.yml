@@ -1,7 +1,10 @@
 appId: com.edas.app
 productName: EDAS
 copyright: Copyright © 2025 Charukrishna Sahu
-
+npmRebuild: false
+directories:
+  buildResources: build
+  output: electron-dist
 directories:
   buildResources: build
   output: electron-dist
