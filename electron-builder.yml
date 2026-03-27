@@ -1,0 +1,67 @@
+appId: com.edas.app
+productName: EDAS
+copyright: Copyright © 2025 Charukrishna Sahu
+
+directories:
+  buildResources: build
+  output: electron-dist
+
+files:
+  - dist/**/*
+  - electron/**/*
+  - "!node_modules/**/*"
+  - "!src/**/*"
+  - "!public/**/*"
+  - "!electron-release/**/*"
+  - "!.github/**/*"
+
+mac:
+  category: public.app-category.education
+  target:
+    - target: dmg
+      arch:
+        - universal
+    - target: zip
+      arch:
+        - universal
+  icon: build/icon.icns
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+
+dmg:
+  title: "EDAS"
+  icon: build/icon.icns
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+  publisherName: Charukrishna Sahu
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: EDAS
+  license: LICENSE
+
+publish:
+  provider: github
+  owner: Cksahu143
+  repo: meku-time-flow
+  releaseType: release
