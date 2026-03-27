@@ -47,7 +47,6 @@ win:
       arch:
         - x64
   icon: build/icon.ico
-  publisherName: Charukrishna Sahu
 
 nsis:
   oneClick: false
