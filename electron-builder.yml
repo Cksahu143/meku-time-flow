@@ -18,7 +18,7 @@ mac:
   category: public.app-category.education
   hardenedRuntime: false
   gatekeeperAssess: false
-  icon: build/icon.png
+  icon: build/favicon.icns
   target:
     - target: dmg
       arch:
@@ -36,7 +36,7 @@ dmg:
       type: link
       path: /Applications
 win:
-  icon: build/icon.ico
+  icon: build/favicon.ico
   target:
     - target: nsis
       arch:
