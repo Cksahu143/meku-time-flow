@@ -15,7 +15,7 @@ function createWindow() {
     minWidth: 800,
     minHeight: 600,
     title: 'EDAS',
-    icon: path.join(__dirname, '..', 'public', 'icons', 'icon-512x512.png'),
+    icon: path.join(__dirname, '..', 'build', 'icon.png'),
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
