@@ -186,7 +186,7 @@ export const AppMenuBar: React.FC<AppMenuBarProps> = ({ onViewChange, currentVie
           <DialogHeader>
             <DialogTitle className="text-center text-xl">EDAS</DialogTitle>
             <DialogDescription className="text-center space-y-2 pt-2">
-              <p className="text-sm text-muted-foreground">Version 1.0.0</p>
+              <p className="text-sm text-muted-foreground">Version 1.1.0</p>
               <p className="text-xs text-muted-foreground">
                 © {new Date().getFullYear()} EDAS. All rights reserved.
               </p>
