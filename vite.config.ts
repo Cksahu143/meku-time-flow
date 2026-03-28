@@ -1,17 +1,22 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react-swc";
+import path from "path";
 
-export default defineConfig({
-  // Other configurations... keep these as they are
-  build: {
-    // Example settings, maintain existing settings
-    outDir: 'dist',
-    rollupOptions: {
-      input: 'src/main.js',
-      output: {
-        // Example output settings
-        format: 'esm',
-      },
-    },
-    // More build settings if they exist
+// https://vitejs.dev/config/
+export default defineConfig(({ mode }) => ({
+  server: {
+    host: "::",
+    port: 8080,
   },
-});
+  base: './',
+  plugins: [react()],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+    dedupe: ["react", "react-dom", "react/jsx-runtime", "@tanstack/react-query"],
+  },
+  optimizeDeps: {
+    include: ["react", "react-dom", "@tanstack/react-query"],
+  },
+}));
