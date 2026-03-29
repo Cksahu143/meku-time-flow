@@ -3,7 +3,18 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
 
-createRoot(document.getElementById("root")!).render(
+// Global unhandled promise rejection handler
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('Unhandled promise rejection:', event.reason);
+  event.preventDefault();
+});
+
+const rootEl = document.getElementById("root");
+if (!rootEl) {
+  throw new Error('Root element not found — cannot mount EDAS');
+}
+
+createRoot(rootEl).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>

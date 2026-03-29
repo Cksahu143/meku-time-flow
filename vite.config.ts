@@ -19,4 +19,16 @@ export default defineConfig(({ mode }) => ({
   optimizeDeps: {
     include: ["react", "react-dom", "@tanstack/react-query"],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          query: ['@tanstack/react-query'],
+          charts: ['recharts'],
+          motion: ['framer-motion'],
+        },
+      },
+    },
+  },
 }));

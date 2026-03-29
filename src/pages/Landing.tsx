@@ -713,7 +713,7 @@ const Landing = () => {
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
             >
-              © 2025 EDAS. All rights reserved.
+              © {new Date().getFullYear()} EDAS. All rights reserved.
             </motion.p>
           </div>
         </div>

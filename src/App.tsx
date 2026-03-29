@@ -2,10 +2,11 @@ import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, QueryCache } from "@tanstack/react-query";
 import { HashRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { RBACProvider } from "@/contexts/RBACContext";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
 import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
@@ -31,37 +32,44 @@ const queryClient = new QueryClient({
       retry: 1,
     },
   },
+  queryCache: new QueryCache({
+    onError: (error) => {
+      console.error('Query error:', error.message);
+    },
+  }),
 });
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider defaultTheme="light" storageKey="meku-theme">
-      <RBACProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <PWAInstallPrompt />
-          <PWAUpdatePrompt />
-          
-          <HashRouter>
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/app" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/active-users" element={<ActiveUsers />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/profile/:userId" element={<Profile />} />
-              <Route path="/profile/edit" element={<EditProfile />} />
-              <Route path="/notifhub" element={<NotificationHub />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </HashRouter>
-        </TooltipProvider>
-      </RBACProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider defaultTheme="light" storageKey="meku-theme">
+        <RBACProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <PWAInstallPrompt />
+            <PWAUpdatePrompt />
+            
+            <HashRouter>
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/app" element={<ErrorBoundary><Index /></ErrorBoundary>} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/active-users" element={<ActiveUsers />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/profile/:userId" element={<Profile />} />
+                <Route path="/profile/edit" element={<EditProfile />} />
+                <Route path="/notifhub" element={<NotificationHub />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </HashRouter>
+          </TooltipProvider>
+        </RBACProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
