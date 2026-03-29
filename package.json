@@ -1,5 +1,7 @@
 {
   "name": "Edas",
+  "description": "EDAS - School Planner",
+  "author": "Charukrishna Sahu",
   "private": true,
   "version": "1.1.0",
   "type": "module",
