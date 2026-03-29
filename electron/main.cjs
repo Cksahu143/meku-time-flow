@@ -5,6 +5,10 @@ const https = require('https');
 const APP_VERSION = app.getVersion();
 const GITHUB_OWNER = 'Cksahu143';
 const GITHUB_REPO = 'meku-time-flow';
+const isDev = !app.isPackaged;
+
+// Set Windows taskbar app ID
+app.setAppUserModelId('com.edas.app');
 
 let mainWindow;
 
@@ -15,10 +19,14 @@ function createWindow() {
     minWidth: 800,
     minHeight: 600,
     title: 'EDAS',
-    icon: path.join(__dirname, '..', 'build', 'icon.png'),
+    icon: path.join(app.getAppPath(), 'build', 'icon.png'),
+    autoHideMenuBar: false,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      webSecurity: !isDev,
+      allowRunningInsecureContent: false,
+      experimentalFeatures: false,
       preload: path.join(__dirname, 'preload.cjs'),
     },
     show: false,
@@ -33,7 +41,81 @@ function createWindow() {
 
   // Load the built app
   const indexPath = path.join(app.getAppPath(), 'dist', 'index.html');
-  mainWindow.loadFile(indexPath);
+  mainWindow.loadFile(indexPath).catch((err) => {
+    console.error('Failed to load app:', err);
+    dialog
+      .showMessageBox({
+        type: 'error',
+        title: 'EDAS — Load Error',
+        message: 'The application could not load.',
+        detail:
+          'The main interface failed to start. This may be caused by a corrupted installation.\n\nPlease try reinstalling EDAS.',
+        buttons: ['Quit'],
+      })
+      .then(() => app.quit());
+  });
+
+  // Handle page load failures (e.g. missing assets after partial update)
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
+    console.error(`did-fail-load: ${errorCode} ${errorDescription}`);
+    dialog
+      .showMessageBox(mainWindow, {
+        type: 'error',
+        title: 'EDAS — Page Load Error',
+        message: 'A page failed to load.',
+        detail: `${errorDescription} (code ${errorCode})\n\nWould you like to retry?`,
+        buttons: ['Retry', 'Quit'],
+        defaultId: 0,
+      })
+      .then(({ response }) => {
+        if (response === 0) {
+          mainWindow.loadFile(indexPath).catch(() => app.quit());
+        } else {
+          app.quit();
+        }
+      });
+  });
+
+  // Handle renderer crash
+  mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    console.error('Renderer crashed:', details.reason);
+    dialog
+      .showMessageBox({
+        type: 'error',
+        title: 'EDAS — Crashed',
+        message: 'The application has crashed.',
+        detail: 'Would you like to reload or quit?',
+        buttons: ['Reload', 'Quit'],
+        defaultId: 0,
+      })
+      .then(({ response }) => {
+        if (response === 0) {
+          mainWindow.reload();
+        } else {
+          app.quit();
+        }
+      });
+  });
+
+  // Handle unresponsive window
+  mainWindow.on('unresponsive', () => {
+    dialog
+      .showMessageBox(mainWindow, {
+        type: 'warning',
+        title: 'EDAS — Not Responding',
+        message: 'The application is not responding.',
+        detail: 'Would you like to wait or reload?',
+        buttons: ['Wait', 'Reload', 'Quit'],
+        defaultId: 0,
+      })
+      .then(({ response }) => {
+        if (response === 1) {
+          mainWindow.reload();
+        } else if (response === 2) {
+          app.quit();
+        }
+      });
+  });
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -76,6 +158,7 @@ function checkForUpdates(silent = false) {
           });
         }
       } catch {
+        // Intentionally silent — JSON parse of GitHub API response failed
         if (!silent) {
           dialog.showMessageBox(mainWindow, {
             type: 'info',
@@ -86,6 +169,7 @@ function checkForUpdates(silent = false) {
       }
     });
   }).on('error', () => {
+    // Intentionally silent on network error for silent checks
     if (!silent) {
       dialog.showMessageBox(mainWindow, {
         type: 'error',
@@ -93,6 +177,22 @@ function checkForUpdates(silent = false) {
         message: 'Could not connect to the update server.',
       });
     }
+  });
+}
+
+function showAboutDialog() {
+  dialog.showMessageBox(mainWindow, {
+    type: 'info',
+    title: 'About EDAS',
+    message: 'EDAS — Educational Dashboard & Assignment System',
+    detail:
+      'The all-in-one school planner for students.\n\n' +
+      'Track assignments, manage schedules, and stay on top of your academic life.\n\n' +
+      'Version ' + APP_VERSION + '\n' +
+      'Built by Charukrishna Sahu\n\n' +
+      'Copyright © 2026 Charukrishna Sahu\n' +
+      'All rights reserved.',
+    buttons: ['OK'],
   });
 }
 
@@ -105,7 +205,10 @@ function buildMenu() {
           {
             label: 'EDAS',
             submenu: [
-              { label: 'About EDAS', role: 'about' },
+              {
+                label: 'About EDAS',
+                click: () => showAboutDialog(),
+              },
               {
                 label: 'Check for Updates…',
                 click: () => checkForUpdates(false),

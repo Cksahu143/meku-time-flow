@@ -286,7 +286,7 @@ serve(async (req) => {
       }
     );
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Transcription error:', error);
     
     return new Response(

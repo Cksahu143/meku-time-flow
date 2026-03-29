@@ -148,11 +148,12 @@ export const PrivacySettings: React.FC = () => {
         title: 'Privacy settings updated',
         description: 'Your privacy preferences have been saved',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to save privacy settings';
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: error.message || 'Failed to save privacy settings',
+        description: message,
       });
     } finally {
       setLoading(false);
@@ -198,11 +199,12 @@ export const PrivacySettings: React.FC = () => {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to change password';
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: error.message || 'Failed to change password',
+        description: message,
       });
     } finally {
       setLoading(false);
@@ -235,12 +237,13 @@ export const PrivacySettings: React.FC = () => {
         description: 'Your account has been permanently deleted',
       });
       
-      window.location.href = '/auth';
-    } catch (error: any) {
+      window.location.hash = '#/auth';
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to delete account';
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: error.message || 'Failed to delete account',
+        description: message,
       });
     } finally {
       setLoading(false);
@@ -256,12 +259,13 @@ export const PrivacySettings: React.FC = () => {
         title: 'Logged out from all devices',
         description: 'You have been signed out from all sessions',
       });
-      window.location.href = '/auth';
-    } catch (error: any) {
+      window.location.hash = '#/auth';
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to log out from all devices';
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: error.message || 'Failed to log out from all devices',
+        description: message,
       });
     }
   };
