@@ -10,7 +10,7 @@ import {
   CheckCircle,
   AlertCircle,
   Upload,
-  Link2,
+  
   FileAudio,
   Sparkles,
   Shield,
@@ -75,8 +75,7 @@ export const TranscribeView: React.FC = () => {
   const [resourceTitle, setResourceTitle] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
-  const [audioUrl, setAudioUrl] = useState('');
-  const [showUrlDialog, setShowUrlDialog] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState('auto');
 
