@@ -10,7 +10,7 @@ import {
   CheckCircle,
   AlertCircle,
   Upload,
-  Link2,
+  
   FileAudio,
   Sparkles,
   Shield,
@@ -75,8 +75,6 @@ export const TranscribeView: React.FC = () => {
   const [resourceTitle, setResourceTitle] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
-  const [audioUrl, setAudioUrl] = useState('');
-  const [showUrlDialog, setShowUrlDialog] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState('auto');
 
@@ -312,74 +310,6 @@ export const TranscribeView: React.FC = () => {
     } finally {
       setIsTranscribing(false);
       setSelectedFile(null);
-    }
-  };
-
-  const transcribeUrl = async () => {
-    if (!audioUrl.trim()) {
-      toast({
-        variant: 'destructive',
-        title: 'URL Required',
-        description: 'Please enter a valid audio or video URL',
-      });
-      return;
-    }
-
-    setShowUrlDialog(false);
-    setIsTranscribing(true);
-
-    try {
-      const formData = new FormData();
-      formData.append('url', audioUrl.trim());
-      formData.append('language', selectedLanguage);
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('Please sign in to use transcription');
-      }
-
-      const response = await supabase.functions.invoke('transcribe-audio', {
-        body: formData,
-      });
-
-      if (response.error) {
-        throw new Error(response.error.message || 'Transcription failed');
-      }
-
-      const result = response.data;
-      
-      if (!result.success) {
-        throw new Error(result.error || 'Transcription failed');
-      }
-
-      setTranscriptData({
-        transcript: result.transcript,
-        notes: result.notes,
-        summary: result.summary,
-        title: 'URL Transcription',
-        detectedLanguage: result.detectedLanguage,
-        languageName: result.languageName,
-        wasTranslated: result.wasTranslated,
-        originalText: result.originalText,
-      });
-      setResourceTitle('URL Transcription - ' + new Date().toLocaleDateString());
-      setShowSaveDialog(true);
-
-      toast({
-        title: 'Transcription Complete',
-        description: 'Your audio has been transcribed successfully!',
-      });
-
-    } catch (error) {
-      console.error('Transcription error:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Transcription Failed',
-        description: error instanceof Error ? error.message : 'Unable to transcribe the URL. Please try again.',
-      });
-    } finally {
-      setIsTranscribing(false);
-      setAudioUrl('');
     }
   };
 
@@ -625,7 +555,7 @@ export const TranscribeView: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="grid md:grid-cols-4 gap-6"
+        className="grid md:grid-cols-3 gap-6"
       >
         {/* Live Mic Card */}
         <Card className="border-border/50 shadow-md hover:shadow-lg transition-shadow border-primary/30">
@@ -704,30 +634,6 @@ export const TranscribeView: React.FC = () => {
                   Choose File
                 </>
               )}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* URL Card */}
-        <Card className="border-border/50 shadow-md hover:shadow-lg transition-shadow">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Link2 className="h-5 w-5 text-primary" />
-              From URL
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Paste a direct link to an audio file
-            </p>
-            <Button 
-              variant="outline"
-              className="w-full gap-2"
-              onClick={() => setShowUrlDialog(true)}
-              disabled={isTranscribing}
-            >
-              <Link2 className="h-4 w-4" />
-              Enter URL
             </Button>
           </CardContent>
         </Card>
@@ -885,46 +791,6 @@ export const TranscribeView: React.FC = () => {
           </Card>
         </motion.div>
       )}
-
-      {/* URL Dialog */}
-      <Dialog open={showUrlDialog} onOpenChange={setShowUrlDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Link2 className="h-5 w-5 text-primary" />
-              Transcribe from URL
-            </DialogTitle>
-            <DialogDescription>
-              Enter a direct link to an audio or video file
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="audio-url">Audio/Video URL</Label>
-              <Input
-                id="audio-url"
-                value={audioUrl}
-                onChange={(e) => setAudioUrl(e.target.value)}
-                placeholder="https://example.com/audio.mp3"
-                type="url"
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              <AlertCircle className="h-3 w-3 inline mr-1" />
-              URL must point directly to an audio/video file (MP3, WAV, M4A, MP4)
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setShowUrlDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={transcribeUrl} disabled={!audioUrl.trim()}>
-              <Sparkles className="h-4 w-4 mr-2" />
-              Transcribe
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Save Dialog */}
       <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
