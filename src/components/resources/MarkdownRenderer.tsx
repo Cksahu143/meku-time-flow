@@ -63,14 +63,52 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, cla
                 {children}
               </blockquote>
             ),
-            h1: ({ children }) => <h1 className="text-xl font-bold text-foreground mt-4 mb-2">{children}</h1>,
-            h2: ({ children }) => <h2 className="text-lg font-bold text-foreground mt-3 mb-2">{children}</h2>,
-            h3: ({ children }) => <h3 className="text-base font-semibold text-foreground mt-3 mb-1">{children}</h3>,
+            h1: ({ children }) => <h1 className="text-xl font-bold text-foreground mt-6 mb-3">{children}</h1>,
+            h2: ({ children }) => <h2 className="text-lg font-bold text-foreground mt-5 mb-3">{children}</h2>,
+            h3: ({ children }) => <h3 className="text-base font-semibold text-foreground mt-4 mb-2">{children}</h3>,
             strong: ({ children }) => <strong className="font-bold text-foreground">{children}</strong>,
-            ul: ({ children }) => <ul className="list-disc pl-5 space-y-1 my-2">{children}</ul>,
-            ol: ({ children }) => <ol className="list-decimal pl-5 space-y-1 my-2">{children}</ol>,
-            li: ({ children }) => <li className="text-foreground">{children}</li>,
-            p: ({ children }) => <p className="my-1.5 text-foreground leading-relaxed">{children}</p>,
+            ul: ({ children }) => <ul className="list-disc pl-5 space-y-1.5 my-3">{children}</ul>,
+            ol: ({ children }) => <ol className="list-decimal pl-5 space-y-1.5 my-3">{children}</ol>,
+            li: ({ children }) => <li className="text-foreground leading-relaxed">{children}</li>,
+            p: ({ children }) => <p className="my-2.5 text-foreground leading-relaxed">{children}</p>,
+            a: ({ href, children }) => {
+              // Detect YouTube links and render as embedded video
+              const ytMatch = href?.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]+)/);
+              if (ytMatch) {
+                return (
+                  <div className="my-4 rounded-lg overflow-hidden border border-border/50">
+                    <iframe
+                      src={`https://www.youtube.com/embed/${ytMatch[1]}`}
+                      className="w-full aspect-video"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      title="YouTube video"
+                    />
+                  </div>
+                );
+              }
+              return (
+                <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80">
+                  {children}
+                </a>
+              );
+            },
+            img: ({ src, alt }) => {
+              // Detect video file extensions
+              if (src && /\.(mp4|webm|mov|ogg)(\?|$)/i.test(src)) {
+                return (
+                  <div className="my-4 rounded-lg overflow-hidden border border-border/50">
+                    <video src={src} controls className="w-full max-h-[500px]" playsInline>
+                      Your browser does not support the video tag.
+                    </video>
+                  </div>
+                );
+              }
+              return (
+                <img src={src} alt={alt || ''} className="rounded-lg my-3 max-w-full h-auto border border-border/50" loading="lazy" />
+              );
+            },
+            hr: () => <hr className="my-6 border-border/50" />,
           }}
         />
       </div>
