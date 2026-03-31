@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, dialog, shell } = require('electron');
+const { app, BrowserWindow, Menu, dialog, shell, session } = require('electron');
 const path = require('path');
 const https = require('https');
 
@@ -13,6 +13,17 @@ app.setAppUserModelId('com.edas.app');
 let mainWindow;
 
 function createWindow() {
+  // Grant microphone permissions automatically
+  session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
+    const allowed = ['media', 'mediaKeySystem', 'geolocation', 'notifications'];
+    callback(allowed.includes(permission));
+  });
+
+  session.defaultSession.setPermissionCheckHandler((_webContents, permission) => {
+    const allowed = ['media', 'mediaKeySystem', 'geolocation', 'notifications'];
+    return allowed.includes(permission);
+  });
+
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -34,9 +45,30 @@ function createWindow() {
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
   });
 
-  // Show splash-like loading
+  // Show when ready
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
+  });
+
+  // Intercept OAuth navigations — open in external browser
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('https://') || url.startsWith('http://')) {
+      shell.openExternal(url);
+      return { action: 'deny' };
+    }
+    return { action: 'allow' };
+  });
+
+  // Also intercept will-navigate for OAuth redirects
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    const parsed = new URL(url);
+    // Allow file:// and localhost navigations (app itself)
+    if (parsed.protocol === 'file:' || parsed.hostname === 'localhost') return;
+    // OAuth and external URLs → open in default browser
+    if (url.includes('accounts.google.com') || url.includes('oauth') || url.includes('supabase')) {
+      event.preventDefault();
+      shell.openExternal(url);
+    }
   });
 
   // Load the built app
@@ -55,7 +87,7 @@ function createWindow() {
       .then(() => app.quit());
   });
 
-  // Handle page load failures (e.g. missing assets after partial update)
+  // Handle page load failures
   mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
     console.error(`did-fail-load: ${errorCode} ${errorDescription}`);
     dialog
@@ -196,6 +228,14 @@ function showAboutDialog() {
   });
 }
 
+function navigateTo(view) {
+  if (mainWindow && mainWindow.webContents) {
+    mainWindow.webContents.executeJavaScript(
+      `window.__EDAS_NAVIGATE && window.__EDAS_NAVIGATE('${view}')`
+    );
+  }
+}
+
 function buildMenu() {
   const isMac = process.platform === 'darwin';
 
@@ -205,14 +245,8 @@ function buildMenu() {
           {
             label: 'EDAS',
             submenu: [
-              {
-                label: 'About EDAS',
-                click: () => showAboutDialog(),
-              },
-              {
-                label: 'Check for Updates…',
-                click: () => checkForUpdates(false),
-              },
+              { label: 'About EDAS', click: () => showAboutDialog() },
+              { label: 'Check for Updates…', click: () => checkForUpdates(false) },
               { type: 'separator' },
               { role: 'services' },
               { type: 'separator' },
@@ -242,6 +276,19 @@ function buildMenu() {
       ],
     },
     {
+      label: 'Navigate',
+      submenu: [
+        { label: 'Dashboard', click: () => navigateTo('dashboard'), accelerator: 'CmdOrCtrl+1' },
+        { label: 'Timetable', click: () => navigateTo('timetable'), accelerator: 'CmdOrCtrl+2' },
+        { label: 'Calendar', click: () => navigateTo('calendar'), accelerator: 'CmdOrCtrl+3' },
+        { label: 'To-Do', click: () => navigateTo('todo'), accelerator: 'CmdOrCtrl+4' },
+        { label: 'Pomodoro', click: () => navigateTo('pomodoro'), accelerator: 'CmdOrCtrl+5' },
+        { label: 'Groups', click: () => navigateTo('groups'), accelerator: 'CmdOrCtrl+6' },
+        { label: 'Resources', click: () => navigateTo('resources'), accelerator: 'CmdOrCtrl+7' },
+        { label: 'Transcribe', click: () => navigateTo('transcribe'), accelerator: 'CmdOrCtrl+8' },
+      ],
+    },
+    {
       label: 'View',
       submenu: [
         { role: 'reload' },
@@ -266,10 +313,13 @@ function buildMenu() {
     {
       label: 'Help',
       submenu: [
-        {
-          label: 'Check for Updates…',
-          click: () => checkForUpdates(false),
-        },
+        ...(!isMac
+          ? [
+              { label: 'About EDAS', click: () => showAboutDialog() },
+              { type: 'separator' },
+            ]
+          : []),
+        { label: 'Check for Updates…', click: () => checkForUpdates(false) },
         { type: 'separator' },
         {
           label: 'Report a Bug',
