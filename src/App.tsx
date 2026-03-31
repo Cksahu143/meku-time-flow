@@ -50,6 +50,7 @@ const App = () => (
             <Sonner />
             <PWAInstallPrompt />
             <PWAUpdatePrompt />
+            <OfflineBanner />
             
             <HashRouter>
               <Routes>

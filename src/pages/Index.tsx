@@ -69,6 +69,16 @@ const Index = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
+  // Expose navigation bridge for Electron native menu
+  useEffect(() => {
+    (window as Record<string, unknown>).__EDAS_NAVIGATE = (view: string) => {
+      handleNavigate(view);
+    };
+    return () => {
+      delete (window as Record<string, unknown>).__EDAS_NAVIGATE;
+    };
+  }, []);
+
   if (loading || rbacLoading) return <LoadingScreen />;
 
   const handleNavigate = (view: string) => {
