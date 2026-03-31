@@ -71,11 +71,13 @@ const Index = () => {
 
   // Expose navigation bridge for Electron native menu
   useEffect(() => {
-    (window as Record<string, unknown>).__EDAS_NAVIGATE = (view: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__EDAS_NAVIGATE = (view: string) => {
       handleNavigate(view);
     };
     return () => {
-      delete (window as Record<string, unknown>).__EDAS_NAVIGATE;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      delete (window as any).__EDAS_NAVIGATE;
     };
   }, []);
 
