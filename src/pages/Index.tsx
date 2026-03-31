@@ -69,6 +69,18 @@ const Index = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
+  // Expose navigation bridge for Electron native menu
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__EDAS_NAVIGATE = (view: string) => {
+      handleNavigate(view);
+    };
+    return () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      delete (window as any).__EDAS_NAVIGATE;
+    };
+  }, []);
+
   if (loading || rbacLoading) return <LoadingScreen />;
 
   const handleNavigate = (view: string) => {

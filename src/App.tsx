@@ -18,6 +18,7 @@ import NotificationHub from "./pages/NotificationHub";
 import ResetPassword from "./pages/ResetPassword";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { PWAUpdatePrompt } from "@/components/PWAUpdatePrompt";
+import { OfflineBanner } from "@/components/OfflineBanner";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -49,6 +50,7 @@ const App = () => (
             <Sonner />
             <PWAInstallPrompt />
             <PWAUpdatePrompt />
+            <OfflineBanner />
             
             <HashRouter>
               <Routes>
