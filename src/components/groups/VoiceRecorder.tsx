@@ -51,6 +51,7 @@ export const VoiceRecorder = ({ onSendVoice, disabled, onRecordingChange }: Voic
 
       mediaRecorder.start();
       setIsRecording(true);
+      onRecordingChange?.(true);
       setRecordingTime(0);
 
       timerRef.current = setInterval(() => {
