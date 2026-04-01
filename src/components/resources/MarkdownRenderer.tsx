@@ -72,8 +72,8 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, cla
             li: ({ children }) => <li className="text-foreground leading-relaxed">{children}</li>,
             p: ({ children }) => <p className="my-2.5 text-foreground leading-relaxed">{children}</p>,
             a: ({ href, children }) => {
-              // Detect YouTube links and render as embedded video
-              const ytMatch = href?.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]+)/);
+              // Detect YouTube links
+              const ytMatch = href?.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([\w-]+)/);
               if (ytMatch) {
                 return (
                   <div className="my-4 rounded-lg overflow-hidden border border-border/50">
@@ -83,6 +83,51 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, cla
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
                       title="YouTube video"
+                    />
+                  </div>
+                );
+              }
+              // Detect Vimeo links
+              const vimeoMatch = href?.match(/(?:vimeo\.com\/)(\d+)/);
+              if (vimeoMatch) {
+                return (
+                  <div className="my-4 rounded-lg overflow-hidden border border-border/50">
+                    <iframe
+                      src={`https://player.vimeo.com/video/${vimeoMatch[1]}?dnt=1`}
+                      className="w-full aspect-video"
+                      allow="autoplay; fullscreen; picture-in-picture"
+                      allowFullScreen
+                      title="Vimeo video"
+                    />
+                  </div>
+                );
+              }
+              // Detect Dailymotion links
+              const dmMatch = href?.match(/(?:dailymotion\.com\/video\/|dai\.ly\/)([\w]+)/);
+              if (dmMatch) {
+                return (
+                  <div className="my-4 rounded-lg overflow-hidden border border-border/50">
+                    <iframe
+                      src={`https://www.dailymotion.com/embed/video/${dmMatch[1]}`}
+                      className="w-full aspect-video"
+                      allow="autoplay; fullscreen; picture-in-picture"
+                      allowFullScreen
+                      title="Dailymotion video"
+                    />
+                  </div>
+                );
+              }
+              // Detect Loom links
+              const loomMatch = href?.match(/(?:loom\.com\/share\/)([\w]+)/);
+              if (loomMatch) {
+                return (
+                  <div className="my-4 rounded-lg overflow-hidden border border-border/50">
+                    <iframe
+                      src={`https://www.loom.com/embed/${loomMatch[1]}`}
+                      className="w-full aspect-video"
+                      allow="autoplay; fullscreen"
+                      allowFullScreen
+                      title="Loom video"
                     />
                   </div>
                 );
