@@ -6,9 +6,10 @@ import { useToast } from '@/hooks/use-toast';
 interface VoiceRecorderProps {
   onSendVoice: (audioBlob: Blob, duration: number) => void;
   disabled?: boolean;
+  onRecordingChange?: (isRecording: boolean) => void;
 }
 
-export const VoiceRecorder = ({ onSendVoice, disabled }: VoiceRecorderProps) => {
+export const VoiceRecorder = ({ onSendVoice, disabled, onRecordingChange }: VoiceRecorderProps) => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
@@ -50,6 +51,7 @@ export const VoiceRecorder = ({ onSendVoice, disabled }: VoiceRecorderProps) => 
 
       mediaRecorder.start();
       setIsRecording(true);
+      onRecordingChange?.(true);
       setRecordingTime(0);
 
       timerRef.current = setInterval(() => {
@@ -77,17 +79,22 @@ export const VoiceRecorder = ({ onSendVoice, disabled }: VoiceRecorderProps) => 
     }
   };
 
+  // Notify parent when internal recording state changes to false (cleanup)
+
+
   const handleSend = () => {
     if (audioBlob) {
       onSendVoice(audioBlob, recordingTime);
       setAudioBlob(null);
       setRecordingTime(0);
+      onRecordingChange?.(false);
     }
   };
 
   const handleCancel = () => {
     setAudioBlob(null);
     setRecordingTime(0);
+    onRecordingChange?.(false);
   };
 
   const formatTime = (seconds: number) => {
