@@ -79,6 +79,9 @@ export const VoiceRecorder = ({ onSendVoice, disabled, onRecordingChange }: Voic
     }
   };
 
+  // Notify parent when internal recording state changes to false (cleanup)
+
+
   const handleSend = () => {
     if (audioBlob) {
       onSendVoice(audioBlob, recordingTime);
