@@ -351,7 +351,7 @@ export const DirectChat = ({ conversationId, otherUserId, otherUserName, otherUs
         <div className="px-2 py-2 bg-muted/20 border-t border-border">
           <MessageReply replyTo={replyTo} onClear={() => setReplyTo(null)} />
           {isRecording ? (
-            <VoiceRecorder onSendVoice={(blob, duration) => sendVoiceMessage(blob, duration)} />
+            <VoiceRecorder onSendVoice={(blob, duration) => { sendVoiceMessage(blob, duration); setIsRecording(false); }} onRecordingChange={(recording) => { if (!recording) setIsRecording(false); }} />
           ) : (
             <div className="flex items-center gap-1.5">
               <div className="flex items-center gap-0.5">
