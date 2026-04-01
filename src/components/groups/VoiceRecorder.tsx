@@ -84,12 +84,14 @@ export const VoiceRecorder = ({ onSendVoice, disabled, onRecordingChange }: Voic
       onSendVoice(audioBlob, recordingTime);
       setAudioBlob(null);
       setRecordingTime(0);
+      onRecordingChange?.(false);
     }
   };
 
   const handleCancel = () => {
     setAudioBlob(null);
     setRecordingTime(0);
+    onRecordingChange?.(false);
   };
 
   const formatTime = (seconds: number) => {
