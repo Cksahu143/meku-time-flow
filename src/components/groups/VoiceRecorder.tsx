@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 interface VoiceRecorderProps {
   onSendVoice: (audioBlob: Blob, duration: number) => void;
   disabled?: boolean;
+  onRecordingChange?: (isRecording: boolean) => void;
 }
 
 export const VoiceRecorder = ({ onSendVoice, disabled }: VoiceRecorderProps) => {
