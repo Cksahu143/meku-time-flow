@@ -9,7 +9,7 @@ interface VoiceRecorderProps {
   onRecordingChange?: (isRecording: boolean) => void;
 }
 
-export const VoiceRecorder = ({ onSendVoice, disabled }: VoiceRecorderProps) => {
+export const VoiceRecorder = ({ onSendVoice, disabled, onRecordingChange }: VoiceRecorderProps) => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
