@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, MoreVertical, Edit2, Trash2, Mic, Reply, Forward, ArrowLeft, Smile } from 'lucide-react';
+import { Send, MoreVertical, Edit2, Trash2, Mic, Reply, Forward, ArrowLeft, Smile, Phone, Video } from 'lucide-react';
+import { useCall } from '@/components/call/CallProvider';
 import { VoiceRecorder } from '@/components/groups/VoiceRecorder';
 import { FileAttachment } from '@/components/groups/FileAttachment';
 import { CameraCapture } from '@/components/groups/CameraCapture';
@@ -36,6 +37,7 @@ interface DirectChatProps {
 }
 
 export const DirectChat = ({ conversationId, otherUserId, otherUserName, otherUserAvatar, onBack }: DirectChatProps) => {
+  const { startCall } = useCall();
   const [input, setInput] = useState('');
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [replyTo, setReplyTo] = useState<DirectMessage | null>(null);
@@ -189,6 +191,12 @@ export const DirectChat = ({ conversationId, otherUserId, otherUserName, otherUs
             <h2 className="font-semibold text-[15px] text-foreground truncate">{otherUserName}</h2>
             <OnlineStatus isOnline={isUserOnline(otherUserLastSeen)} lastSeen={otherUserLastSeen} showBadge={false} showText={true} />
           </div>
+          <Button variant="ghost" size="icon" className="rounded-full h-9 w-9" onClick={() => startCall(otherUserId, otherUserName, 'voice')}>
+            <Phone className="h-5 w-5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="rounded-full h-9 w-9" onClick={() => startCall(otherUserId, otherUserName, 'video')}>
+            <Video className="h-5 w-5" />
+          </Button>
         </div>
 
         {/* Messages area - WhatsApp wallpaper style */}

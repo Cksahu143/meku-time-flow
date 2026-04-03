@@ -7,6 +7,7 @@ import { HashRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { RBACProvider } from "@/contexts/RBACContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { CallProvider } from "@/components/call/CallProvider";
 import Index from "./pages/Index";
 import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
@@ -45,12 +46,13 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light" storageKey="meku-theme">
         <RBACProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <PWAInstallPrompt />
-            <PWAUpdatePrompt />
-            <OfflineBanner />
+          <CallProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <PWAInstallPrompt />
+              <PWAUpdatePrompt />
+              <OfflineBanner />
             
             <HashRouter>
               <Routes>
@@ -68,6 +70,7 @@ const App = () => (
               </Routes>
             </HashRouter>
           </TooltipProvider>
+          </CallProvider>
         </RBACProvider>
       </ThemeProvider>
     </QueryClientProvider>
