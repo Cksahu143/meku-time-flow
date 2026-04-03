@@ -22,6 +22,22 @@ const ICE_SERVERS: RTCConfiguration = {
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun2.l.google.com:19302' },
+    // Free TURN servers for NAT traversal behind strict firewalls
+    {
+      urls: 'turn:openrelay.metered.ca:80',
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443',
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
   ],
 };
 
@@ -45,20 +61,25 @@ export const useWebRTC = () => {
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const durationTimerRef = useRef<NodeJS.Timeout | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  const currentUserIdRef = useRef<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  // Get current user ID
+  // Get current user ID reactively
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) currentUserIdRef.current = user.id;
+      if (user) setCurrentUserId(user.id);
     };
     getUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setCurrentUserId(session?.user?.id || null);
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
   // Listen for incoming calls
   useEffect(() => {
-    if (!currentUserIdRef.current) return;
+    if (!currentUserId) return;
 
     const incomingChannel = supabase
       .channel('incoming-calls')
@@ -68,7 +89,7 @@ export const useWebRTC = () => {
           event: 'INSERT',
           schema: 'public',
           table: 'call_signals',
-          filter: `callee_id=eq.${currentUserIdRef.current}`,
+          filter: `callee_id=eq.${currentUserId}`,
         },
         async (payload) => {
           const signal = payload.new as Record<string, unknown>;
@@ -99,7 +120,7 @@ export const useWebRTC = () => {
     return () => {
       supabase.removeChannel(incomingChannel);
     };
-  }, [callState.status]);
+  }, [currentUserId, callState.status]);
 
   // Subscribe to call signal updates when in a call
   useEffect(() => {
@@ -235,7 +256,7 @@ export const useWebRTC = () => {
   }, [callState.callId]);
 
   const startCall = useCallback(async (remoteUserId: string, remoteUserName: string, callType: CallType) => {
-    if (!currentUserIdRef.current) return;
+    if (!currentUserId) return;
 
     try {
       const constraints: MediaStreamConstraints = {
@@ -253,7 +274,7 @@ export const useWebRTC = () => {
       const { data: callData, error } = await supabase
         .from('call_signals')
         .insert({
-          caller_id: currentUserIdRef.current,
+          caller_id: currentUserId,
           callee_id: remoteUserId,
           call_type: callType,
           status: 'ringing',
