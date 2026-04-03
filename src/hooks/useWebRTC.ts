@@ -79,7 +79,7 @@ export const useWebRTC = () => {
 
   // Listen for incoming calls
   useEffect(() => {
-    if (!currentUserIdRef.current) return;
+    if (!currentUserId) return;
 
     const incomingChannel = supabase
       .channel('incoming-calls')
@@ -89,7 +89,7 @@ export const useWebRTC = () => {
           event: 'INSERT',
           schema: 'public',
           table: 'call_signals',
-          filter: `callee_id=eq.${currentUserIdRef.current}`,
+          filter: `callee_id=eq.${currentUserId}`,
         },
         async (payload) => {
           const signal = payload.new as Record<string, unknown>;
@@ -256,7 +256,7 @@ export const useWebRTC = () => {
   }, [callState.callId]);
 
   const startCall = useCallback(async (remoteUserId: string, remoteUserName: string, callType: CallType) => {
-    if (!currentUserIdRef.current) return;
+    if (!currentUserId) return;
 
     try {
       const constraints: MediaStreamConstraints = {
@@ -274,7 +274,7 @@ export const useWebRTC = () => {
       const { data: callData, error } = await supabase
         .from('call_signals')
         .insert({
-          caller_id: currentUserIdRef.current,
+          caller_id: currentUserId,
           callee_id: remoteUserId,
           call_type: callType,
           status: 'ringing',
