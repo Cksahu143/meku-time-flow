@@ -61,15 +61,20 @@ export const useWebRTC = () => {
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const durationTimerRef = useRef<NodeJS.Timeout | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  const currentUserIdRef = useRef<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  // Get current user ID
+  // Get current user ID reactively
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) currentUserIdRef.current = user.id;
+      if (user) setCurrentUserId(user.id);
     };
     getUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setCurrentUserId(session?.user?.id || null);
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
   // Listen for incoming calls
