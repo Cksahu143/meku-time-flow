@@ -191,6 +191,12 @@ export const DirectChat = ({ conversationId, otherUserId, otherUserName, otherUs
             <h2 className="font-semibold text-[15px] text-foreground truncate">{otherUserName}</h2>
             <OnlineStatus isOnline={isUserOnline(otherUserLastSeen)} lastSeen={otherUserLastSeen} showBadge={false} showText={true} />
           </div>
+          <Button variant="ghost" size="icon" className="rounded-full h-9 w-9" onClick={() => startCall(otherUserId, otherUserName, 'voice')}>
+            <Phone className="h-5 w-5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="rounded-full h-9 w-9" onClick={() => startCall(otherUserId, otherUserName, 'video')}>
+            <Video className="h-5 w-5" />
+          </Button>
         </div>
 
         {/* Messages area - WhatsApp wallpaper style */}
