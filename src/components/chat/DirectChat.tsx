@@ -37,6 +37,7 @@ interface DirectChatProps {
 }
 
 export const DirectChat = ({ conversationId, otherUserId, otherUserName, otherUserAvatar, onBack }: DirectChatProps) => {
+  const { startCall } = useCall();
   const [input, setInput] = useState('');
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [replyTo, setReplyTo] = useState<DirectMessage | null>(null);
