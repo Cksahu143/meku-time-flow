@@ -7,6 +7,7 @@ import { HashRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { RBACProvider } from "@/contexts/RBACContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { CallProvider } from "@/components/call/CallProvider";
 import Index from "./pages/Index";
 import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
