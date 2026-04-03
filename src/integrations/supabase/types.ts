@@ -156,6 +156,51 @@ export type Database = {
           },
         ]
       }
+      call_signals: {
+        Row: {
+          answer: Json | null
+          call_type: string
+          callee_id: string
+          caller_id: string
+          created_at: string
+          ended_at: string | null
+          ice_candidates: Json | null
+          id: string
+          offer: Json | null
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          answer?: Json | null
+          call_type?: string
+          callee_id: string
+          caller_id: string
+          created_at?: string
+          ended_at?: string | null
+          ice_candidates?: Json | null
+          id?: string
+          offer?: Json | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          answer?: Json | null
+          call_type?: string
+          callee_id?: string
+          caller_id?: string
+          created_at?: string
+          ended_at?: string | null
+          ice_candidates?: Json | null
+          id?: string
+          offer?: Json | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       class_students: {
         Row: {
           class_id: string
