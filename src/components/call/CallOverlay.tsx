@@ -119,7 +119,7 @@ export const CallOverlay: React.FC<CallOverlayProps> = ({
               <p className="text-muted-foreground text-lg">
                 {isIncoming && status === 'ringing' ? (
                   <span className="flex items-center gap-2 justify-center">
-                    <PhoneIncoming className="h-5 w-5 text-green-500 animate-bounce" />
+                    <PhoneIncoming className="h-5 w-5 text-primary animate-bounce" />
                     {callType === 'video' ? 'Incoming video call' : 'Incoming voice call'}
                   </span>
                 ) : statusText}
