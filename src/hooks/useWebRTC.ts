@@ -284,7 +284,7 @@ export const useWebRTC = () => {
 
       await supabase
         .from('call_signals')
-        .update({ offer: offer })
+        .update({ offer: offer as unknown as Json })
         .eq('id', callData.id);
 
       // Auto-end after 30s if not answered
