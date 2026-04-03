@@ -159,7 +159,7 @@ export const CallOverlay: React.FC<CallOverlayProps> = ({
                 <Button
                   onClick={onAnswer}
                   size="icon"
-                  className="h-16 w-16 rounded-full bg-green-500 hover:bg-green-600 shadow-lg"
+                  className="h-16 w-16 rounded-full bg-primary hover:bg-primary/90 shadow-lg"
                 >
                   <Phone className="h-7 w-7" />
                 </Button>
