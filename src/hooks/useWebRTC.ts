@@ -339,7 +339,7 @@ export const useWebRTC = () => {
       const pc = createPeerConnection();
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
-      await pc.setRemoteDescription(new RTCSessionDescription(callData.offer as RTCSessionDescriptionInit));
+      await pc.setRemoteDescription(new RTCSessionDescription(callData.offer as unknown as RTCSessionDescriptionInit));
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
