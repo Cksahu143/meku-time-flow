@@ -120,7 +120,7 @@ export const useWebRTC = () => {
     return () => {
       supabase.removeChannel(incomingChannel);
     };
-  }, [callState.status]);
+  }, [currentUserId, callState.status]);
 
   // Subscribe to call signal updates when in a call
   useEffect(() => {
