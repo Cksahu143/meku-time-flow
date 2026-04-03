@@ -70,6 +70,7 @@ const App = () => (
               </Routes>
             </HashRouter>
           </TooltipProvider>
+          </CallProvider>
         </RBACProvider>
       </ThemeProvider>
     </QueryClientProvider>
