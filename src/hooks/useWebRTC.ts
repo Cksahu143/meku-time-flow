@@ -346,7 +346,7 @@ export const useWebRTC = () => {
       await supabase
         .from('call_signals')
         .update({
-          answer: answer,
+          answer: answer as unknown as Json,
           status: 'answered',
           started_at: new Date().toISOString(),
         })
