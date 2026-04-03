@@ -46,12 +46,13 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light" storageKey="meku-theme">
         <RBACProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <PWAInstallPrompt />
-            <PWAUpdatePrompt />
-            <OfflineBanner />
+          <CallProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <PWAInstallPrompt />
+              <PWAUpdatePrompt />
+              <OfflineBanner />
             
             <HashRouter>
               <Routes>
