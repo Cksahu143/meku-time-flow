@@ -21,8 +21,7 @@ const ICE_SERVERS: RTCConfiguration = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
-    // Free TURN servers for NAT traversal behind strict firewalls
+    // TURN servers for NAT traversal behind strict firewalls
     {
       urls: 'turn:openrelay.metered.ca:80',
       username: 'openrelayproject',
@@ -41,18 +40,21 @@ const ICE_SERVERS: RTCConfiguration = {
   ],
 };
 
+const INITIAL_STATE: CallState = {
+  status: 'idle',
+  callId: null,
+  callType: 'voice',
+  remoteUserId: null,
+  remoteUserName: null,
+  isMuted: false,
+  isVideoOff: false,
+  duration: 0,
+  isIncoming: false,
+};
+
 export const useWebRTC = () => {
-  const [callState, setCallState] = useState<CallState>({
-    status: 'idle',
-    callId: null,
-    callType: 'voice',
-    remoteUserId: null,
-    remoteUserName: null,
-    isMuted: false,
-    isVideoOff: false,
-    duration: 0,
-    isIncoming: false,
-  });
+  const [callState, setCallState] = useState<CallState>(INITIAL_STATE);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
@@ -60,175 +62,138 @@ export const useWebRTC = () => {
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const durationTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const broadcastChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
+  const callStateRef = useRef(callState);
+  callStateRef.current = callState;
 
-  // Get current user ID reactively
+  // Auth state
   useEffect(() => {
-    const getUser = async () => {
+    const init = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) setCurrentUserId(user.id);
     };
-    getUser();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    init();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
       setCurrentUserId(session?.user?.id || null);
     });
     return () => subscription.unsubscribe();
   }, []);
 
-  // Listen for incoming calls
+  // Listen for incoming calls via Broadcast (instant, no DB lag)
   useEffect(() => {
     if (!currentUserId) return;
 
-    const incomingChannel = supabase
-      .channel('incoming-calls')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'call_signals',
-          filter: `callee_id=eq.${currentUserId}`,
-        },
-        async (payload) => {
-          const signal = payload.new as Record<string, unknown>;
-          if (signal.status === 'ringing' && callState.status === 'idle') {
-            // Fetch caller name
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('display_name, username')
-              .eq('id', signal.caller_id as string)
-              .maybeSingle();
+    const channel = supabase
+      .channel(`user-calls-${currentUserId}`)
+      .on('broadcast', { event: 'incoming-call' }, async (payload) => {
+        const msg = payload.payload as {
+          callId: string;
+          callerId: string;
+          callerName: string;
+          callType: CallType;
+        };
+        if (callStateRef.current.status !== 'idle') return;
 
-            setCallState({
-              status: 'ringing',
-              callId: signal.id as string,
-              callType: signal.call_type as CallType,
-              remoteUserId: signal.caller_id as string,
-              remoteUserName: profile?.display_name || profile?.username || 'Unknown',
-              isMuted: false,
-              isVideoOff: false,
-              duration: 0,
-              isIncoming: true,
-            });
-          }
-        }
-      )
+        setCallState({
+          status: 'ringing',
+          callId: msg.callId,
+          callType: msg.callType,
+          remoteUserId: msg.callerId,
+          remoteUserName: msg.callerName,
+          isMuted: false,
+          isVideoOff: false,
+          duration: 0,
+          isIncoming: true,
+        });
+      })
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(incomingChannel);
-    };
-  }, [currentUserId, callState.status]);
+    return () => { supabase.removeChannel(channel); };
+  }, [currentUserId]);
 
-  // Subscribe to call signal updates when in a call
+  // Per-call signaling channel (offer/answer/ICE/hangup via Broadcast)
   useEffect(() => {
     if (!callState.callId) return;
 
-    const callChannel = supabase
-      .channel(`call-${callState.callId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'call_signals',
-          filter: `id=eq.${callState.callId}`,
-        },
-        async (payload) => {
-          const signal = payload.new as Record<string, unknown>;
+    const channel = supabase
+      .channel(`call-signal-${callState.callId}`)
+      .on('broadcast', { event: 'signal' }, async (payload) => {
+        const msg = payload.payload as {
+          type: 'offer' | 'answer' | 'ice-candidate' | 'hangup';
+          data?: unknown;
+          from: string;
+        };
 
-          if (signal.status === 'answered' && callState.isIncoming === false) {
-            // Caller receives answer
-            if (signal.answer && peerConnectionRef.current) {
-              try {
-                await peerConnectionRef.current.setRemoteDescription(
-                  new RTCSessionDescription(signal.answer as RTCSessionDescriptionInit)
-                );
-              } catch (err) {
-                console.error('Error setting remote description:', err);
+        if (msg.from === currentUserId) return; // ignore own messages
+
+        const pc = peerConnectionRef.current;
+
+        switch (msg.type) {
+          case 'offer':
+            if (pc) {
+              await pc.setRemoteDescription(new RTCSessionDescription(msg.data as RTCSessionDescriptionInit));
+              // Flush pending ICE candidates
+              for (const c of pendingCandidatesRef.current) {
+                try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch { /* ignore */ }
               }
+              pendingCandidatesRef.current = [];
             }
-          }
+            break;
 
-          if (signal.status === 'ended' || signal.status === 'rejected' || signal.status === 'missed') {
+          case 'answer':
+            if (pc) {
+              await pc.setRemoteDescription(new RTCSessionDescription(msg.data as RTCSessionDescriptionInit));
+              for (const c of pendingCandidatesRef.current) {
+                try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch { /* ignore */ }
+              }
+              pendingCandidatesRef.current = [];
+            }
+            break;
+
+          case 'ice-candidate':
+            if (pc && pc.remoteDescription) {
+              try { await pc.addIceCandidate(new RTCIceCandidate(msg.data as RTCIceCandidateInit)); } catch { /* ignore */ }
+            } else {
+              pendingCandidatesRef.current.push(msg.data as RTCIceCandidateInit);
+            }
+            break;
+
+          case 'hangup':
             cleanup();
             setCallState(prev => ({ ...prev, status: 'ended' }));
-            setTimeout(() => resetCallState(), 2000);
-          }
-
-          // Handle ICE candidates
-          if (signal.ice_candidates && Array.isArray(signal.ice_candidates)) {
-            const candidates = signal.ice_candidates as RTCIceCandidateInit[];
-            for (const candidate of candidates) {
-              if (peerConnectionRef.current && peerConnectionRef.current.remoteDescription) {
-                try {
-                  await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate));
-                } catch (err) {
-                  // Ignore duplicate candidates
-                }
-              }
-            }
-          }
+            setTimeout(() => setCallState(INITIAL_STATE), 2000);
+            break;
         }
-      )
+      })
       .subscribe();
 
-    channelRef.current = callChannel;
+    broadcastChannelRef.current = channel;
+    return () => { supabase.removeChannel(channel); broadcastChannelRef.current = null; };
+  }, [callState.callId, currentUserId]);
 
-    return () => {
-      supabase.removeChannel(callChannel);
-    };
-  }, [callState.callId, callState.isIncoming]);
-
-  const resetCallState = useCallback(() => {
-    setCallState({
-      status: 'idle',
-      callId: null,
-      callType: 'voice',
-      remoteUserId: null,
-      remoteUserName: null,
-      isMuted: false,
-      isVideoOff: false,
-      duration: 0,
-      isIncoming: false,
+  const sendSignal = useCallback((type: string, data?: unknown) => {
+    broadcastChannelRef.current?.send({
+      type: 'broadcast',
+      event: 'signal',
+      payload: { type, data, from: currentUserId },
     });
-  }, []);
+  }, [currentUserId]);
 
   const cleanup = useCallback(() => {
-    if (durationTimerRef.current) {
-      clearInterval(durationTimerRef.current);
-      durationTimerRef.current = null;
-    }
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(track => track.stop());
-      localStreamRef.current = null;
-    }
-    if (peerConnectionRef.current) {
-      peerConnectionRef.current.close();
-      peerConnectionRef.current = null;
-    }
+    if (durationTimerRef.current) { clearInterval(durationTimerRef.current); durationTimerRef.current = null; }
+    if (localStreamRef.current) { localStreamRef.current.getTracks().forEach(t => t.stop()); localStreamRef.current = null; }
+    if (peerConnectionRef.current) { peerConnectionRef.current.close(); peerConnectionRef.current = null; }
     remoteStreamRef.current = null;
+    pendingCandidatesRef.current = [];
   }, []);
 
   const createPeerConnection = useCallback(() => {
     const pc = new RTCPeerConnection(ICE_SERVERS);
 
-    pc.onicecandidate = async (event) => {
-      if (event.candidate && callState.callId) {
-        // Fetch current candidates and append
-        const { data } = await supabase
-          .from('call_signals')
-          .select('ice_candidates')
-          .eq('id', callState.callId)
-          .maybeSingle();
-
-        const existing = (data?.ice_candidates as RTCIceCandidateInit[] | null) || [];
-        await supabase
-          .from('call_signals')
-          .update({ ice_candidates: [...existing, event.candidate.toJSON()] as unknown as Json })
-          .eq('id', callState.callId);
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        sendSignal('ice-candidate', event.candidate.toJSON());
       }
     };
 
@@ -253,40 +218,33 @@ export const useWebRTC = () => {
 
     peerConnectionRef.current = pc;
     return pc;
-  }, [callState.callId]);
+  }, [sendSignal]);
 
   const startCall = useCallback(async (remoteUserId: string, remoteUserName: string, callType: CallType) => {
     if (!currentUserId) return;
 
     try {
-      const constraints: MediaStreamConstraints = {
+      const stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: callType === 'video',
-      };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      });
       localStreamRef.current = stream;
+      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = stream;
-      }
-
-      // Create call signal record
+      // Persist to DB
       const { data: callData, error } = await supabase
         .from('call_signals')
-        .insert({
-          caller_id: currentUserId,
-          callee_id: remoteUserId,
-          call_type: callType,
-          status: 'ringing',
-        })
+        .insert({ caller_id: currentUserId, callee_id: remoteUserId, call_type: callType, status: 'ringing' })
         .select()
         .single();
 
-      if (error || !callData) throw new Error('Failed to create call signal');
+      if (error || !callData) throw new Error('Failed to create call');
+
+      const callId = callData.id;
 
       setCallState({
         status: 'calling',
-        callId: callData.id,
+        callId,
         callType,
         remoteUserId,
         remoteUserName,
@@ -296,159 +254,132 @@ export const useWebRTC = () => {
         isIncoming: false,
       });
 
-      // Create peer connection and offer
+      // Notify callee instantly via Broadcast
+      const calleeChannel = supabase.channel(`user-calls-${remoteUserId}`);
+      await calleeChannel.subscribe();
+      await calleeChannel.send({
+        type: 'broadcast',
+        event: 'incoming-call',
+        payload: { callId, callerId: currentUserId, callerName: remoteUserName, callType },
+      });
+      // We need the callerName from our profile, not the remote user's name
+      const { data: myProfile } = await supabase.from('profiles').select('display_name, username').eq('id', currentUserId).maybeSingle();
+      await calleeChannel.send({
+        type: 'broadcast',
+        event: 'incoming-call',
+        payload: { callId, callerId: currentUserId, callerName: myProfile?.display_name || myProfile?.username || 'Unknown', callType },
+      });
+      supabase.removeChannel(calleeChannel);
+
+      // Create peer connection & offer
       const pc = createPeerConnection();
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
-
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
-      await supabase
-        .from('call_signals')
-        .update({ offer: offer as unknown as Json })
-        .eq('id', callData.id);
+      // Send offer via broadcast (the signal channel for this callId is set up by the useEffect above)
+      // Small delay to ensure signal channel is subscribed
+      setTimeout(() => sendSignal('offer', offer), 300);
 
-      // Auto-end after 30s if not answered
+      // Also persist offer to DB as fallback
+      await supabase.from('call_signals').update({ offer: offer as unknown as Json }).eq('id', callId);
+
+      // Auto-end after 30s
       setTimeout(async () => {
-        const { data } = await supabase
-          .from('call_signals')
-          .select('status')
-          .eq('id', callData.id)
-          .maybeSingle();
-
-        if (data?.status === 'ringing') {
-          await supabase
-            .from('call_signals')
-            .update({ status: 'missed', ended_at: new Date().toISOString() })
-            .eq('id', callData.id);
+        if (callStateRef.current.callId === callId && callStateRef.current.status === 'calling') {
+          await supabase.from('call_signals').update({ status: 'missed', ended_at: new Date().toISOString() }).eq('id', callId);
+          sendSignal('hangup');
           cleanup();
-          resetCallState();
+          setCallState(INITIAL_STATE);
         }
       }, 30000);
 
     } catch (err) {
       console.error('Error starting call:', err);
       cleanup();
-      resetCallState();
+      setCallState(INITIAL_STATE);
     }
-  }, [createPeerConnection, cleanup, resetCallState]);
+  }, [currentUserId, createPeerConnection, sendSignal, cleanup]);
 
   const answerCall = useCallback(async () => {
     if (!callState.callId) return;
 
     try {
-      const constraints: MediaStreamConstraints = {
+      const stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: callState.callType === 'video',
-      };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      });
       localStreamRef.current = stream;
+      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = stream;
-      }
-
-      // Get the offer
+      // Get offer from DB (fallback if broadcast offer was missed)
       const { data: callData } = await supabase
         .from('call_signals')
         .select('offer')
         .eq('id', callState.callId)
         .maybeSingle();
 
-      if (!callData?.offer) throw new Error('No offer found');
-
       const pc = createPeerConnection();
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
-      await pc.setRemoteDescription(new RTCSessionDescription(callData.offer as unknown as RTCSessionDescriptionInit));
+      // Use offer from DB if peer connection doesn't have remote description yet
+      if (!pc.remoteDescription && callData?.offer) {
+        await pc.setRemoteDescription(new RTCSessionDescription(callData.offer as unknown as RTCSessionDescriptionInit));
+      }
+
+      // Flush pending candidates
+      for (const c of pendingCandidatesRef.current) {
+        try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch { /* ignore */ }
+      }
+      pendingCandidatesRef.current = [];
+
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
-      await supabase
-        .from('call_signals')
-        .update({
-          answer: answer as unknown as Json,
-          status: 'answered',
-          started_at: new Date().toISOString(),
-        })
-        .eq('id', callState.callId);
+      // Send answer via broadcast (instant)
+      sendSignal('answer', answer);
+
+      // Persist to DB
+      await supabase.from('call_signals').update({
+        answer: answer as unknown as Json,
+        status: 'answered',
+        started_at: new Date().toISOString(),
+      }).eq('id', callState.callId);
 
       setCallState(prev => ({ ...prev, status: 'connected', isIncoming: false }));
-
-      // Process any pending ICE candidates
-      const { data: signalData } = await supabase
-        .from('call_signals')
-        .select('ice_candidates')
-        .eq('id', callState.callId)
-        .maybeSingle();
-
-      if (signalData?.ice_candidates && Array.isArray(signalData.ice_candidates)) {
-        for (const candidate of signalData.ice_candidates as RTCIceCandidateInit[]) {
-          try {
-            await pc.addIceCandidate(new RTCIceCandidate(candidate));
-          } catch {
-            // Ignore
-          }
-        }
-      }
-
     } catch (err) {
       console.error('Error answering call:', err);
       cleanup();
-      resetCallState();
+      setCallState(INITIAL_STATE);
     }
-  }, [callState.callId, callState.callType, createPeerConnection, cleanup, resetCallState]);
+  }, [callState.callId, callState.callType, createPeerConnection, sendSignal, cleanup]);
 
   const rejectCall = useCallback(async () => {
     if (!callState.callId) return;
-    await supabase
-      .from('call_signals')
-      .update({ status: 'rejected', ended_at: new Date().toISOString() })
-      .eq('id', callState.callId);
+    sendSignal('hangup');
+    await supabase.from('call_signals').update({ status: 'rejected', ended_at: new Date().toISOString() }).eq('id', callState.callId);
     cleanup();
-    resetCallState();
-  }, [callState.callId, cleanup, resetCallState]);
+    setCallState(INITIAL_STATE);
+  }, [callState.callId, sendSignal, cleanup]);
 
   const endCall = useCallback(async () => {
     if (callState.callId) {
-      await supabase
-        .from('call_signals')
-        .update({ status: 'ended', ended_at: new Date().toISOString() })
-        .eq('id', callState.callId);
+      sendSignal('hangup');
+      await supabase.from('call_signals').update({ status: 'ended', ended_at: new Date().toISOString() }).eq('id', callState.callId);
     }
     cleanup();
-    setTimeout(() => resetCallState(), 1500);
-  }, [callState.callId, cleanup, resetCallState]);
+    setTimeout(() => setCallState(INITIAL_STATE), 1500);
+  }, [callState.callId, sendSignal, cleanup]);
 
   const toggleMute = useCallback(() => {
-    if (localStreamRef.current) {
-      const audioTrack = localStreamRef.current.getAudioTracks()[0];
-      if (audioTrack) {
-        audioTrack.enabled = !audioTrack.enabled;
-        setCallState(prev => ({ ...prev, isMuted: !audioTrack.enabled }));
-      }
-    }
+    const track = localStreamRef.current?.getAudioTracks()[0];
+    if (track) { track.enabled = !track.enabled; setCallState(prev => ({ ...prev, isMuted: !track.enabled })); }
   }, []);
 
   const toggleVideo = useCallback(() => {
-    if (localStreamRef.current) {
-      const videoTrack = localStreamRef.current.getVideoTracks()[0];
-      if (videoTrack) {
-        videoTrack.enabled = !videoTrack.enabled;
-        setCallState(prev => ({ ...prev, isVideoOff: !videoTrack.enabled }));
-      }
-    }
+    const track = localStreamRef.current?.getVideoTracks()[0];
+    if (track) { track.enabled = !track.enabled; setCallState(prev => ({ ...prev, isVideoOff: !track.enabled })); }
   }, []);
 
-  return {
-    callState,
-    localVideoRef,
-    remoteVideoRef,
-    startCall,
-    answerCall,
-    rejectCall,
-    endCall,
-    toggleMute,
-    toggleVideo,
-  };
+  return { callState, localVideoRef, remoteVideoRef, startCall, answerCall, rejectCall, endCall, toggleMute, toggleVideo };
 };
