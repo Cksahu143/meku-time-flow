@@ -206,7 +206,7 @@ export const useWebRTC = () => {
         const existing = (data?.ice_candidates as RTCIceCandidateInit[] | null) || [];
         await supabase
           .from('call_signals')
-          .update({ ice_candidates: [...existing, event.candidate.toJSON()] })
+          .update({ ice_candidates: [...existing, event.candidate.toJSON()] as unknown as Json })
           .eq('id', callState.callId);
       }
     };
