@@ -275,20 +275,19 @@ export const useWebRTC = () => {
         isIncoming: false,
       });
 
-      // Notify callee instantly via Broadcast
+      // Get our own display name for the callee
+      const { data: myProfile } = await supabase.from('profiles').select('display_name, username').eq('id', currentUserId).maybeSingle();
+      const callerName = myProfile?.display_name || myProfile?.username || 'Unknown';
+
+      // Notify callee instantly via Broadcast (single message)
       const calleeChannel = supabase.channel(`user-calls-${remoteUserId}`);
       await calleeChannel.subscribe();
+      // Small delay to ensure channel is ready
+      await new Promise(r => setTimeout(r, 200));
       await calleeChannel.send({
         type: 'broadcast',
         event: 'incoming-call',
-        payload: { callId, callerId: currentUserId, callerName: remoteUserName, callType },
-      });
-      // We need the callerName from our profile, not the remote user's name
-      const { data: myProfile } = await supabase.from('profiles').select('display_name, username').eq('id', currentUserId).maybeSingle();
-      await calleeChannel.send({
-        type: 'broadcast',
-        event: 'incoming-call',
-        payload: { callId, callerId: currentUserId, callerName: myProfile?.display_name || myProfile?.username || 'Unknown', callType },
+        payload: { callId, callerId: currentUserId, callerName, callType },
       });
       supabase.removeChannel(calleeChannel);
 
