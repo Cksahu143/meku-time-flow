@@ -146,17 +146,18 @@ self.addEventListener('push', (event) => {
 // Receive messages from the main thread (show notification, skip waiting)
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
-    const { title, body, icon, badge, tag, data, actions } = event.data;
+    const { title, body, icon, badge, tag, data, actions, requireInteraction, silent } = event.data;
     event.waitUntil(
       self.registration.showNotification(title, {
         body,
         icon: icon || '/icons/icon-192x192.png',
         badge: badge || '/icons/icon-72x72.png',
         tag: tag || 'default',
-        requireInteraction: false,
-        vibrate: [200, 100, 200],
+        requireInteraction: requireInteraction || false,
+        vibrate: [200, 100, 200, 100, 200],
         data: data || {},
         actions: actions || [],
+        silent: silent || false,
       })
     );
   }
