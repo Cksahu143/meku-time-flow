@@ -58,6 +58,26 @@ export const CallOverlay: React.FC<CallOverlayProps> = ({
     }
   }, [status]);
 
+  // 🔊 Sound effects based on call status
+  useEffect(() => {
+    if (status === 'ringing' && isIncoming) {
+      startRingtone();
+    } else if (status === 'calling' && !isIncoming) {
+      startDialTone();
+    } else if (status === 'connected' || status === 'idle') {
+      stopRingtone();
+      stopDialTone();
+    } else if (status === 'ended') {
+      stopRingtone();
+      stopDialTone();
+      playEndTone();
+    }
+    return () => {
+      stopRingtone();
+      stopDialTone();
+    };
+  }, [status, isIncoming]);
+
   if (status === 'idle') return null;
 
   const statusText = status === 'calling' ? 'Calling...'
