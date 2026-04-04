@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff, PhoneIncoming } from 'lucide-react';
 import { CallStatus, CallType } from '@/hooks/useWebRTC';
 import { motion, AnimatePresence } from 'framer-motion';
+import { startRingtone, stopRingtone, startDialTone, stopDialTone, playEndTone } from '@/utils/callSounds';
 
 interface CallOverlayProps {
   status: CallStatus;
