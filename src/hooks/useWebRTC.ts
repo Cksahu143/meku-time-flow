@@ -95,6 +95,27 @@ export const useWebRTC = () => {
         };
         if (callStateRef.current.status !== 'idle') return;
 
+        // Show persistent OS notification to wake sleeping devices
+        try {
+          const reg = await navigator.serviceWorker?.ready;
+          if (reg?.active) {
+            reg.active.postMessage({
+              type: 'SHOW_NOTIFICATION',
+              title: `📞 Incoming ${msg.callType} call`,
+              body: `${msg.callerName} is calling you`,
+              tag: `call-${msg.callId}`,
+              requireInteraction: true,
+              data: { url: '/app', callId: msg.callId },
+              actions: [
+                { action: 'answer', title: '✅ Answer' },
+                { action: 'reject', title: '❌ Decline' },
+              ],
+            });
+          }
+        } catch (e) {
+          console.warn('Could not show call notification:', e);
+        }
+
         setCallState({
           status: 'ringing',
           callId: msg.callId,

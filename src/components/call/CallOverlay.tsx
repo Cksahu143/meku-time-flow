@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff, PhoneIncoming } from 'lucide-react';
 import { CallStatus, CallType } from '@/hooks/useWebRTC';
 import { motion, AnimatePresence } from 'framer-motion';
+import { startRingtone, stopRingtone, startDialTone, stopDialTone, playEndTone } from '@/utils/callSounds';
 
 interface CallOverlayProps {
   status: CallStatus;
@@ -56,6 +57,26 @@ export const CallOverlay: React.FC<CallOverlayProps> = ({
       remoteVideoContainerRef.current.appendChild(remoteVideoRef.current);
     }
   }, [status]);
+
+  // 🔊 Sound effects based on call status
+  useEffect(() => {
+    if (status === 'ringing' && isIncoming) {
+      startRingtone();
+    } else if (status === 'calling' && !isIncoming) {
+      startDialTone();
+    } else if (status === 'connected' || status === 'idle') {
+      stopRingtone();
+      stopDialTone();
+    } else if (status === 'ended') {
+      stopRingtone();
+      stopDialTone();
+      playEndTone();
+    }
+    return () => {
+      stopRingtone();
+      stopDialTone();
+    };
+  }, [status, isIncoming]);
 
   if (status === 'idle') return null;
 
