@@ -266,8 +266,25 @@ export const useWebRTC = () => {
           setCallState(prev => ({ ...prev, duration: prev.duration + 1 }));
         }, 1000);
       }
-      if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
-        endCall();
+      if (pc.connectionState === 'failed') {
+        // Attempt ICE restart before giving up
+        try {
+          pc.restartIce();
+          pc.createOffer({ iceRestart: true }).then(offer => {
+            pc.setLocalDescription(offer);
+            sendSignal('offer', offer);
+          });
+        } catch {
+          endCall();
+        }
+      }
+      if (pc.connectionState === 'disconnected') {
+        // Wait 5s for reconnection before ending
+        setTimeout(() => {
+          if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+            endCall();
+          }
+        }, 5000);
       }
     };
 

@@ -170,19 +170,31 @@ self.addEventListener('message', (event) => {
 
 // ── NOTIFICATION CLICK ──
 self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
+  const action = event.action;
   const notificationData = event.notification.data || {};
   const targetUrl = notificationData.url || '/app';
+
+  event.notification.close();
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
+        // Try to find an existing EDAS window
         for (let client of clientList) {
           if (client.url.includes(self.location.origin) && 'focus' in client) {
+            // Forward the action (answer/reject) to the app
+            if (action === 'answer' || action === 'reject') {
+              client.postMessage({
+                type: 'CALL_ACTION',
+                action,
+                callId: notificationData.callId,
+              });
+            }
             if (notificationData.url) client.navigate(notificationData.url);
             return client.focus();
           }
         }
+        // No existing window — open the app
         if (clients.openWindow) return clients.openWindow(targetUrl);
       })
   );
