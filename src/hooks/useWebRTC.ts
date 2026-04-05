@@ -304,8 +304,26 @@ export const useWebRTC = () => {
       // Also persist offer to DB as fallback
       await supabase.from('call_signals').update({ offer: offer as unknown as Json }).eq('id', callId);
 
+      // Retry broadcast every 3s in case callee missed the first one
+      const retryInterval = setInterval(async () => {
+        if (callStateRef.current.callId !== callId || callStateRef.current.status !== 'calling') {
+          clearInterval(retryInterval);
+          return;
+        }
+        const retryChannel = supabase.channel(`user-calls-${remoteUserId}-retry-${Date.now()}`);
+        await retryChannel.subscribe();
+        await new Promise(r => setTimeout(r, 150));
+        await retryChannel.send({
+          type: 'broadcast',
+          event: 'incoming-call',
+          payload: { callId, callerId: currentUserId, callerName, callType },
+        });
+        supabase.removeChannel(retryChannel);
+      }, 3000);
+
       // Auto-end after 30s
       setTimeout(async () => {
+        clearInterval(retryInterval);
         if (callStateRef.current.callId === callId && callStateRef.current.status === 'calling') {
           await supabase.from('call_signals').update({ status: 'missed', ended_at: new Date().toISOString() }).eq('id', callId);
           sendSignal('hangup');

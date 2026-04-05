@@ -6,7 +6,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, MoreVertical, Users, LogOut, Edit, Trash, X, Info, Reply, Pin, Forward, ArrowLeft, Mic, Smile } from 'lucide-react';
+import { Send, MoreVertical, Users, LogOut, Edit, Trash, X, Info, Reply, Pin, Forward, ArrowLeft, Mic, Smile, Phone, Video } from 'lucide-react';
+import { useCall } from '@/components/call/CallProvider';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
