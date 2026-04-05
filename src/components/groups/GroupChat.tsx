@@ -12,6 +12,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { GroupSettingsDialog } from './GroupSettingsDialog';
+import { GroupCallPickerDialog } from './GroupCallPickerDialog';
 import { GroupInfoDialog } from './GroupInfoDialog';
 import { InviteUsersDialog } from './InviteUsersDialog';
 import { TypingIndicator } from './TypingIndicator';
@@ -451,6 +452,20 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup, o
         <GroupSettingsDialog open={showSettings} onOpenChange={setShowSettings} group={group} onUpdate={onUpdateGroup} />
         <InviteUsersDialog open={showInvite} onOpenChange={setShowInvite} groupId={group.id} />
         <ForwardMessageDialog open={showForwardDialog} onOpenChange={setShowForwardDialog} message={forwardMessage} currentUserId={currentUserId || ''} />
+        <GroupCallPickerDialog
+          open={showCallPicker}
+          onOpenChange={setShowCallPicker}
+          callType={pendingCallType}
+          currentUserId={currentUserId}
+          members={Object.values(profiles).map((p: any) => ({
+            id: p.id,
+            display_name: p.display_name,
+            username: p.username,
+            avatar_url: p.avatar_url,
+            last_seen: p.last_seen,
+          }))}
+          onSelectMember={(userId, name, type) => startCall(userId, name, type)}
+        />
       </div>
     </DragDropUpload>
   );
