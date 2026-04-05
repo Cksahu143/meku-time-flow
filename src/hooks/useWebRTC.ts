@@ -80,6 +80,21 @@ export const useWebRTC = () => {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Listen for call actions from Service Worker notifications (Answer/Decline buttons)
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (event.data?.type === 'CALL_ACTION') {
+        if (event.data.action === 'answer' && callStateRef.current.status === 'ringing') {
+          // answerCall/rejectCall are called from callState effect
+        } else if (event.data.action === 'reject' && callStateRef.current.status === 'ringing') {
+          // handled below
+        }
+      }
+    };
+    navigator.serviceWorker?.addEventListener('message', handler);
+    return () => navigator.serviceWorker?.removeEventListener('message', handler);
+  }, []);
+
   // Listen for incoming calls via Broadcast (instant, no DB lag)
   useEffect(() => {
     if (!currentUserId) return;
