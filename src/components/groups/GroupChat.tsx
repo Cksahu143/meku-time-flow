@@ -44,6 +44,7 @@ interface GroupChatProps {
 }
 
 export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup, onBack }: GroupChatProps) => {
+  const { startCall } = useCall();
   const { messages, loading, sendMessage, sendVoiceMessage, sendFileMessage, editMessage, deleteMessage } = useMessages(group.id);
   const { members } = useGroupMembers(group.id);
   const [newMessage, setNewMessage] = useState('');
@@ -213,6 +214,43 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup, o
           <div className="flex-1 min-w-0" onClick={() => setShowInfo(true)} role="button">
             <h2 className="font-semibold text-[15px] text-foreground truncate">{group.name}</h2>
             <p className="text-[11px] text-muted-foreground truncate">{members.length} members</p>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full h-9 w-9"
+              onClick={() => {
+                // Call the first other member in the group (1-on-1 within group context)
+                const otherMember = members.find(m => m.user_id !== currentUserId);
+                if (otherMember) {
+                  const profile = profiles[otherMember.user_id];
+                  const name = profile?.display_name || profile?.username || 'Group Member';
+                  startCall(otherMember.user_id, name, 'voice');
+                } else {
+                  toast.error('No other members in this group');
+                }
+              }}
+            >
+              <Phone className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full h-9 w-9"
+              onClick={() => {
+                const otherMember = members.find(m => m.user_id !== currentUserId);
+                if (otherMember) {
+                  const profile = profiles[otherMember.user_id];
+                  const name = profile?.display_name || profile?.username || 'Group Member';
+                  startCall(otherMember.user_id, name, 'video');
+                } else {
+                  toast.error('No other members in this group');
+                }
+              }}
+            >
+              <Video className="h-4 w-4" />
+            </Button>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
