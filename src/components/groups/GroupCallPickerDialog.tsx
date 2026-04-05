@@ -66,7 +66,7 @@ export const GroupCallPickerDialog: React.FC<GroupCallPickerDialogProps> = ({
                       <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm">{initials}</AvatarFallback>
                     </Avatar>
                     {online && (
-                      <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
+                      <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-emerald-500 border-2 border-background" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
