@@ -60,6 +60,8 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup, o
   const [isTyping, setIsTyping] = useState(false);
   const [forwardMessage, setForwardMessage] = useState<Message | null>(null);
   const [showForwardDialog, setShowForwardDialog] = useState(false);
+  const [showCallPicker, setShowCallPicker] = useState(false);
+  const [pendingCallType, setPendingCallType] = useState<'voice' | 'video'>('voice');
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastMessageIdRef = useRef<string | null>(null);
@@ -220,17 +222,7 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup, o
               variant="ghost"
               size="icon"
               className="rounded-full h-9 w-9"
-              onClick={() => {
-                // Call the first other member in the group (1-on-1 within group context)
-                const otherMember = members.find(m => m.user_id !== currentUserId);
-                if (otherMember) {
-                  const profile = profiles[otherMember.user_id];
-                  const name = profile?.display_name || profile?.username || 'Group Member';
-                  startCall(otherMember.user_id, name, 'voice');
-                } else {
-                  toast.error('No other members in this group');
-                }
-              }}
+              onClick={() => { setPendingCallType('voice'); setShowCallPicker(true); }}
             >
               <Phone className="h-4 w-4" />
             </Button>
@@ -238,16 +230,7 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup, o
               variant="ghost"
               size="icon"
               className="rounded-full h-9 w-9"
-              onClick={() => {
-                const otherMember = members.find(m => m.user_id !== currentUserId);
-                if (otherMember) {
-                  const profile = profiles[otherMember.user_id];
-                  const name = profile?.display_name || profile?.username || 'Group Member';
-                  startCall(otherMember.user_id, name, 'video');
-                } else {
-                  toast.error('No other members in this group');
-                }
-              }}
+              onClick={() => { setPendingCallType('video'); setShowCallPicker(true); }}
             >
               <Video className="h-4 w-4" />
             </Button>
