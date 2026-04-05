@@ -488,5 +488,9 @@ export const useWebRTC = () => {
     if (track) { track.enabled = !track.enabled; setCallState(prev => ({ ...prev, isVideoOff: !track.enabled })); }
   }, []);
 
+  // Keep refs in sync for SW notification actions
+  answerCallRef.current = answerCall;
+  rejectCallRef.current = rejectCall;
+
   return { callState, localVideoRef, remoteVideoRef, startCall, answerCall, rejectCall, endCall, toggleMute, toggleVideo };
 };
