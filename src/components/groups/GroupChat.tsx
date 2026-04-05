@@ -12,6 +12,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { GroupSettingsDialog } from './GroupSettingsDialog';
+import { GroupCallPickerDialog } from './GroupCallPickerDialog';
 import { GroupInfoDialog } from './GroupInfoDialog';
 import { InviteUsersDialog } from './InviteUsersDialog';
 import { TypingIndicator } from './TypingIndicator';
@@ -60,6 +61,8 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup, o
   const [isTyping, setIsTyping] = useState(false);
   const [forwardMessage, setForwardMessage] = useState<Message | null>(null);
   const [showForwardDialog, setShowForwardDialog] = useState(false);
+  const [showCallPicker, setShowCallPicker] = useState(false);
+  const [pendingCallType, setPendingCallType] = useState<'voice' | 'video'>('voice');
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastMessageIdRef = useRef<string | null>(null);
@@ -220,17 +223,7 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup, o
               variant="ghost"
               size="icon"
               className="rounded-full h-9 w-9"
-              onClick={() => {
-                // Call the first other member in the group (1-on-1 within group context)
-                const otherMember = members.find(m => m.user_id !== currentUserId);
-                if (otherMember) {
-                  const profile = profiles[otherMember.user_id];
-                  const name = profile?.display_name || profile?.username || 'Group Member';
-                  startCall(otherMember.user_id, name, 'voice');
-                } else {
-                  toast.error('No other members in this group');
-                }
-              }}
+              onClick={() => { setPendingCallType('voice'); setShowCallPicker(true); }}
             >
               <Phone className="h-4 w-4" />
             </Button>
@@ -238,16 +231,7 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup, o
               variant="ghost"
               size="icon"
               className="rounded-full h-9 w-9"
-              onClick={() => {
-                const otherMember = members.find(m => m.user_id !== currentUserId);
-                if (otherMember) {
-                  const profile = profiles[otherMember.user_id];
-                  const name = profile?.display_name || profile?.username || 'Group Member';
-                  startCall(otherMember.user_id, name, 'video');
-                } else {
-                  toast.error('No other members in this group');
-                }
-              }}
+              onClick={() => { setPendingCallType('video'); setShowCallPicker(true); }}
             >
               <Video className="h-4 w-4" />
             </Button>
@@ -468,6 +452,20 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup, o
         <GroupSettingsDialog open={showSettings} onOpenChange={setShowSettings} group={group} onUpdate={onUpdateGroup} />
         <InviteUsersDialog open={showInvite} onOpenChange={setShowInvite} groupId={group.id} />
         <ForwardMessageDialog open={showForwardDialog} onOpenChange={setShowForwardDialog} message={forwardMessage} currentUserId={currentUserId || ''} />
+        <GroupCallPickerDialog
+          open={showCallPicker}
+          onOpenChange={setShowCallPicker}
+          callType={pendingCallType}
+          currentUserId={currentUserId}
+          members={Object.values(profiles).map((p: any) => ({
+            id: p.id,
+            display_name: p.display_name,
+            username: p.username,
+            avatar_url: p.avatar_url,
+            last_seen: p.last_seen,
+          }))}
+          onSelectMember={(userId, name, type) => startCall(userId, name, type)}
+        />
       </div>
     </DragDropUpload>
   );
