@@ -84,53 +84,87 @@ export const useWebRTC = () => {
   useEffect(() => {
     if (!currentUserId) return;
 
+    const handleIncomingCall = async (msg: {
+      callId: string;
+      callerId: string;
+      callerName: string;
+      callType: CallType;
+    }) => {
+      if (callStateRef.current.status !== 'idle') return;
+
+      // Show persistent OS notification to wake sleeping devices
+      try {
+        const reg = await navigator.serviceWorker?.ready;
+        if (reg?.active) {
+          reg.active.postMessage({
+            type: 'SHOW_NOTIFICATION',
+            title: `📞 Incoming ${msg.callType} call`,
+            body: `${msg.callerName} is calling you`,
+            tag: `call-${msg.callId}`,
+            requireInteraction: true,
+            data: { url: '/app', callId: msg.callId },
+            actions: [
+              { action: 'answer', title: '✅ Answer' },
+              { action: 'reject', title: '❌ Decline' },
+            ],
+          });
+        }
+      } catch (e) {
+        console.warn('Could not show call notification:', e);
+      }
+
+      setCallState({
+        status: 'ringing',
+        callId: msg.callId,
+        callType: msg.callType,
+        remoteUserId: msg.callerId,
+        remoteUserName: msg.callerName,
+        isMuted: false,
+        isVideoOff: false,
+        duration: 0,
+        isIncoming: true,
+      });
+    };
+
+    // Primary: Broadcast channel
     const channel = supabase
       .channel(`user-calls-${currentUserId}`)
-      .on('broadcast', { event: 'incoming-call' }, async (payload) => {
-        const msg = payload.payload as {
-          callId: string;
-          callerId: string;
-          callerName: string;
-          callType: CallType;
-        };
-        if (callStateRef.current.status !== 'idle') return;
-
-        // Show persistent OS notification to wake sleeping devices
-        try {
-          const reg = await navigator.serviceWorker?.ready;
-          if (reg?.active) {
-            reg.active.postMessage({
-              type: 'SHOW_NOTIFICATION',
-              title: `📞 Incoming ${msg.callType} call`,
-              body: `${msg.callerName} is calling you`,
-              tag: `call-${msg.callId}`,
-              requireInteraction: true,
-              data: { url: '/app', callId: msg.callId },
-              actions: [
-                { action: 'answer', title: '✅ Answer' },
-                { action: 'reject', title: '❌ Decline' },
-              ],
-            });
-          }
-        } catch (e) {
-          console.warn('Could not show call notification:', e);
-        }
-
-        setCallState({
-          status: 'ringing',
-          callId: msg.callId,
-          callType: msg.callType,
-          remoteUserId: msg.callerId,
-          remoteUserName: msg.callerName,
-          isMuted: false,
-          isVideoOff: false,
-          duration: 0,
-          isIncoming: true,
-        });
+      .on('broadcast', { event: 'incoming-call' }, (payload) => {
+        handleIncomingCall(payload.payload as any);
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    // Fallback: Poll DB every 3s for ringing calls targeting us (catches missed broadcasts)
+    const pollInterval = setInterval(async () => {
+      if (callStateRef.current.status !== 'idle') return;
+      try {
+        const { data } = await supabase
+          .from('call_signals')
+          .select('id, caller_id, call_type')
+          .eq('callee_id', currentUserId)
+          .eq('status', 'ringing')
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (data && data.length > 0) {
+          const call = data[0];
+          // Fetch caller profile
+          const { data: profile } = await supabase.from('profiles').select('display_name, username').eq('id', call.caller_id).maybeSingle();
+          const callerName = profile?.display_name || profile?.username || 'Unknown';
+          handleIncomingCall({
+            callId: call.id,
+            callerId: call.caller_id,
+            callerName,
+            callType: call.call_type as CallType,
+          });
+        }
+      } catch { /* ignore polling errors */ }
+    }, 3000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(pollInterval);
+    };
   }, [currentUserId]);
 
   // Per-call signaling channel (offer/answer/ICE/hangup via Broadcast)
