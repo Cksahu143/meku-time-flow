@@ -81,13 +81,16 @@ export const useWebRTC = () => {
   }, []);
 
   // Listen for call actions from Service Worker notifications (Answer/Decline buttons)
+  const answerCallRef = useRef<() => void>(() => {});
+  const rejectCallRef = useRef<() => void>(() => {});
+
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       if (event.data?.type === 'CALL_ACTION') {
         if (event.data.action === 'answer' && callStateRef.current.status === 'ringing') {
-          // answerCall/rejectCall are called from callState effect
+          answerCallRef.current();
         } else if (event.data.action === 'reject' && callStateRef.current.status === 'ringing') {
-          // handled below
+          rejectCallRef.current();
         }
       }
     };
