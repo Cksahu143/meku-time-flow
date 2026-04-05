@@ -80,57 +80,106 @@ export const useWebRTC = () => {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Listen for call actions from Service Worker notifications (Answer/Decline buttons)
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (event.data?.type === 'CALL_ACTION') {
+        if (event.data.action === 'answer' && callStateRef.current.status === 'ringing') {
+          // answerCall/rejectCall are called from callState effect
+        } else if (event.data.action === 'reject' && callStateRef.current.status === 'ringing') {
+          // handled below
+        }
+      }
+    };
+    navigator.serviceWorker?.addEventListener('message', handler);
+    return () => navigator.serviceWorker?.removeEventListener('message', handler);
+  }, []);
+
   // Listen for incoming calls via Broadcast (instant, no DB lag)
   useEffect(() => {
     if (!currentUserId) return;
 
+    const handleIncomingCall = async (msg: {
+      callId: string;
+      callerId: string;
+      callerName: string;
+      callType: CallType;
+    }) => {
+      if (callStateRef.current.status !== 'idle') return;
+
+      // Show persistent OS notification to wake sleeping devices
+      try {
+        const reg = await navigator.serviceWorker?.ready;
+        if (reg?.active) {
+          reg.active.postMessage({
+            type: 'SHOW_NOTIFICATION',
+            title: `📞 Incoming ${msg.callType} call`,
+            body: `${msg.callerName} is calling you`,
+            tag: `call-${msg.callId}`,
+            requireInteraction: true,
+            data: { url: '/app', callId: msg.callId },
+            actions: [
+              { action: 'answer', title: '✅ Answer' },
+              { action: 'reject', title: '❌ Decline' },
+            ],
+          });
+        }
+      } catch (e) {
+        console.warn('Could not show call notification:', e);
+      }
+
+      setCallState({
+        status: 'ringing',
+        callId: msg.callId,
+        callType: msg.callType,
+        remoteUserId: msg.callerId,
+        remoteUserName: msg.callerName,
+        isMuted: false,
+        isVideoOff: false,
+        duration: 0,
+        isIncoming: true,
+      });
+    };
+
+    // Primary: Broadcast channel
     const channel = supabase
       .channel(`user-calls-${currentUserId}`)
-      .on('broadcast', { event: 'incoming-call' }, async (payload) => {
-        const msg = payload.payload as {
-          callId: string;
-          callerId: string;
-          callerName: string;
-          callType: CallType;
-        };
-        if (callStateRef.current.status !== 'idle') return;
-
-        // Show persistent OS notification to wake sleeping devices
-        try {
-          const reg = await navigator.serviceWorker?.ready;
-          if (reg?.active) {
-            reg.active.postMessage({
-              type: 'SHOW_NOTIFICATION',
-              title: `📞 Incoming ${msg.callType} call`,
-              body: `${msg.callerName} is calling you`,
-              tag: `call-${msg.callId}`,
-              requireInteraction: true,
-              data: { url: '/app', callId: msg.callId },
-              actions: [
-                { action: 'answer', title: '✅ Answer' },
-                { action: 'reject', title: '❌ Decline' },
-              ],
-            });
-          }
-        } catch (e) {
-          console.warn('Could not show call notification:', e);
-        }
-
-        setCallState({
-          status: 'ringing',
-          callId: msg.callId,
-          callType: msg.callType,
-          remoteUserId: msg.callerId,
-          remoteUserName: msg.callerName,
-          isMuted: false,
-          isVideoOff: false,
-          duration: 0,
-          isIncoming: true,
-        });
+      .on('broadcast', { event: 'incoming-call' }, (payload) => {
+        handleIncomingCall(payload.payload as any);
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    // Fallback: Poll DB every 3s for ringing calls targeting us (catches missed broadcasts)
+    const pollInterval = setInterval(async () => {
+      if (callStateRef.current.status !== 'idle') return;
+      try {
+        const { data } = await supabase
+          .from('call_signals')
+          .select('id, caller_id, call_type')
+          .eq('callee_id', currentUserId)
+          .eq('status', 'ringing')
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (data && data.length > 0) {
+          const call = data[0];
+          // Fetch caller profile
+          const { data: profile } = await supabase.from('profiles').select('display_name, username').eq('id', call.caller_id).maybeSingle();
+          const callerName = profile?.display_name || profile?.username || 'Unknown';
+          handleIncomingCall({
+            callId: call.id,
+            callerId: call.caller_id,
+            callerName,
+            callType: call.call_type as CallType,
+          });
+        }
+      } catch { /* ignore polling errors */ }
+    }, 3000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(pollInterval);
+    };
   }, [currentUserId]);
 
   // Per-call signaling channel (offer/answer/ICE/hangup via Broadcast)
@@ -232,8 +281,25 @@ export const useWebRTC = () => {
           setCallState(prev => ({ ...prev, duration: prev.duration + 1 }));
         }, 1000);
       }
-      if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
-        endCall();
+      if (pc.connectionState === 'failed') {
+        // Attempt ICE restart before giving up
+        try {
+          pc.restartIce();
+          pc.createOffer({ iceRestart: true }).then(offer => {
+            pc.setLocalDescription(offer);
+            sendSignal('offer', offer);
+          });
+        } catch {
+          endCall();
+        }
+      }
+      if (pc.connectionState === 'disconnected') {
+        // Wait 5s for reconnection before ending
+        setTimeout(() => {
+          if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+            endCall();
+          }
+        }, 5000);
       }
     };
 
@@ -304,8 +370,26 @@ export const useWebRTC = () => {
       // Also persist offer to DB as fallback
       await supabase.from('call_signals').update({ offer: offer as unknown as Json }).eq('id', callId);
 
+      // Retry broadcast every 3s in case callee missed the first one
+      const retryInterval = setInterval(async () => {
+        if (callStateRef.current.callId !== callId || callStateRef.current.status !== 'calling') {
+          clearInterval(retryInterval);
+          return;
+        }
+        const retryChannel = supabase.channel(`user-calls-${remoteUserId}-retry-${Date.now()}`);
+        await retryChannel.subscribe();
+        await new Promise(r => setTimeout(r, 150));
+        await retryChannel.send({
+          type: 'broadcast',
+          event: 'incoming-call',
+          payload: { callId, callerId: currentUserId, callerName, callType },
+        });
+        supabase.removeChannel(retryChannel);
+      }, 3000);
+
       // Auto-end after 30s
       setTimeout(async () => {
+        clearInterval(retryInterval);
         if (callStateRef.current.callId === callId && callStateRef.current.status === 'calling') {
           await supabase.from('call_signals').update({ status: 'missed', ended_at: new Date().toISOString() }).eq('id', callId);
           sendSignal('hangup');
