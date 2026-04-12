@@ -1,6 +1,7 @@
 import React, { createContext, useContext } from 'react';
 import { useWebRTC, CallType } from '@/hooks/useWebRTC';
 import { CallOverlay } from './CallOverlay';
+import { usePushSubscription } from '@/hooks/usePushSubscription';
 
 interface CallContextType {
   startCall: (remoteUserId: string, remoteUserName: string, callType: CallType) => Promise<void>;
@@ -15,6 +16,9 @@ const CallContext = createContext<CallContextType>({
 export const useCall = () => useContext(CallContext);
 
 export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Auto-subscribe to push notifications when user is logged in
+  usePushSubscription();
+
   const {
     callState,
     localVideoRef,

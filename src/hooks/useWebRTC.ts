@@ -360,6 +360,24 @@ export const useWebRTC = () => {
       });
       supabase.removeChannel(calleeChannel);
 
+      // Send push notification to wake callee's device even if browser is closed
+      try {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://gkkeysrfmgmxoypnjkdl.supabase.co';
+        fetch(`${supabaseUrl}/functions/v1/send-push`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}` },
+          body: JSON.stringify({
+            userId: remoteUserId,
+            title: `📞 Incoming ${callType} call`,
+            body: `${callerName} is calling you`,
+            tag: `call-${callId}`,
+            data: { url: '/app', callId },
+          }),
+        }).catch(e => console.warn('Push notification failed:', e));
+      } catch (e) {
+        console.warn('Push send error:', e);
+      }
+
       // Create peer connection & offer
       const pc = createPeerConnection();
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
