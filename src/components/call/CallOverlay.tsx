@@ -16,6 +16,8 @@ interface CallOverlayProps {
   isIncoming: boolean;
   localVideoRef: React.RefObject<HTMLVideoElement>;
   remoteVideoRef: React.RefObject<HTMLVideoElement>;
+  localStream: MediaStream | null;
+  remoteStream: MediaStream | null;
   onAnswer: () => void;
   onReject: () => void;
   onEnd: () => void;
@@ -32,26 +34,22 @@ const formatDuration = (seconds: number): string => {
 const SlideToAnswer: React.FC<{ onAnswer: () => void }> = ({ onAnswer }) => {
   const x = useMotionValue(0);
   const maxSlide = 220;
-  const background = useTransform(x, [0, maxSlide], ['hsl(var(--primary) / 0.15)', 'hsl(var(--primary) / 0.5)']);
   const iconOpacity = useTransform(x, [0, maxSlide * 0.8, maxSlide], [1, 0.5, 0]);
   const [answered, setAnswered] = useState(false);
 
   return (
     <div className="relative w-72 h-16 rounded-full bg-primary/10 border border-primary/20 overflow-hidden">
-      {/* Shimmer hint */}
       <motion.div
         className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent"
         animate={{ x: [-300, 300] }}
         transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
       />
-      {/* Label */}
       <motion.span
         className="absolute inset-0 flex items-center justify-center text-sm font-medium text-primary/60 select-none"
         style={{ opacity: iconOpacity }}
       >
         Slide to answer →
       </motion.span>
-      {/* Draggable thumb */}
       <motion.div
         className="absolute top-1 left-1 h-14 w-14 rounded-full bg-primary flex items-center justify-center cursor-grab active:cursor-grabbing shadow-lg z-10"
         drag="x"
@@ -73,9 +71,22 @@ const SlideToAnswer: React.FC<{ onAnswer: () => void }> = ({ onAnswer }) => {
 
 export const CallOverlay: React.FC<CallOverlayProps> = ({
   status, callType, remoteUserName, isMuted, isVideoOff, duration,
-  isIncoming, localVideoRef, remoteVideoRef,
+  isIncoming, localVideoRef, remoteVideoRef, localStream, remoteStream,
   onAnswer, onReject, onEnd, onToggleMute, onToggleVideo,
 }) => {
+  // Attach streams to video elements when they become available
+  useEffect(() => {
+    if (localVideoRef.current && localStream) {
+      localVideoRef.current.srcObject = localStream;
+    }
+  }, [localStream, localVideoRef, status]);
+
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream, remoteVideoRef, status]);
+
   // Sound effects
   useEffect(() => {
     if (status === 'ringing' && isIncoming) startRingtone();
@@ -95,6 +106,8 @@ export const CallOverlay: React.FC<CallOverlayProps> = ({
     : status === 'connected' ? formatDuration(duration)
     : 'Call ended';
 
+  const showVideo = callType === 'video' && status === 'connected';
+
   return (
     <AnimatePresence>
       <motion.div
@@ -108,27 +121,38 @@ export const CallOverlay: React.FC<CallOverlayProps> = ({
         {/* Background */}
         <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-muted/80 backdrop-blur-2xl" />
 
-        {/* Video layer for connected video calls */}
-        {callType === 'video' && status === 'connected' && (
+        {/* Video layer */}
+        {showVideo && (
           <>
             <div className="absolute inset-0 bg-black z-0">
-              <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+              <video
+                ref={remoteVideoRef}
+                autoPlay
+                playsInline
+                className="w-full h-full object-cover"
+              />
             </div>
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               className="absolute top-6 right-4 w-28 h-40 rounded-2xl overflow-hidden border-2 border-background/40 shadow-2xl z-10"
             >
-              <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover" style={{ transform: 'scaleX(-1)' }} />
+              <video
+                ref={localVideoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover"
+                style={{ transform: 'scaleX(-1)' }}
+              />
             </motion.div>
           </>
         )}
 
         {/* Main content */}
         <div className="relative z-10 flex flex-col items-center justify-between h-full py-12 px-6">
-          {/* Top: Caller info */}
+          {/* Caller info */}
           <div className="flex flex-col items-center gap-4 mt-8">
-            {/* Pulsing rings for ringing/calling */}
             <div className="relative">
               {(status === 'ringing' || status === 'calling') && (
                 <>
@@ -168,16 +192,13 @@ export const CallOverlay: React.FC<CallOverlayProps> = ({
               </p>
             </div>
 
-            {/* EDAS branding */}
             <span className="text-xs text-muted-foreground/50 tracking-widest uppercase mt-2">EDAS Call</span>
           </div>
 
-          {/* Middle spacer */}
           <div className="flex-1" />
 
-          {/* Bottom: Controls */}
+          {/* Controls */}
           <div className="w-full max-w-sm">
-            {/* Incoming: slide to answer + decline button */}
             {status === 'ringing' && isIncoming && (
               <motion.div
                 initial={{ y: 60, opacity: 0 }}
@@ -197,7 +218,6 @@ export const CallOverlay: React.FC<CallOverlayProps> = ({
               </motion.div>
             )}
 
-            {/* Outgoing: cancel */}
             {status === 'calling' && (
               <div className="flex justify-center">
                 <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="flex flex-col items-center gap-2">
@@ -213,7 +233,6 @@ export const CallOverlay: React.FC<CallOverlayProps> = ({
               </div>
             )}
 
-            {/* Connected: mute, video, end */}
             {status === 'connected' && (
               <motion.div
                 initial={{ y: 40, opacity: 0 }}
@@ -247,7 +266,6 @@ export const CallOverlay: React.FC<CallOverlayProps> = ({
               </motion.div>
             )}
 
-            {/* Ended */}
             {status === 'ended' && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-center">
                 <p className="text-muted-foreground text-lg">Call ended</p>

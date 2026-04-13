@@ -3,12 +3,11 @@
 // Handles: caching, offline support, push notifications, auto-update
 // ======================================
 
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const STATIC_CACHE = `edas-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `edas-dynamic-${CACHE_VERSION}`;
 const API_CACHE = `edas-api-${CACHE_VERSION}`;
 
-// Files to pre-cache on install (app shell)
 const APP_SHELL = [
   '/',
   '/app',
@@ -18,18 +17,15 @@ const APP_SHELL = [
 ];
 
 // ── INSTALL ──
-// Pre-cache the app shell, then immediately activate
 self.addEventListener('install', (event) => {
   console.log('[SW] Installing service worker', CACHE_VERSION);
   event.waitUntil(
     caches.open(STATIC_CACHE)
       .then(cache => cache.addAll(APP_SHELL))
-      // Do NOT skipWaiting here — let the app control when to activate
   );
 });
 
 // ── ACTIVATE ──
-// Clean up old caches from previous versions
 self.addEventListener('activate', (event) => {
   console.log('[SW] Activating service worker', CACHE_VERSION);
   event.waitUntil(
@@ -42,10 +38,9 @@ self.addEventListener('activate', (event) => {
             return caches.delete(key);
           })
       )
-    ).then(() => self.clients.claim()) // Take control of all pages immediately
+    ).then(() => self.clients.claim())
   );
 
-  // Notify all clients that an update happened
   self.clients.matchAll().then(clients => {
     clients.forEach(client => {
       client.postMessage({ type: 'SW_UPDATED', version: CACHE_VERSION });
@@ -54,15 +49,12 @@ self.addEventListener('activate', (event) => {
 });
 
 // ── FETCH ──
-// Network-first for API/navigation, cache-first for static assets
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET requests
   if (request.method !== 'GET') return;
 
-  // Skip chrome-extension, analytics, and Supabase realtime requests
   if (
     url.protocol === 'chrome-extension:' ||
     url.hostname.includes('analytics') ||
@@ -72,12 +64,10 @@ self.addEventListener('fetch', (event) => {
     url.hostname.includes('supabase')
   ) return;
 
-  // For navigation requests: network-first with offline fallback
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
         .then(response => {
-          // Cache the latest version of each page
           const clone = response.clone();
           caches.open(STATIC_CACHE).then(cache => cache.put(request, clone));
           return response;
@@ -87,7 +77,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // For static assets (JS, CSS, images, fonts): cache-first
   if (
     url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff2?|ttf|eot)$/) ||
     url.hostname.includes('fonts.googleapis.com') ||
@@ -106,7 +95,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Everything else: network-first
   event.respondWith(
     fetch(request)
       .then(response => {
@@ -120,12 +108,27 @@ self.addEventListener('fetch', (event) => {
 
 // ── PUSH NOTIFICATIONS ──
 self.addEventListener('push', (event) => {
-  const options = event.data ? event.data.json() : {};
+  let options = {};
+  
+  try {
+    if (event.data) {
+      const text = event.data.text();
+      if (text) {
+        options = JSON.parse(text);
+      }
+    }
+  } catch (e) {
+    console.warn('[SW] Could not parse push data:', e);
+  }
+
   const title = options.title || 'EDAS';
-  const body = options.body || '';
-  const icon = options.icon || '/icons/icon-192x192.png';
-  const badge = options.badge || '/icons/icon-72x72.png';
+  const body = options.body || 'You have a new notification';
+  const icon = options.icon || '/favicon.ico';
+  const badge = options.badge || '/favicon.ico';
   const tag = options.tag || 'default';
+  const data = options.data || {};
+  const actions = options.actions || [];
+  const requireInteraction = options.requireInteraction || false;
 
   event.waitUntil(
     self.registration.showNotification(title, {
@@ -133,25 +136,24 @@ self.addEventListener('push', (event) => {
       icon,
       badge,
       tag,
-      requireInteraction: false,
-      vibrate: [200, 100, 200],
-      data: options.data || {},
-      actions: options.actions || [],
-      silent: options.silent || false,
+      requireInteraction,
+      vibrate: [200, 100, 200, 100, 200],
+      data,
+      actions,
+      silent: false,
     })
   );
 });
 
 // ── MESSAGE HANDLER ──
-// Receive messages from the main thread (show notification, skip waiting)
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
     const { title, body, icon, badge, tag, data, actions, requireInteraction, silent } = event.data;
     event.waitUntil(
       self.registration.showNotification(title, {
         body,
-        icon: icon || '/icons/icon-192x192.png',
-        badge: badge || '/icons/icon-72x72.png',
+        icon: icon || '/favicon.ico',
+        badge: badge || '/favicon.ico',
         tag: tag || 'default',
         requireInteraction: requireInteraction || false,
         vibrate: [200, 100, 200, 100, 200],
@@ -162,7 +164,6 @@ self.addEventListener('message', (event) => {
     );
   }
 
-  // When the app detects a new SW version, it can tell us to activate immediately
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
@@ -179,10 +180,8 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
-        // Try to find an existing EDAS window
         for (let client of clientList) {
           if (client.url.includes(self.location.origin) && 'focus' in client) {
-            // Forward the action (answer/reject) to the app
             if (action === 'answer' || action === 'reject') {
               client.postMessage({
                 type: 'CALL_ACTION',
@@ -195,7 +194,14 @@ self.addEventListener('notificationclick', (event) => {
           }
         }
         // No existing window — open the app
-        if (clients.openWindow) return clients.openWindow(targetUrl);
+        if (clients.openWindow) {
+          const url = action === 'answer' 
+            ? `${targetUrl}?callAction=answer&callId=${notificationData.callId || ''}`
+            : action === 'reject'
+            ? `${targetUrl}?callAction=reject&callId=${notificationData.callId || ''}`
+            : targetUrl;
+          return clients.openWindow(url);
+        }
       })
   );
 });
