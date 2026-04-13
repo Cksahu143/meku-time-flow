@@ -16,13 +16,14 @@ const CallContext = createContext<CallContextType>({
 export const useCall = () => useContext(CallContext);
 
 export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Auto-subscribe to push notifications when user is logged in
   usePushSubscription();
 
   const {
     callState,
     localVideoRef,
     remoteVideoRef,
+    localStream,
+    remoteStream,
     startCall,
     answerCall,
     rejectCall,
@@ -44,6 +45,8 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isIncoming={callState.isIncoming}
         localVideoRef={localVideoRef}
         remoteVideoRef={remoteVideoRef}
+        localStream={localStream}
+        remoteStream={remoteStream}
         onAnswer={answerCall}
         onReject={rejectCall}
         onEnd={endCall}

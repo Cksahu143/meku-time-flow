@@ -614,6 +614,82 @@ export type Database = {
         }
         Relationships: []
       }
+      group_call_participants: {
+        Row: {
+          created_at: string
+          group_call_id: string
+          id: string
+          joined_at: string | null
+          left_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          group_call_id: string
+          id?: string
+          joined_at?: string | null
+          left_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          group_call_id?: string
+          id?: string
+          joined_at?: string | null
+          left_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_call_participants_group_call_id_fkey"
+            columns: ["group_call_id"]
+            isOneToOne: false
+            referencedRelation: "group_calls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_calls: {
+        Row: {
+          call_type: string
+          created_at: string
+          created_by: string
+          ended_at: string | null
+          group_id: string
+          id: string
+          status: string
+        }
+        Insert: {
+          call_type?: string
+          created_at?: string
+          created_by: string
+          ended_at?: string | null
+          group_id: string
+          id?: string
+          status?: string
+        }
+        Update: {
+          call_type?: string
+          created_at?: string
+          created_by?: string
+          ended_at?: string | null
+          group_id?: string
+          id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_calls_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_invitations: {
         Row: {
           created_at: string
