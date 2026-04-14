@@ -74,18 +74,29 @@ export const CallOverlay: React.FC<CallOverlayProps> = ({
   isIncoming, localVideoRef, remoteVideoRef, localStream, remoteStream,
   onAnswer, onReject, onEnd, onToggleMute, onToggleVideo,
 }) => {
+  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
+
   // Attach streams to video elements when they become available
   useEffect(() => {
     if (localVideoRef.current && localStream) {
       localVideoRef.current.srcObject = localStream;
+      localVideoRef.current.play().catch(() => undefined);
     }
   }, [localStream, localVideoRef, status]);
 
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream;
+      remoteVideoRef.current.play().catch(() => undefined);
     }
   }, [remoteStream, remoteVideoRef, status]);
+
+  useEffect(() => {
+    if (remoteAudioRef.current && remoteStream) {
+      remoteAudioRef.current.srcObject = remoteStream;
+      remoteAudioRef.current.play().catch(() => undefined);
+    }
+  }, [remoteStream, status]);
 
   // Sound effects
   useEffect(() => {
@@ -120,6 +131,7 @@ export const CallOverlay: React.FC<CallOverlayProps> = ({
       >
         {/* Background */}
         <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-muted/80 backdrop-blur-2xl" />
+        <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
 
         {/* Video layer */}
         {showVideo && (
@@ -129,6 +141,7 @@ export const CallOverlay: React.FC<CallOverlayProps> = ({
                 ref={remoteVideoRef}
                 autoPlay
                 playsInline
+                muted
                 className="w-full h-full object-cover"
               />
             </div>

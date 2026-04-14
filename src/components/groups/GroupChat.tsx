@@ -45,7 +45,7 @@ interface GroupChatProps {
 }
 
 export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup, onBack }: GroupChatProps) => {
-  const { startCall } = useCall();
+  const { startGroupCall } = useCall();
   const { messages, loading, sendMessage, sendVoiceMessage, sendFileMessage, editMessage, deleteMessage } = useMessages(group.id);
   const { members } = useGroupMembers(group.id);
   const [newMessage, setNewMessage] = useState('');
@@ -457,14 +457,14 @@ export const GroupChat = ({ group, onUpdateGroup, onDeleteGroup, onLeaveGroup, o
           onOpenChange={setShowCallPicker}
           callType={pendingCallType}
           currentUserId={currentUserId}
-          members={Object.values(profiles).map((p: any) => ({
-            id: p.id,
-            display_name: p.display_name,
-            username: p.username,
-            avatar_url: p.avatar_url,
-            last_seen: p.last_seen,
+          members={members.map((member) => ({
+            id: member.user_id,
+            display_name: member.display_name,
+            username: member.username,
+            avatar_url: member.avatar_url,
+            last_seen: member.last_seen,
           }))}
-          onSelectMember={(userId, name, type) => startCall(userId, name, type)}
+          onStartCall={(selectedMembers, type) => startGroupCall(group.id, group.name, selectedMembers, type)}
         />
       </div>
     </DragDropUpload>

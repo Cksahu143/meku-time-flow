@@ -9,6 +9,7 @@ interface GroupMemberWithProfile {
   display_name: string;
   username: string;
   avatar_url?: string;
+  last_seen?: string | null;
 }
 
 export const useGroupMembers = (groupId: string) => {
@@ -53,7 +54,7 @@ export const useGroupMembers = (groupId: string) => {
         const userIds = membersData.map(m => m.user_id);
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles_secure')
-          .select('id, display_name, username, avatar_url')
+          .select('id, display_name, username, avatar_url, last_seen')
           .in('id', userIds);
 
         if (profilesError) throw profilesError;
@@ -67,6 +68,7 @@ export const useGroupMembers = (groupId: string) => {
             display_name: profile?.display_name || profile?.username || 'Unknown',
             username: profile?.username || '',
             avatar_url: profile?.avatar_url,
+            last_seen: profile?.last_seen,
           };
         });
 
