@@ -59,6 +59,7 @@ export const useWebRTC = () => {
 
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+  const remoteMediaStreamRef = useRef<MediaStream | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const durationTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -67,6 +68,8 @@ export const useWebRTC = () => {
   const callStateRef = useRef(callState);
   const retryIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const answerPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const signalQueueRef = useRef<Array<{ type: string; data?: unknown }>>([]);
+  const channelReadyRef = useRef(false);
   callStateRef.current = callState;
 
   // Auth state
@@ -99,6 +102,45 @@ export const useWebRTC = () => {
     navigator.serviceWorker?.addEventListener('message', handler);
     return () => navigator.serviceWorker?.removeEventListener('message', handler);
   }, []);
+
+  const flushSignalQueue = useCallback(async () => {
+    if (!broadcastChannelRef.current || !channelReadyRef.current) return;
+
+    const queuedSignals = [...signalQueueRef.current];
+    signalQueueRef.current = [];
+
+    for (const signal of queuedSignals) {
+      const response = await broadcastChannelRef.current.send({
+        type: 'broadcast',
+        event: 'signal',
+        payload: { ...signal, from: currentUserId },
+      });
+
+      if (response !== 'ok') {
+        signalQueueRef.current.unshift(signal);
+        break;
+      }
+    }
+  }, [currentUserId]);
+
+  const sendSignal = useCallback(async (type: string, data?: unknown) => {
+    const signal = { type, data };
+
+    if (!broadcastChannelRef.current || !channelReadyRef.current) {
+      signalQueueRef.current.push(signal);
+      return;
+    }
+
+    const response = await broadcastChannelRef.current.send({
+      type: 'broadcast',
+      event: 'signal',
+      payload: { ...signal, from: currentUserId },
+    });
+
+    if (response !== 'ok') {
+      signalQueueRef.current.push(signal);
+    }
+  }, [currentUserId]);
 
   // Listen for incoming calls via Broadcast
   useEffect(() => {
@@ -260,45 +302,71 @@ export const useWebRTC = () => {
             break;
         }
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          channelReadyRef.current = true;
+          void flushSignalQueue();
+        }
+
+        if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR' || status === 'CLOSED') {
+          channelReadyRef.current = false;
+        }
+      });
 
     broadcastChannelRef.current = channel;
-    return () => { supabase.removeChannel(channel); broadcastChannelRef.current = null; };
-  }, [callState.callId, currentUserId]);
-
-  const sendSignal = useCallback((type: string, data?: unknown) => {
-    broadcastChannelRef.current?.send({
-      type: 'broadcast',
-      event: 'signal',
-      payload: { type, data, from: currentUserId },
-    });
-  }, [currentUserId]);
+    return () => {
+      channelReadyRef.current = false;
+      signalQueueRef.current = [];
+      supabase.removeChannel(channel);
+      broadcastChannelRef.current = null;
+    };
+  }, [callState.callId, currentUserId, flushSignalQueue]);
 
   const cleanup = useCallback(() => {
     if (durationTimerRef.current) { clearInterval(durationTimerRef.current); durationTimerRef.current = null; }
     if (retryIntervalRef.current) { clearInterval(retryIntervalRef.current); retryIntervalRef.current = null; }
     if (answerPollRef.current) { clearInterval(answerPollRef.current); answerPollRef.current = null; }
     if (localStreamRef.current) { localStreamRef.current.getTracks().forEach(t => t.stop()); localStreamRef.current = null; }
+    if (remoteMediaStreamRef.current) { remoteMediaStreamRef.current.getTracks().forEach(t => t.stop()); remoteMediaStreamRef.current = null; }
     if (peerConnectionRef.current) { peerConnectionRef.current.close(); peerConnectionRef.current = null; }
     setLocalStream(null);
     setRemoteStream(null);
     pendingCandidatesRef.current = [];
+    signalQueueRef.current = [];
+    channelReadyRef.current = false;
   }, []);
 
   const createPeerConnection = useCallback(() => {
     const pc = new RTCPeerConnection(ICE_SERVERS);
+    const remoteMediaStream = new MediaStream();
+    remoteMediaStreamRef.current = remoteMediaStream;
+    setRemoteStream(remoteMediaStream);
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
-        sendSignal('ice-candidate', event.candidate.toJSON());
+        void sendSignal('ice-candidate', event.candidate.toJSON());
       }
     };
 
     pc.ontrack = (event) => {
-      const stream = event.streams[0];
+      const stream = remoteMediaStreamRef.current ?? new MediaStream();
+      const inboundStream = event.streams[0];
+
+      if (inboundStream) {
+        inboundStream.getTracks().forEach((track) => {
+          if (!stream.getTracks().some((existingTrack) => existingTrack.id === track.id)) {
+            stream.addTrack(track);
+          }
+        });
+      } else if (!stream.getTracks().some((track) => track.id === event.track.id)) {
+        stream.addTrack(event.track);
+      }
+
+      remoteMediaStreamRef.current = stream;
       setRemoteStream(stream);
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = stream;
+        remoteVideoRef.current.play().catch(() => undefined);
       }
     };
 
@@ -322,7 +390,7 @@ export const useWebRTC = () => {
           pc.restartIce();
           pc.createOffer({ iceRestart: true }).then(offer => {
             pc.setLocalDescription(offer);
-            sendSignal('offer', offer);
+            void sendSignal('offer', offer);
           });
         } catch {
           endCall();
@@ -346,12 +414,15 @@ export const useWebRTC = () => {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: callType === 'video',
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        video: callType === 'video' ? { facingMode: 'user' } : false,
       });
       localStreamRef.current = stream;
       setLocalStream(stream);
-      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+        localVideoRef.current.play().catch(() => undefined);
+      }
 
       const { data: callData, error } = await supabase
         .from('call_signals')
@@ -413,8 +484,8 @@ export const useWebRTC = () => {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
-      // Send offer via broadcast with slight delay
-      setTimeout(() => sendSignal('offer', offer), 300);
+      // Send offer via broadcast with queueing support
+      void sendSignal('offer', offer);
 
       // Persist offer to DB as fallback
       await supabase.from('call_signals').update({ offer: offer as unknown as Json }).eq('id', callId);
@@ -494,12 +565,15 @@ export const useWebRTC = () => {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: callState.callType === 'video',
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        video: callState.callType === 'video' ? { facingMode: 'user' } : false,
       });
       localStreamRef.current = stream;
       setLocalStream(stream);
-      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+        localVideoRef.current.play().catch(() => undefined);
+      }
 
       // Get offer from DB (fallback)
       const { data: callData } = await supabase
@@ -525,9 +599,9 @@ export const useWebRTC = () => {
       await pc.setLocalDescription(answer);
 
       // Send answer via broadcast (instant) - retry a few times
-      sendSignal('answer', answer);
-      setTimeout(() => sendSignal('answer', answer), 500);
-      setTimeout(() => sendSignal('answer', answer), 1500);
+      void sendSignal('answer', answer);
+      setTimeout(() => { void sendSignal('answer', answer); }, 500);
+      setTimeout(() => { void sendSignal('answer', answer); }, 1500);
 
       // Persist to DB
       await supabase.from('call_signals').update({

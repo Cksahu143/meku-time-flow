@@ -1,9 +1,8 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Phone, Video } from 'lucide-react';
-import { OnlineStatus } from '@/components/chat/OnlineStatus';
 import { CallType } from '@/hooks/useWebRTC';
 
 interface MemberProfile {
@@ -20,26 +19,47 @@ interface GroupCallPickerDialogProps {
   callType: CallType;
   members: MemberProfile[];
   currentUserId: string | null;
-  onSelectMember: (userId: string, name: string, callType: CallType) => void;
+  onStartCall: (members: Array<{ userId: string; name: string; avatarUrl?: string }>, callType: CallType) => void;
 }
 
 export const GroupCallPickerDialog: React.FC<GroupCallPickerDialogProps> = ({
-  open, onOpenChange, callType, members, currentUserId, onSelectMember,
+  open, onOpenChange, callType, members, currentUserId, onStartCall,
 }) => {
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const otherMembers = members.filter(m => m.id !== currentUserId);
+
+  useEffect(() => {
+    if (!open) {
+      setSelectedIds([]);
+    }
+  }, [open]);
+
+  const selectedMembers = useMemo(() => otherMembers
+    .filter((member) => selectedIds.includes(member.id))
+    .map((member) => ({
+      userId: member.id,
+      name: member.display_name || member.username || 'Unknown',
+      avatarUrl: member.avatar_url,
+    })), [otherMembers, selectedIds]);
 
   const isOnline = (lastSeen: string | undefined) => {
     if (!lastSeen) return false;
     return new Date(lastSeen) > new Date(Date.now() - 5 * 60 * 1000);
   };
 
+  const toggleMember = (memberId: string) => {
+    setSelectedIds((current) => current.includes(memberId)
+      ? current.filter((id) => id !== memberId)
+      : [...current, memberId]);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {callType === 'video' ? <Video className="h-5 w-5 text-primary" /> : <Phone className="h-5 w-5 text-primary" />}
-            Choose who to call
+            Invite members to this {callType} call
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-1 max-h-72 overflow-y-auto">
@@ -50,15 +70,13 @@ export const GroupCallPickerDialog: React.FC<GroupCallPickerDialogProps> = ({
               const name = member.display_name || member.username || 'Unknown';
               const initials = name.charAt(0).toUpperCase();
               const online = isOnline(member.last_seen);
+              const selected = selectedIds.includes(member.id);
 
               return (
                 <button
                   key={member.id}
-                  onClick={() => {
-                    onSelectMember(member.id, name, callType);
-                    onOpenChange(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted/60 transition-colors text-left"
+                  onClick={() => toggleMember(member.id)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-colors ${selected ? 'border-primary bg-primary/10' : 'border-transparent hover:bg-muted/60'}`}
                 >
                   <div className="relative">
                     <Avatar className="h-10 w-10">
@@ -84,6 +102,20 @@ export const GroupCallPickerDialog: React.FC<GroupCallPickerDialogProps> = ({
               );
             })
           )}
+        </div>
+        <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
+          <p className="text-sm text-muted-foreground">
+            {selectedMembers.length === 0 ? 'Select at least one member' : `${selectedMembers.length} member${selectedMembers.length === 1 ? '' : 's'} selected`}
+          </p>
+          <Button
+            disabled={selectedMembers.length === 0}
+            onClick={() => {
+              onStartCall(selectedMembers, callType);
+              onOpenChange(false);
+            }}
+          >
+            Start {callType} call
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
