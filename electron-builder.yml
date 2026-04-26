@@ -82,7 +82,7 @@ nsis:
 linux:
   category: Education
   icon: build/favicon.icns
-    maintainer: Charukrishna Sahu <charukrishna.sahu@gmail.com>
+  maintainer: Charukrishna Sahu <charukrishna.sahu@gmail.com>
   target:
     - target: AppImage
       arch:
