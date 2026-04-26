@@ -18,9 +18,6 @@ files:
   - "!electron-release/**/*"
   - "!.github/**/*"
 
-# ─────────────────────────────────────────────────────────────────────────────
-# macOS — universal = Intel (x64) + Apple Silicon (arm64) in one file
-# ─────────────────────────────────────────────────────────────────────────────
 mac:
   category: public.app-category.education
   hardenedRuntime: false
@@ -50,10 +47,7 @@ dmg:
       type: link
       path: /Applications
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Windows — x64 + ia32 so old 32-bit machines can run it.
-# Portable = single .exe, no install, runs from USB or anywhere.
-# ─────────────────────────────────────────────────────────────────────────────
+
 win:
   icon: build/favicon.ico
   target:
@@ -74,11 +68,7 @@ nsis:
   createStartMenuShortcut: true
   shortcutName: EDAS
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Linux — AppImage runs on any distro with no install.
-# deb for Ubuntu/Debian, rpm for Fedora/RHEL, tar.gz as raw fallback.
-# armv7l covers old 32-bit ARM (Raspberry Pi 2/3, etc.)
-# ─────────────────────────────────────────────────────────────────────────────
+
 linux:
   category: Education
   icon: build/favicon.icns
