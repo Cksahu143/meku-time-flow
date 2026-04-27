@@ -1,0 +1,71 @@
+name: Update Download Manifest
+
+# Fires when you publish a release on the main EDAS repo (meku-time-flow)
+# You can also trigger it manually from the Actions tab
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to set (e.g. 1.2.1)'
+        required: true
+  repository_dispatch:
+    types: [release-published]
+
+permissions:
+  contents: write
+
+jobs:
+  update-manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout edas-home
+        uses: actions/checkout@v4
+
+      - name: Fetch latest release from meku-time-flow
+        id: release
+        run: |
+          RELEASE=$(curl -s https://api.github.com/repos/Cksahu143/meku-time-flow/releases/latest)
+          VERSION=$(echo $RELEASE | jq -r '.tag_name' | sed 's/^v//')
+          DATE=$(echo $RELEASE | jq -r '.published_at')
+          NOTES=$(echo $RELEASE | jq -r '.body // ""' | head -c 300)
+
+          MAC_URL=$(echo $RELEASE | jq -r '.assets[] | select(.name | endswith(".dmg")) | .browser_download_url' | head -1)
+          WIN_URL=$(echo $RELEASE | jq -r '.assets[] | select(.name | contains("Setup") and contains("x64") and endswith(".exe")) | .browser_download_url' | head -1)
+          LINUX_URL=$(echo $RELEASE | jq -r '.assets[] | select(.name | endswith("-x64.AppImage") or (endswith(".AppImage") and (contains("arm") | not))) | .browser_download_url' | head -1)
+          RELEASE_PAGE=$(echo $RELEASE | jq -r '.html_url')
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "date=$DATE" >> $GITHUB_OUTPUT
+          echo "mac_url=$MAC_URL" >> $GITHUB_OUTPUT
+          echo "win_url=$WIN_URL" >> $GITHUB_OUTPUT
+          echo "linux_url=$LINUX_URL" >> $GITHUB_OUTPUT
+          echo "release_page=$RELEASE_PAGE" >> $GITHUB_OUTPUT
+
+      - name: Write updates/latest.json
+        run: |
+          mkdir -p updates
+          cat > updates/latest.json << EOF
+          {
+            "version": "${{ steps.release.outputs.version }}",
+            "releaseDate": "${{ steps.release.outputs.date }}",
+            "releaseNotes": "See release page for full changelog.",
+            "mac": {
+              "url": "${{ steps.release.outputs.mac_url }}"
+            },
+            "win": {
+              "url": "${{ steps.release.outputs.win_url }}"
+            },
+            "linux": {
+              "url": "${{ steps.release.outputs.linux_url }}"
+            },
+            "releasePageUrl": "${{ steps.release.outputs.release_page }}"
+          }
+          EOF
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add updates/latest.json
+          git diff --staged --quiet || git commit -m "Update manifest to v${{ steps.release.outputs.version }}"
+          git push
