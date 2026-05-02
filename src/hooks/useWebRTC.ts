@@ -216,7 +216,7 @@ export const useWebRTC = () => {
     const channel = supabase
       .channel(`user-calls-${currentUserId}`)
       .on('broadcast', { event: 'incoming-call' }, (payload) => {
-        handleIncomingCall(payload.payload as any);
+        handleIncomingCall(payload.payload as Parameters<typeof handleIncomingCall>[0]);
       })
       .subscribe();
 
