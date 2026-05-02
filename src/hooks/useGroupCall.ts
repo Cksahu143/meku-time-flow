@@ -290,7 +290,12 @@ export const useGroupCall = () => {
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
-        void sendSignal(remoteUserId, 'ice-candidate', event.candidate.toJSON());
+        const candidate = event.candidate.toJSON();
+        localIceCandidatesRef.current[remoteUserId] = [
+          ...(localIceCandidatesRef.current[remoteUserId] || []),
+          candidate,
+        ];
+        void sendSignal(remoteUserId, 'ice-candidate', candidate);
       }
     };
 
@@ -352,6 +357,7 @@ export const useGroupCall = () => {
 
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
+    rebroadcastLocalIceCandidates(remoteUserId);
     await sendSignal(remoteUserId, 'offer', offer);
   };
 
@@ -378,6 +384,7 @@ export const useGroupCall = () => {
 
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
+        rebroadcastLocalIceCandidates(message.from);
         await sendSignal(message.from, 'answer', answer);
         break;
       }
