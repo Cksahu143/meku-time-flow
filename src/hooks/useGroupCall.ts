@@ -196,6 +196,31 @@ export const useGroupCall = () => {
     }
   };
 
+  const rebroadcastLocalIceCandidates = (remoteUserId: string, attempts = 8) => {
+    if (iceCandidateRetryRefs.current[remoteUserId]) {
+      clearInterval(iceCandidateRetryRefs.current[remoteUserId]);
+    }
+
+    let attempt = 0;
+    iceCandidateRetryRefs.current[remoteUserId] = setInterval(() => {
+      if (callStateRef.current.status === 'idle' || callStateRef.current.status === 'ended') {
+        clearInterval(iceCandidateRetryRefs.current[remoteUserId]);
+        delete iceCandidateRetryRefs.current[remoteUserId];
+        return;
+      }
+
+      (localIceCandidatesRef.current[remoteUserId] || []).forEach((candidate) => {
+        void sendSignal(remoteUserId, 'ice-candidate', candidate);
+      });
+
+      attempt += 1;
+      if (attempt >= attempts) {
+        clearInterval(iceCandidateRetryRefs.current[remoteUserId]);
+        delete iceCandidateRetryRefs.current[remoteUserId];
+      }
+    }, 500);
+  };
+
   const cleanupPeer = (remoteUserId: string) => {
     if (iceCandidateRetryRefs.current[remoteUserId]) {
       clearInterval(iceCandidateRetryRefs.current[remoteUserId]);
