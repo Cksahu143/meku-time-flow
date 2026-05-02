@@ -95,6 +95,8 @@ export const useGroupCall = () => {
   const remoteStreamsRef = useRef<Record<string, MediaStream>>({});
   const peerConnectionsRef = useRef<Record<string, RTCPeerConnection>>({});
   const pendingCandidatesRef = useRef<Record<string, RTCIceCandidateInit[]>>({});
+  const localIceCandidatesRef = useRef<Record<string, RTCIceCandidateInit[]>>({});
+  const iceCandidateRetryRefs = useRef<Record<string, ReturnType<typeof setInterval>>>({});
   const signalChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const participantChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const signalQueueRef = useRef<Array<{ to: string | '*'; type: GroupSignal['type']; data?: unknown }>>([]);
@@ -195,9 +197,15 @@ export const useGroupCall = () => {
   };
 
   const cleanupPeer = (remoteUserId: string) => {
+    if (iceCandidateRetryRefs.current[remoteUserId]) {
+      clearInterval(iceCandidateRetryRefs.current[remoteUserId]);
+      delete iceCandidateRetryRefs.current[remoteUserId];
+    }
+
     peerConnectionsRef.current[remoteUserId]?.close();
     delete peerConnectionsRef.current[remoteUserId];
     delete pendingCandidatesRef.current[remoteUserId];
+    delete localIceCandidatesRef.current[remoteUserId];
 
     const remoteStream = remoteStreamsRef.current[remoteUserId];
     if (remoteStream) {
@@ -221,6 +229,9 @@ export const useGroupCall = () => {
     setParticipants([]);
     signalQueueRef.current = [];
     signalReadyRef.current = false;
+    localIceCandidatesRef.current = {};
+    Object.values(iceCandidateRetryRefs.current).forEach(clearInterval);
+    iceCandidateRetryRefs.current = {};
 
     if (signalChannelRef.current) {
       supabase.removeChannel(signalChannelRef.current);
