@@ -475,6 +475,15 @@ export const useWebRTC = () => {
         isIncoming: false,
       });
 
+      // Create and persist the offer before notifying the callee so answering never races a missing SDP.
+      const pc = createPeerConnection();
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      rebroadcastLocalIceCandidates();
+      void sendSignal('offer', offer);
+      await supabase.from('call_signals').update({ offer: offer as unknown as Json }).eq('id', callId);
+
       const { data: myProfile } = await supabase.from('profiles').select('display_name, username').eq('id', currentUserId).maybeSingle();
       const callerName = myProfile?.display_name || myProfile?.username || 'Unknown';
 
@@ -506,19 +515,6 @@ export const useWebRTC = () => {
       } catch (e) {
         console.warn('Push send error:', e);
       }
-
-      // Create peer connection & offer
-      const pc = createPeerConnection();
-      stream.getTracks().forEach(track => pc.addTrack(track, stream));
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      rebroadcastLocalIceCandidates();
-
-      // Send offer via broadcast with queueing support
-      void sendSignal('offer', offer);
-
-      // Persist offer to DB as fallback
-      await supabase.from('call_signals').update({ offer: offer as unknown as Json }).eq('id', callId);
 
       // Retry broadcast every 3s
       retryIntervalRef.current = setInterval(async () => {
