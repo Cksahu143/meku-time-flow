@@ -371,7 +371,9 @@ export const useWebRTC = () => {
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
-        void sendSignal('ice-candidate', event.candidate.toJSON());
+        const candidate = event.candidate.toJSON();
+        localIceCandidatesRef.current.push(candidate);
+        void sendSignal('ice-candidate', candidate);
       }
     };
 
@@ -390,7 +392,7 @@ export const useWebRTC = () => {
       }
 
       remoteMediaStreamRef.current = stream;
-      setRemoteStream(stream);
+      setRemoteStream(new MediaStream(stream.getTracks()));
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = stream;
         remoteVideoRef.current.play().catch(() => undefined);
