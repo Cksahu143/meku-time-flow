@@ -601,18 +601,28 @@ export const useWebRTC = () => {
         localVideoRef.current.play().catch(() => undefined);
       }
 
-      // Get offer from DB (fallback)
-      const { data: callData } = await supabase
-        .from('call_signals')
-        .select('offer')
-        .eq('id', callState.callId)
-        .maybeSingle();
+      // Get offer from DB (fallback) and wait briefly if the caller is still persisting it.
+      let callData: { offer: Json | null } | null = null;
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const { data } = await supabase
+          .from('call_signals')
+          .select('offer')
+          .eq('id', callState.callId)
+          .maybeSingle();
+        callData = data;
+        if (callData?.offer) break;
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
 
       const pc = createPeerConnection();
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
       if (!pc.remoteDescription && callData?.offer) {
         await pc.setRemoteDescription(new RTCSessionDescription(callData.offer as unknown as RTCSessionDescriptionInit));
+      }
+
+      if (!pc.remoteDescription) {
+        throw new Error('Call offer was not ready yet');
       }
 
       // Flush pending candidates
