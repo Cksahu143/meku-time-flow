@@ -512,6 +512,7 @@ export const useWebRTC = () => {
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
+      rebroadcastLocalIceCandidates();
 
       // Send offer via broadcast with queueing support
       void sendSignal('offer', offer);
@@ -626,6 +627,7 @@ export const useWebRTC = () => {
 
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
+      rebroadcastLocalIceCandidates();
 
       // Send answer via broadcast (instant) - retry a few times
       void sendSignal('answer', answer);
