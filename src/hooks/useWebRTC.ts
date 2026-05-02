@@ -588,7 +588,7 @@ export const useWebRTC = () => {
       cleanup();
       setCallState(INITIAL_STATE);
     }
-  }, [currentUserId, createPeerConnection, sendSignal, cleanup]);
+  }, [currentUserId, createPeerConnection, sendSignal, rebroadcastLocalIceCandidates, cleanup]);
 
   const answerCall = useCallback(async () => {
     if (!callState.callId) return;
@@ -662,7 +662,7 @@ export const useWebRTC = () => {
       cleanup();
       setCallState(INITIAL_STATE);
     }
-  }, [callState.callId, callState.callType, createPeerConnection, sendSignal, cleanup]);
+  }, [callState.callId, callState.callType, createPeerConnection, sendSignal, rebroadcastLocalIceCandidates, cleanup]);
 
   const rejectCall = useCallback(async () => {
     if (!callState.callId) return;
