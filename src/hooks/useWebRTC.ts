@@ -68,8 +68,10 @@ export const useWebRTC = () => {
   const callStateRef = useRef(callState);
   const retryIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const answerPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const iceCandidateRetryRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const signalQueueRef = useRef<Array<{ type: string; data?: unknown }>>([]);
   const channelReadyRef = useRef(false);
+  const localIceCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
   callStateRef.current = callState;
 
   // Auth state
@@ -141,6 +143,29 @@ export const useWebRTC = () => {
       signalQueueRef.current.push(signal);
     }
   }, [currentUserId]);
+
+  const rebroadcastLocalIceCandidates = useCallback((attempts = 8) => {
+    if (iceCandidateRetryRef.current) clearInterval(iceCandidateRetryRef.current);
+
+    let attempt = 0;
+    iceCandidateRetryRef.current = setInterval(() => {
+      if (callStateRef.current.status === 'idle' || callStateRef.current.status === 'ended') {
+        if (iceCandidateRetryRef.current) clearInterval(iceCandidateRetryRef.current);
+        iceCandidateRetryRef.current = null;
+        return;
+      }
+
+      localIceCandidatesRef.current.forEach((candidate) => {
+        void sendSignal('ice-candidate', candidate);
+      });
+
+      attempt += 1;
+      if (attempt >= attempts) {
+        if (iceCandidateRetryRef.current) clearInterval(iceCandidateRetryRef.current);
+        iceCandidateRetryRef.current = null;
+      }
+    }, 500);
+  }, [sendSignal]);
 
   // Listen for incoming calls via Broadcast
   useEffect(() => {
@@ -326,6 +351,7 @@ export const useWebRTC = () => {
     if (durationTimerRef.current) { clearInterval(durationTimerRef.current); durationTimerRef.current = null; }
     if (retryIntervalRef.current) { clearInterval(retryIntervalRef.current); retryIntervalRef.current = null; }
     if (answerPollRef.current) { clearInterval(answerPollRef.current); answerPollRef.current = null; }
+    if (iceCandidateRetryRef.current) { clearInterval(iceCandidateRetryRef.current); iceCandidateRetryRef.current = null; }
     if (localStreamRef.current) { localStreamRef.current.getTracks().forEach(t => t.stop()); localStreamRef.current = null; }
     if (remoteMediaStreamRef.current) { remoteMediaStreamRef.current.getTracks().forEach(t => t.stop()); remoteMediaStreamRef.current = null; }
     if (peerConnectionRef.current) { peerConnectionRef.current.close(); peerConnectionRef.current = null; }
@@ -333,6 +359,7 @@ export const useWebRTC = () => {
     setRemoteStream(null);
     pendingCandidatesRef.current = [];
     signalQueueRef.current = [];
+    localIceCandidatesRef.current = [];
     channelReadyRef.current = false;
   }, []);
 
