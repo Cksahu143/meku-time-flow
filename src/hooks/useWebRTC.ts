@@ -68,8 +68,10 @@ export const useWebRTC = () => {
   const callStateRef = useRef(callState);
   const retryIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const answerPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const iceCandidateRetryRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const signalQueueRef = useRef<Array<{ type: string; data?: unknown }>>([]);
   const channelReadyRef = useRef(false);
+  const localIceCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
   callStateRef.current = callState;
 
   // Auth state
@@ -142,6 +144,29 @@ export const useWebRTC = () => {
     }
   }, [currentUserId]);
 
+  const rebroadcastLocalIceCandidates = useCallback((attempts = 8) => {
+    if (iceCandidateRetryRef.current) clearInterval(iceCandidateRetryRef.current);
+
+    let attempt = 0;
+    iceCandidateRetryRef.current = setInterval(() => {
+      if (callStateRef.current.status === 'idle' || callStateRef.current.status === 'ended') {
+        if (iceCandidateRetryRef.current) clearInterval(iceCandidateRetryRef.current);
+        iceCandidateRetryRef.current = null;
+        return;
+      }
+
+      localIceCandidatesRef.current.forEach((candidate) => {
+        void sendSignal('ice-candidate', candidate);
+      });
+
+      attempt += 1;
+      if (attempt >= attempts) {
+        if (iceCandidateRetryRef.current) clearInterval(iceCandidateRetryRef.current);
+        iceCandidateRetryRef.current = null;
+      }
+    }, 500);
+  }, [sendSignal]);
+
   // Listen for incoming calls via Broadcast
   useEffect(() => {
     if (!currentUserId) return;
@@ -191,7 +216,7 @@ export const useWebRTC = () => {
     const channel = supabase
       .channel(`user-calls-${currentUserId}`)
       .on('broadcast', { event: 'incoming-call' }, (payload) => {
-        handleIncomingCall(payload.payload as any);
+        handleIncomingCall(payload.payload as Parameters<typeof handleIncomingCall>[0]);
       })
       .subscribe();
 
@@ -326,6 +351,7 @@ export const useWebRTC = () => {
     if (durationTimerRef.current) { clearInterval(durationTimerRef.current); durationTimerRef.current = null; }
     if (retryIntervalRef.current) { clearInterval(retryIntervalRef.current); retryIntervalRef.current = null; }
     if (answerPollRef.current) { clearInterval(answerPollRef.current); answerPollRef.current = null; }
+    if (iceCandidateRetryRef.current) { clearInterval(iceCandidateRetryRef.current); iceCandidateRetryRef.current = null; }
     if (localStreamRef.current) { localStreamRef.current.getTracks().forEach(t => t.stop()); localStreamRef.current = null; }
     if (remoteMediaStreamRef.current) { remoteMediaStreamRef.current.getTracks().forEach(t => t.stop()); remoteMediaStreamRef.current = null; }
     if (peerConnectionRef.current) { peerConnectionRef.current.close(); peerConnectionRef.current = null; }
@@ -333,6 +359,7 @@ export const useWebRTC = () => {
     setRemoteStream(null);
     pendingCandidatesRef.current = [];
     signalQueueRef.current = [];
+    localIceCandidatesRef.current = [];
     channelReadyRef.current = false;
   }, []);
 
@@ -344,7 +371,9 @@ export const useWebRTC = () => {
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
-        void sendSignal('ice-candidate', event.candidate.toJSON());
+        const candidate = event.candidate.toJSON();
+        localIceCandidatesRef.current.push(candidate);
+        void sendSignal('ice-candidate', candidate);
       }
     };
 
@@ -363,7 +392,7 @@ export const useWebRTC = () => {
       }
 
       remoteMediaStreamRef.current = stream;
-      setRemoteStream(stream);
+      setRemoteStream(new MediaStream(stream.getTracks()));
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = stream;
         remoteVideoRef.current.play().catch(() => undefined);
@@ -446,6 +475,15 @@ export const useWebRTC = () => {
         isIncoming: false,
       });
 
+      // Create and persist the offer before notifying the callee so answering never races a missing SDP.
+      const pc = createPeerConnection();
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      rebroadcastLocalIceCandidates();
+      void sendSignal('offer', offer);
+      await supabase.from('call_signals').update({ offer: offer as unknown as Json }).eq('id', callId);
+
       const { data: myProfile } = await supabase.from('profiles').select('display_name, username').eq('id', currentUserId).maybeSingle();
       const callerName = myProfile?.display_name || myProfile?.username || 'Unknown';
 
@@ -477,18 +515,6 @@ export const useWebRTC = () => {
       } catch (e) {
         console.warn('Push send error:', e);
       }
-
-      // Create peer connection & offer
-      const pc = createPeerConnection();
-      stream.getTracks().forEach(track => pc.addTrack(track, stream));
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-
-      // Send offer via broadcast with queueing support
-      void sendSignal('offer', offer);
-
-      // Persist offer to DB as fallback
-      await supabase.from('call_signals').update({ offer: offer as unknown as Json }).eq('id', callId);
 
       // Retry broadcast every 3s
       retryIntervalRef.current = setInterval(async () => {
@@ -558,7 +584,7 @@ export const useWebRTC = () => {
       cleanup();
       setCallState(INITIAL_STATE);
     }
-  }, [currentUserId, createPeerConnection, sendSignal, cleanup]);
+  }, [currentUserId, createPeerConnection, sendSignal, rebroadcastLocalIceCandidates, cleanup]);
 
   const answerCall = useCallback(async () => {
     if (!callState.callId) return;
@@ -575,18 +601,28 @@ export const useWebRTC = () => {
         localVideoRef.current.play().catch(() => undefined);
       }
 
-      // Get offer from DB (fallback)
-      const { data: callData } = await supabase
-        .from('call_signals')
-        .select('offer')
-        .eq('id', callState.callId)
-        .maybeSingle();
+      // Get offer from DB (fallback) and wait briefly if the caller is still persisting it.
+      let callData: { offer: Json | null } | null = null;
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const { data } = await supabase
+          .from('call_signals')
+          .select('offer')
+          .eq('id', callState.callId)
+          .maybeSingle();
+        callData = data;
+        if (callData?.offer) break;
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
 
       const pc = createPeerConnection();
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
       if (!pc.remoteDescription && callData?.offer) {
         await pc.setRemoteDescription(new RTCSessionDescription(callData.offer as unknown as RTCSessionDescriptionInit));
+      }
+
+      if (!pc.remoteDescription) {
+        throw new Error('Call offer was not ready yet');
       }
 
       // Flush pending candidates
@@ -597,6 +633,7 @@ export const useWebRTC = () => {
 
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
+      rebroadcastLocalIceCandidates();
 
       // Send answer via broadcast (instant) - retry a few times
       void sendSignal('answer', answer);
@@ -631,7 +668,7 @@ export const useWebRTC = () => {
       cleanup();
       setCallState(INITIAL_STATE);
     }
-  }, [callState.callId, callState.callType, createPeerConnection, sendSignal, cleanup]);
+  }, [callState.callId, callState.callType, createPeerConnection, sendSignal, rebroadcastLocalIceCandidates, cleanup]);
 
   const rejectCall = useCallback(async () => {
     if (!callState.callId) return;
